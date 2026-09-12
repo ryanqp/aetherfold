@@ -95,6 +95,8 @@ Add `--verbose` after `--` to print every test name. Exit code `0` = all passed.
 
 More detail, including how to add a suite: [docs/testing.md](docs/testing.md).
 
+To give a card real rules (draw, tokens, counters, …) add JSON under `engine/cards/ir/`. Walkthrough and a copy-paste template: [docs/adding-a-card.md](docs/adding-a-card.md).
+
 ## Requirements
 
 - Godot **4.7** (project feature tag is `4.7`)
