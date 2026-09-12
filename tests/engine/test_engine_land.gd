@@ -25,6 +25,30 @@ func test_island_enters_untapped() -> void:
 	assert_false(engine.state.objects[bf.object_ids[0]].tapped)
 
 
+func test_bot_island_stays_untapped_until_mana_ability() -> void:
+	# Live table uses GameSession.ai_take_turn, not rival_ai.gd.
+	# A basic Island must ETB untapped. Same-turn tap happens only if it is
+	# activated for mana (auto_pay), which is legal and looks like "came in tapped"
+	# if you only see the board after the bot's whole turn.
+	var engine := Fixtures.empty_engine_1v1()
+	var isl: GameObject = Fixtures.spawn_named(engine, db, 1, EngineEnums.ZoneId.HAND, "Island")
+	engine.state.active_player_id = 1
+	engine.state.priority_player_id = 1
+	engine.state.awaiting = {player_id = 1, type = &"priority"}
+	assert_true(engine.submit(Fixtures.play_land(1, isl.object_id)).ok)
+	var bf: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	var land_id: int = int(bf.object_ids[0])
+	assert_false(engine.state.objects[land_id].tapped, "basic must ETB untapped")
+	var opt: GameObject = Fixtures.spawn_named(engine, db, 1, EngineEnums.ZoneId.HAND, "Opt")
+	var a := GameAction.new()
+	a.kind = GameAction.Kind.CAST_SPELL
+	a.player_id = 1
+	a.object_id = opt.object_id
+	a.extra = {auto_pay = true}
+	assert_true(engine.submit(a).ok)
+	assert_true(engine.state.objects[land_id].tapped, "Island taps when paying for Opt")
+
+
 func test_play_one_land() -> void:
 	var engine := Fixtures.empty_engine_1v1()
 	var mtn: GameObject = Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.HAND, "Mountain")
