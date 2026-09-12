@@ -112,6 +112,8 @@ If a bot land looks like it entered tapped: [docs/land-tap-investigation.md](doc
 
 Talrand is a scripted opponent: it plays lands, casts cheap instants/sorceries (and can Counterspell), and attacks. Difficulty is in **Menu**.
 
+Want to change the engine or UI? See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 The Aetherfold **code** in this repository is licensed under the [MIT License](LICENSE).
