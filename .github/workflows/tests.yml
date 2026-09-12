@@ -17,5 +17,8 @@ jobs:
           version: "4.7.0"
           use-dotnet: false
 
+      - name: Import project (builds the global script class cache)
+        run: godot --headless --path . --editor --quit
+
       - name: Run engine test suite
         run: godot --headless --path . -s res://tools/run_tests.gd
