@@ -13,6 +13,7 @@ const TURN_GREEN := Color(0.18, 0.78, 0.32)
 var input_box: TextEdit
 var progress_label: Label
 var preview_label: Label
+var source_link: LinkButton
 var unresolved_label: Label
 var import_btn: Button
 var confirm_btn: Button
@@ -25,6 +26,7 @@ var last_result: Dictionary = {}
 var existing_path: String = ""
 var busy := false
 var auto_play := true
+var _source_url := ""
 
 
 func _ready() -> void:
@@ -78,6 +80,12 @@ func _ready() -> void:
 	preview_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	preview_label.add_theme_font_size_override("font_size", 13)
 	col.add_child(preview_label)
+	source_link = LinkButton.new()
+	source_link.visible = false
+	source_link.underline = LinkButton.UNDERLINE_MODE_ON_HOVER
+	source_link.add_theme_color_override("font_color", GOLD)
+	source_link.pressed.connect(_on_source_link_pressed)
+	col.add_child(source_link)
 	unresolved_label = Label.new()
 	unresolved_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	unresolved_label.add_theme_color_override("font_color", Color(0.95, 0.55, 0.35))
@@ -120,6 +128,11 @@ func open() -> void:
 	progress_label.text = ""
 	preview_label.text = ""
 	unresolved_label.text = ""
+	if source_link:
+		source_link.visible = false
+		source_link.uri = ""
+		source_link.tooltip_text = ""
+		_source_url = ""
 	confirm_btn.visible = false
 	update_btn.visible = false
 	save_new_btn.visible = false
@@ -198,6 +211,8 @@ func _show_result(result: Dictionary) -> void:
 	retry_btn.visible = true
 	if not bool(result.get("ok", false)):
 		preview_label.text = str(result.get("error", "Import failed."))
+		if source_link:
+			source_link.visible = false
 		confirm_btn.visible = false
 		update_btn.visible = false
 		save_new_btn.visible = false
@@ -222,6 +237,7 @@ func _show_result(result: Dictionary) -> void:
 		for e in errs:
 			body.append("- %s" % e)
 	preview_label.text = "\n".join(body)
+	_show_source_link(deck)
 	if unresolved.size() > 0:
 		unresolved_label.text = "UNRESOLVED CARDS\n- " + "\n- ".join(unresolved)
 		ignore_btn.visible = true
@@ -237,6 +253,30 @@ func _show_result(result: Dictionary) -> void:
 	save_new_btn.visible = can_confirm and existing_path != ""
 	if existing_path != "":
 		confirm_btn.visible = false
+
+
+func _show_source_link(deck: NormalizedDeck) -> void:
+	if source_link == null:
+		return
+	var url := str(deck.source_url).strip_edges()
+	if not DeckSource.is_http_url(url):
+		source_link.visible = false
+		source_link.uri = ""
+		_source_url = ""
+		return
+	_source_url = url
+	source_link.text = DeckSource.view_on_label(deck.source)
+	source_link.uri = ""
+	source_link.tooltip_text = url
+	source_link.visible = true
+
+
+func _on_source_link_pressed() -> void:
+	var url := _source_url.strip_edges()
+	if url == "" and last_result.has("deck") and last_result.get("deck") is NormalizedDeck:
+		url = str((last_result.get("deck") as NormalizedDeck).source_url).strip_edges()
+	if DeckSource.is_http_url(url):
+		OS.shell_open(url)
 
 
 func _paint_preview(deck: NormalizedDeck, rows: Dictionary) -> void:

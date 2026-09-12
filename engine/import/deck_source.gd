@@ -31,6 +31,25 @@ static func detect(raw: String) -> int:
 	return Kind.TEXT
 
 
+static func is_http_url(url: String) -> bool:
+	var u := url.strip_edges().to_lower()
+	return u.begins_with("https://") or u.begins_with("http://")
+
+
+static func view_on_label(source: String) -> String:
+	match str(source).to_lower():
+		"moxfield":
+			return "View on Moxfield"
+		"archidekt":
+			return "View on Archidekt"
+		"tappedout":
+			return "View on TappedOut"
+		"deckstats":
+			return "View on Deckstats"
+		_:
+			return "View original deck"
+
+
 static func kind_name(kind: int) -> String:
 	match kind:
 		Kind.MOXFIELD:
