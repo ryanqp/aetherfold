@@ -199,6 +199,42 @@ func test_moxfield_parser_fixture() -> void:
 		assert_ne(str(e.get("name", "")), "Lightning Bolt")
 
 
+func test_moxfield_v3_nested_cards_map() -> void:
+	var json := {
+		name = "V3 Nested",
+		boards = {
+			commanders = {
+				count = 1,
+				cards = {
+					"abc": {quantity = 1, card = {name = "Krenko, Mob Boss"}},
+				},
+			},
+			mainboard = {
+				count = 99,
+				cards = {
+					"sol": {quantity = 1, card = {name = "Sol Ring"}},
+					"mtn": {quantity = 98, card = {name = "Mountain"}},
+				},
+			},
+			sideboard = {
+				count = 1,
+				cards = {
+					"bolt": {quantity = 1, card = {name = "Lightning Bolt"}},
+				},
+			},
+		},
+	}
+	var deck: NormalizedDeck = MoxfieldImporter.parse(json, "https://www.moxfield.com/decks/ZExXdg2U1UO-jl0mTquqLw")
+	assert_eq(deck.commander_names()[0], "Krenko, Mob Boss")
+	assert_eq(deck.library_count(), 99)
+	assert_eq(deck.total_cards(), 100)
+	for e in deck.commanders:
+		assert_ne(str(e.get("name", "")), "cards")
+	for e2 in deck.mainboard:
+		assert_ne(str(e2.get("name", "")), "cards")
+		assert_ne(str(e2.get("name", "")), "Lightning Bolt")
+
+
 func test_archidekt_parser_fixture() -> void:
 	var json := {
 		name = "Arch Test",

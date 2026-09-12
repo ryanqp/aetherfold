@@ -45,13 +45,23 @@ static func parse(json: Dictionary, source_url: String = "") -> NormalizedDeck:
 
 static func _ingest_board(deck: NormalizedDeck, board: Variant, as_commander: bool) -> void:
 	if board is Dictionary:
-		for k in (board as Dictionary).keys():
-			var v: Variant = board[k]
+		var b: Dictionary = board
+		# v3 wraps each board as { "count": N, "cards": { id: entry } }
+		if b.has("cards") and (b.get("cards") is Dictionary or b.get("cards") is Array):
+			_ingest_board(deck, b.get("cards"), as_commander)
+			return
+		for k in b.keys():
+			var v: Variant = b[k]
 			if v is Dictionary:
 				var n := _card_name(v)
 				if n == "":
-					n = str(k)
-				var q := int(v.get("quantity", 1))
+					var key := str(k)
+					if key == "cards" or key == "count" or key == "board":
+						continue
+					n = key
+				if n == "":
+					continue
+				var q := int(v.get("quantity", v.get("count", 1)))
 				if as_commander:
 					deck.add_commander(n, q)
 				else:
