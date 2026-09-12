@@ -69,6 +69,32 @@ python tools/fetch_scryfall.py
 
 That only downloads metadata + image URLs, not every card image. Images cache as you play.
 
+## Running tests
+
+Engine tests are GDScript suites under `tests/engine/` (`test_*.gd`). Run them with Godot **4.7** from the project root (the folder that contains `project.godot`). If `godot` is not on your PATH, use the full path to your Godot 4.7 binary.
+
+Whole suite:
+
+```
+godot --headless --path . -s res://tools/run_tests.gd
+```
+
+One suite (the `suite_name()` string, not the file name):
+
+```
+godot --headless --path . -s res://tools/run_tests.gd -- --suite=engine_stack
+```
+
+One test (substring of the `test_*` method name):
+
+```
+godot --headless --path . -s res://tools/run_tests.gd -- --suite=engine_stack --test=test_creature_not_in_play
+```
+
+Add `--verbose` after `--` to print every test name. Exit code `0` = all passed.
+
+More detail, including how to add a suite: [docs/testing.md](docs/testing.md).
+
 ## Requirements
 
 - Godot **4.7** (project feature tag is `4.7`)
