@@ -283,40 +283,12 @@ func put_library_bottom(object_id: int, player_id: int) -> GameObject:
 
 
 func resolve_top() -> void:
-	if state.stack == null or not (state.stack is MagicStack):
-		return
-	var stack := state.stack as MagicStack
-	var entry: StackEntry = stack.pop()
-	if entry == null:
-		return
-	if executor != null:
-		executor.resolve(self, entry)
-	if entry.kind != StackEntry.Kind.SPELL:
-		return
-	var obj: GameObject = state.objects.get(entry.object_id)
-	if obj == null or obj.zone != EngineEnums.ZoneId.STACK:
-		return
-	var def: CardDefinition = obj.definition as CardDefinition if obj.definition is CardDefinition else null
-	if def != null and def.is_permanent_type():
-		state.zones.move(obj.object_id, EngineEnums.ZoneId.BATTLEFIELD)
-	else:
-		state.zones.move(obj.object_id, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
+	if state.stack is MagicStack:
+		(state.stack as MagicStack).resolve_top(self)
 
 
 func _submit_pass(action: GameAction) -> SubmitResult:
-	var r := SubmitResult.new()
-	r.ok = false
-	if state.mode != EngineEnums.EngineMode.GIVING_PRIORITY:
-		r.error = "not in priority"
-		return r
-	if action.player_id != int(state.awaiting.get("player_id", -1)):
-		r.error = "not your priority"
-		return r
-	var wrapped := priority.pass_from(state, action.player_id)
-	if wrapped:
-		turn.all_passed()
-	r.ok = true
-	return r
+	return priority.submit_pass(self, action)
 
 
 func _submit_play_land(action: GameAction) -> SubmitResult:
@@ -498,25 +470,16 @@ func _put_spell_on_stack(player_id: int) -> SubmitResult:
 	if obj == null:
 		r.error = "source gone"
 		return r
+	var source_id: int = obj.object_id
 	var moved: GameObject = state.zones.move(obj.object_id, EngineEnums.ZoneId.STACK)
 	if moved == null:
 		r.error = "stack move failed"
 		return r
-	var entry := StackEntry.new()
-	entry.stack_id = state.next_stack_id
+	var entry: StackEntry = (state.stack as MagicStack).push_spell(
+		moved, player_id, _cast_targets, state.next_stack_id, source_id
+	)
 	state.next_stack_id += 1
-	entry.kind = StackEntry.Kind.SPELL
-	entry.object_id = moved.object_id
-	entry.source_id = obj.object_id
-	entry.controller_id = player_id
 	var def: CardDefinition = moved.definition as CardDefinition if moved.definition is CardDefinition else null
-	if def != null:
-		var sp: Ability = def.spell_ability()
-		if sp != null:
-			entry.ability_id = sp.ability_id
-			entry.effects = sp.effects.duplicate()
-	entry.targets = _cast_targets.duplicate()
-	(state.stack as MagicStack).push(entry)
 	state.log.append(EngineEnums.EventType.SPELL_CAST, player_id, {
 		object_id = moved.object_id,
 		stack_id = entry.stack_id,
@@ -626,29 +589,18 @@ func _stack_empty() -> bool:
 
 
 func _submit_choose_replacement(action: GameAction) -> SubmitResult:
-	var r := SubmitResult.new()
-	r.ok = false
-	var dest := int(action.extra.get("dest_zone", EngineEnums.ZoneId.COMMAND))
-	if state.replacement == null or not state.replacement.apply_choice(self, action.player_id, dest):
+	if state.replacement == null:
+		var r := SubmitResult.new()
+		r.ok = false
 		r.error = "illegal replacement"
 		return r
-	r.ok = true
-	return r
+	return state.replacement.submit(self, action)
 
 
 func _legal_choose_replacement(player_id: int) -> Array:
-	var out: Array = []
-	if int(state.awaiting.get("player_id", -1)) != player_id:
-		return out
-	var options: Array = state.awaiting.get("options", [])
-	for dest in options:
-		var a := GameAction.new()
-		a.kind = GameAction.Kind.CHOOSE_REPLACEMENT
-		a.player_id = player_id
-		a.object_id = int(state.awaiting.get("object_id", 0))
-		a.extra = {dest_zone = int(dest)}
-		out.append(a)
-	return out
+	if state.replacement == null:
+		return []
+	return state.replacement.legal_actions(state, player_id)
 
 
 func _submit_choose_sba(action: GameAction) -> SubmitResult:
@@ -748,8 +700,7 @@ func apply_combat_damage() -> void:
 		var obj: GameObject = state.objects.get(int(aid))
 		if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
 			continue
-		var snap: Dictionary = layers.snapshot(state, obj) if layers != null else {power = 0}
-		var dmg := int(snap.get("power", 0))
+		var dmg := layers.power(state, obj) if layers != null else 0
 		if dmg <= 0:
 			continue
 		state.players[defender].life -= dmg

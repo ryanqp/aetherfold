@@ -62,17 +62,9 @@ func _counter_spell(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -
 	if not (engine.state.stack is MagicStack):
 		return
 	var stack := engine.state.stack as MagicStack
-	var found_i := -1
-	var found: StackEntry = null
-	for i in stack.entries.size():
-		var e: StackEntry = stack.entries[i]
-		if e != null and e.stack_id == sid:
-			found_i = i
-			found = e
-			break
+	var found: StackEntry = stack.remove_by_stack_id(sid)
 	if found == null:
 		return
-	stack.entries.remove_at(found_i)
 	if found.object_id == 0:
 		return
 	var obj: GameObject = engine.state.objects.get(found.object_id)

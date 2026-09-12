@@ -24,6 +24,10 @@ func snapshot(state: GameState, obj: GameObject) -> Dictionary:
 	}
 
 
+func power(state: GameState, obj: GameObject) -> int:
+	return int(snapshot(state, obj).get("power", 0))
+
+
 func clear_until_eot(state: GameState) -> void:
 	var kept: Array = []
 	for e in state.effects:

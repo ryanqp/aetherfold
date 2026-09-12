@@ -31,3 +31,20 @@ func next_apnap(state: GameState, from_id: int) -> int:
 	if n <= 0:
 		return 0
 	return (from_id + 1) % n
+
+
+func submit_pass(engine: RulesEngine, action: GameAction) -> SubmitResult:
+	var r := SubmitResult.new()
+	r.ok = false
+	var st := engine.state
+	if st.mode != EngineEnums.EngineMode.GIVING_PRIORITY:
+		r.error = "not in priority"
+		return r
+	if action.player_id != int(st.awaiting.get("player_id", -1)):
+		r.error = "not your priority"
+		return r
+	var wrapped := pass_from(st, action.player_id)
+	if wrapped:
+		engine.turn.all_passed()
+	r.ok = true
+	return r
