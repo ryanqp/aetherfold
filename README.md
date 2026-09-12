@@ -97,6 +97,8 @@ More detail, including how to add a suite: [docs/testing.md](docs/testing.md).
 
 To give a card real rules (draw, tokens, counters, …) add JSON under `engine/cards/ir/`. Walkthrough and a copy-paste template: [docs/adding-a-card.md](docs/adding-a-card.md).
 
+**Live rules live in `engine/`, not `scripts/match_state.gd`.** What to edit: [docs/migration-status.md](docs/migration-status.md).
+
 ## Requirements
 
 - Godot **4.7** (project feature tag is `4.7`)

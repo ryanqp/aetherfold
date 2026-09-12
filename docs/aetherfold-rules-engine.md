@@ -1,5 +1,8 @@
 # Aetherfold Rules Engine Design
 
+> **Migration status (2026-09-12):** the shipping table uses `engine/` via `GameSession` (`scripts/table.gd` `USE_ENGINE := true`). This document is the original plan and still talks about the pre-engine prototype as “today.” For what actually drives play, see [migration-status.md](migration-status.md).
+
+
 | Field | Value |
 | --- | --- |
 | **Title** | Aetherfold Commander-First Rules Engine |
