@@ -100,7 +100,10 @@ func send_action(kind: String, payload: Dictionary = {}) -> void:
 func broadcast_view(view) -> void:
 	if role != "host" or connected_peer_id == 0:
 		return
-	receive_view.rpc_id(connected_peer_id, view.to_plain() if view != null and view.has_method("to_plain") else {})
+	var plain := {}
+	if view != null and view.has_method("to_plain_for_remote"):
+		plain = view.to_plain_for_remote()
+	receive_view.rpc_id(connected_peer_id, plain)
 
 
 @rpc("any_peer", "reliable")
