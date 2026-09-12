@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Download Scryfall images for Aetherfold's current table cards into D: cache."""
+"""Download Scryfall images for Aetherfold's current table cards into the local cache."""
 from __future__ import annotations
 
 import json
+import os
 import urllib.request
 from pathlib import Path
 
-DATA_DIR = Path(r"D:\AetherfoldData\scryfall")
+DATA_DIR = Path(os.environ.get("AETHERFOLD_SCRYFALL_DIR", str(Path.home() / "AetherfoldData" / "scryfall")))
 IMAGE_DIR = DATA_DIR / "images"
 CATALOG = DATA_DIR / "catalog.jsonl"
 USER_AGENT = "Aetherfold/1.0 (Godot MTG companion; card art cache)"
@@ -75,6 +76,11 @@ def download(url: str, dest: Path) -> None:
 
 
 def main() -> int:
+    print(f"data dir: {DATA_DIR}")
+    if not CATALOG.is_file():
+        print(f"Catalog missing at {CATALOG}. Run tools/fetch_scryfall.py first.")
+        print("Set AETHERFOLD_SCRYFALL_DIR if the catalog lives somewhere else.")
+        return 1
     IMAGE_DIR.mkdir(parents=True, exist_ok=True)
     catalog = load_catalog()
     for name in NAMES:
