@@ -1,6 +1,36 @@
-[gd_scene format=3 uid="uid://b8aetherfoldmenu"]
+[gd_scene load_steps=5 format=3 uid="uid://b8aetherfoldmenu"]
 
 [ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="1_menu"]
+
+[sub_resource type="StyleBoxFlat" id="SB_page"]
+bg_color = Color(0.09, 0.1, 0.11, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.6975, 0.585, 0.21, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+content_margin_left = 28.0
+content_margin_top = 22.0
+content_margin_right = 28.0
+content_margin_bottom = 22.0
+
+[sub_resource type="StyleBoxFlat" id="SB_gold_btn"]
+bg_color = Color(0.7905, 0.663, 0.238, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="SB_gray_btn"]
+bg_color = Color(0.16, 0.17, 0.18, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -10,3 +40,673 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_menu")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.055, 0.06, 1)
+
+[node name="PageHub" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 80.0
+offset_top = 40.0
+offset_right = -80.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("SB_page")
+
+[node name="Col" type="VBoxContainer" parent="PageHub"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="PageHub/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 42
+text = "AETHERFOLD"
+
+[node name="Sub1" type="Label" parent="PageHub/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+text = "Commander  ·  1v1 table"
+
+[node name="Spacer" type="Control" parent="PageHub/Col"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 12)
+
+[node name="ButtonWrap" type="VBoxContainer" parent="PageHub/Col"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="VsAiBtn" type="Button" parent="PageHub/Col/ButtonWrap"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(400, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gold_btn")
+theme_override_colors/font_color = Color(0.12, 0.1, 0.04, 1)
+text = "Vs. AI"
+
+[node name="MultiplayerBtn" type="Button" parent="PageHub/Col/ButtonWrap"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(400, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Multiplayer"
+
+[node name="LibraryBuilderBtn" type="Button" parent="PageHub/Col/ButtonWrap"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(400, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Library Builder"
+
+[node name="MenuBtn" type="Button" parent="PageHub/Col/ButtonWrap"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(400, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Menu"
+
+[node name="ExitBtn" type="Button" parent="PageHub/Col/ButtonWrap"]
+layout_mode = 2
+custom_minimum_size = Vector2(400, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Exit Game"
+
+[node name="StatusLabel" type="Label" parent="PageHub/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+text = "Play Krenko against a Talrand bot, or bring your own decks."
+
+[node name="PageVs" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 80.0
+offset_top = 40.0
+offset_right = -80.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("SB_page")
+
+[node name="Col" type="VBoxContainer" parent="PageVs"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="PageVs/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 32
+text = "Vs. AI"
+
+[node name="Sub1" type="Label" parent="PageVs/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+text = "Pick a deck for you and the bot, then set difficulty."
+
+[node name="DeckRow" type="HBoxContainer" parent="PageVs/Col"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 24
+
+[node name="PlayerColumn" type="VBoxContainer" parent="PageVs/Col/DeckRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="ColumnTitle" type="Label" parent="PageVs/Col/DeckRow/PlayerColumn"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+text = "Your deck"
+
+[node name="Scroll" type="ScrollContainer" parent="PageVs/Col/DeckRow/PlayerColumn"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 360)
+
+[node name="PlayerList" type="VBoxContainer" parent="PageVs/Col/DeckRow/PlayerColumn/Scroll"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="BotColumn" type="VBoxContainer" parent="PageVs/Col/DeckRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="ColumnTitle" type="Label" parent="PageVs/Col/DeckRow/BotColumn"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+text = "Bot deck"
+
+[node name="Scroll" type="ScrollContainer" parent="PageVs/Col/DeckRow/BotColumn"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 360)
+
+[node name="BotList" type="VBoxContainer" parent="PageVs/Col/DeckRow/BotColumn/Scroll"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="DiffRow" type="HBoxContainer" parent="PageVs/Col"]
+layout_mode = 2
+alignment = 1
+
+[node name="DiffLabel" type="Label" parent="PageVs/Col/DiffRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+text = "Bot difficulty"
+
+[node name="DiffOption" type="OptionButton" parent="PageVs/Col/DiffRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(220, 36)
+
+[node name="BackRow" type="HBoxContainer" parent="PageVs/Col"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="VsBackBtn" type="Button" parent="PageVs/Col/BackRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(160, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Back"
+
+[node name="VsStartMatchBtn" type="Button" parent="PageVs/Col/BackRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(200, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gold_btn")
+theme_override_colors/font_color = Color(0.12, 0.1, 0.04, 1)
+text = "Start Match"
+
+[node name="PageMp" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 80.0
+offset_top = 40.0
+offset_right = -80.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("SB_page")
+
+[node name="Col" type="VBoxContainer" parent="PageMp"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="PageMp/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 32
+text = "Multiplayer"
+
+[node name="Sub1" type="Label" parent="PageMp/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+text = "Peer-to-peer. Create a room code or join one on the same network."
+
+[node name="MpCodeEdit" type="LineEdit" parent="PageMp/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
+max_length = 8
+placeholder_text = "Room code (leave blank to generate)"
+
+[node name="MpIpEdit" type="LineEdit" parent="PageMp/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
+placeholder_text = "Host IP (optional — LAN discovery uses the code)"
+
+[node name="RoomRow" type="HBoxContainer" parent="PageMp/Col"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="CreateRoomBtn" type="Button" parent="PageMp/Col/RoomRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(200, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gold_btn")
+theme_override_colors/font_color = Color(0.12, 0.1, 0.04, 1)
+text = "Create room"
+
+[node name="JoinRoomBtn" type="Button" parent="PageMp/Col/RoomRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(200, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Join room"
+
+[node name="MpStatus" type="Label" parent="PageMp/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+text = "Not connected."
+
+[node name="MpRoster" type="Label" parent="PageMp/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+
+[node name="BackRow" type="HBoxContainer" parent="PageMp/Col"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="MpBackBtn" type="Button" parent="PageMp/Col/BackRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(160, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Back"
+
+[node name="MpStartMatchBtn" type="Button" parent="PageMp/Col/BackRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(200, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gold_btn")
+theme_override_colors/font_color = Color(0.12, 0.1, 0.04, 1)
+text = "Start Match"
+
+[node name="PageLibrary" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 80.0
+offset_top = 40.0
+offset_right = -80.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("SB_page")
+
+[node name="Col" type="VBoxContainer" parent="PageLibrary"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="PageLibrary/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 32
+text = "Library"
+
+[node name="Sub1" type="Label" parent="PageLibrary/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+text = "Import a list, build a deck, or browse what you've saved."
+
+[node name="ButtonWrap" type="VBoxContainer" parent="PageLibrary/Col"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="ImportBtn" type="Button" parent="PageLibrary/Col/ButtonWrap"]
+layout_mode = 2
+custom_minimum_size = Vector2(420, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gold_btn")
+theme_override_colors/font_color = Color(0.12, 0.1, 0.04, 1)
+text = "Import from URL / list"
+
+[node name="BuilderBtn" type="Button" parent="PageLibrary/Col/ButtonWrap"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(420, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Library Builder"
+
+[node name="GalleryBtn" type="Button" parent="PageLibrary/Col/ButtonWrap"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(420, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Library Gallery"
+
+[node name="BackRow" type="HBoxContainer" parent="PageLibrary/Col"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="LibraryBackBtn" type="Button" parent="PageLibrary/Col/BackRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(160, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Back"
+
+[node name="PageGallery" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 80.0
+offset_top = 40.0
+offset_right = -80.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("SB_page")
+
+[node name="Col" type="VBoxContainer" parent="PageGallery"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="PageGallery/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 32
+text = "Library Gallery"
+
+[node name="Sub1" type="Label" parent="PageGallery/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+text = "Commander art is the deck icon. Click the name to rename."
+
+[node name="Scroll" type="ScrollContainer" parent="PageGallery/Col"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="GalleryGrid" type="GridContainer" parent="PageGallery/Col/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+columns = 3
+
+[node name="BackRow" type="HBoxContainer" parent="PageGallery/Col"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="GalleryBackBtn" type="Button" parent="PageGallery/Col/BackRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(160, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Back"
+
+[node name="GalleryLibraryHomeBtn" type="Button" parent="PageGallery/Col/BackRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(180, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Library home"
+
+[node name="PageBuilder" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 80.0
+offset_top = 40.0
+offset_right = -80.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("SB_page")
+
+[node name="Col" type="VBoxContainer" parent="PageBuilder"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="PageBuilder/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 32
+text = "Library Builder"
+
+[node name="Sub1" type="Label" parent="PageBuilder/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+text = "Pick a commander, then add cards by name. Singleton Commander rules apply when you save."
+
+[node name="BuilderName" type="LineEdit" parent="PageBuilder/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Deck name (defaults to commander)"
+
+[node name="BuilderCmd" type="LineEdit" parent="PageBuilder/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Search commander…"
+
+[node name="BuilderCmdList" type="ItemList" parent="PageBuilder/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 90)
+
+[node name="BuilderCard" type="LineEdit" parent="PageBuilder/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Add card name, then press Enter"
+
+[node name="BuilderCardList" type="ItemList" parent="PageBuilder/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 180)
+
+[node name="BuilderCount" type="Label" parent="PageBuilder/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+text = "0 / 99 library  ·  no commander"
+
+[node name="ActionRow" type="HBoxContainer" parent="PageBuilder/Col"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="RemoveSelectedBtn" type="Button" parent="PageBuilder/Col/ActionRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(180, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Remove selected"
+
+[node name="SaveToGalleryBtn" type="Button" parent="PageBuilder/Col/ActionRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(200, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gold_btn")
+theme_override_colors/font_color = Color(0.12, 0.1, 0.04, 1)
+text = "Save to Gallery"
+
+[node name="BackRow" type="HBoxContainer" parent="PageBuilder/Col"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="BuilderBackBtn" type="Button" parent="PageBuilder/Col/BackRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(160, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Back"
+
+[node name="BuilderLibraryHomeBtn" type="Button" parent="PageBuilder/Col/BackRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(180, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Library home"
+
+[node name="PageSettings" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 80.0
+offset_top = 40.0
+offset_right = -80.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("SB_page")
+
+[node name="Col" type="VBoxContainer" parent="PageSettings"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="PageSettings/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 32
+text = "Menu"
+
+[node name="Sub1" type="Label" parent="PageSettings/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+text = "Audio and display."
+
+[node name="SettingsMusicBtn" type="Button" parent="PageSettings/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(280, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Music: On"
+
+[node name="SettingsSfxBtn" type="Button" parent="PageSettings/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(280, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "SFX: On"
+
+[node name="ToggleFullscreenBtn" type="Button" parent="PageSettings/Col"]
+layout_mode = 2
+custom_minimum_size = Vector2(280, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Toggle fullscreen"
+
+[node name="Sub2" type="Label" parent="PageSettings/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+text = "Aetherfold  ·  Godot 4.7  ·  fan Commander table"
+
+[node name="BackRow" type="HBoxContainer" parent="PageSettings/Col"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="SettingsBackBtn" type="Button" parent="PageSettings/Col/BackRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(160, 48)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Back"
+
+[connection signal="pressed" from="PageHub/Col/ButtonWrap/ExitBtn" to="." method="_on_exit"]
+[connection signal="pressed" from="PageVs/Col/BackRow/VsStartMatchBtn" to="." method="_on_start_vs"]
+[connection signal="item_selected" from="PageVs/Col/DiffRow/DiffOption" to="." method="_on_diff_selected"]
+[connection signal="pressed" from="PageMp/Col/RoomRow/CreateRoomBtn" to="." method="_on_mp_host"]
+[connection signal="pressed" from="PageMp/Col/RoomRow/JoinRoomBtn" to="." method="_on_mp_join"]
+[connection signal="pressed" from="PageMp/Col/BackRow/MpStartMatchBtn" to="." method="_on_mp_start"]
+[connection signal="pressed" from="PageLibrary/Col/ButtonWrap/ImportBtn" to="." method="_on_open_import"]
+[connection signal="pressed" from="PageBuilder/Col/ActionRow/RemoveSelectedBtn" to="." method="_on_remove_card"]
+[connection signal="pressed" from="PageBuilder/Col/ActionRow/SaveToGalleryBtn" to="." method="_on_save_builder"]
+[connection signal="text_changed" from="PageBuilder/Col/BuilderCmd" to="." method="_on_cmd_search"]
+[connection signal="item_selected" from="PageBuilder/Col/BuilderCmdList" to="." method="_on_cmd_pick"]
+[connection signal="text_submitted" from="PageBuilder/Col/BuilderCard" to="." method="_on_add_card"]
+[connection signal="pressed" from="PageSettings/Col/SettingsMusicBtn" to="." method="_toggle_music"]
+[connection signal="pressed" from="PageSettings/Col/SettingsSfxBtn" to="." method="_toggle_sfx"]
+[connection signal="pressed" from="PageSettings/Col/ToggleFullscreenBtn" to="." method="_toggle_fullscreen"]
