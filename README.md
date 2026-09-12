@@ -78,6 +78,8 @@ That only downloads metadata + image URLs, not every card image. Images cache as
 
 Talrand is a scripted opponent: it plays lands, casts cheap instants/sorceries (and can Counterspell), and attacks. Difficulty is in **Menu**.
 
-## License / Magicthegathering
+## License
+
+The Aetherfold **code** in this repository is licensed under the [MIT License](LICENSE).
 
 Card names, rules text, and imagery are property of Wizards of the Coast. This is a fan project for personal play, not an official product.
