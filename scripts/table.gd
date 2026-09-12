@@ -95,7 +95,7 @@ func _ready() -> void:
 	else:
 		_hydrate_from_scryfall()
 	_build()
-	import_overlay = ImportOverlay.new()
+	import_overlay = preload("res://scenes/ui/import_overlay.tscn").instantiate()
 	add_child(import_overlay)
 	import_overlay.play_imported.connect(_on_play_imported)
 	_refresh()

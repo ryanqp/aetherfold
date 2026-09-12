@@ -44,7 +44,7 @@ func _ready() -> void:
 	_build_gallery()
 	_build_builder()
 	_build_settings()
-	import_overlay = ImportOverlay.new()
+	import_overlay = preload("res://scenes/ui/import_overlay.tscn").instantiate()
 	add_child(import_overlay)
 	import_overlay.auto_play = false
 	import_overlay.play_imported.connect(_on_imported_saved)
