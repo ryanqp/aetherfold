@@ -10,7 +10,7 @@ You do **not** need an IR file for:
 
 You **do** need an IR file if the card should draw, make tokens, counter, bounce, tap for non-basic mana, or fire a trigger.
 
-There are a handful of authored cards today (`opt.json`, `dragon_fodder.json`, `krenko_mob_boss.json`, …). This is how you add the next one.
+Authored IR lives in `engine/cards/ir/` (Opt, Dragon Fodder, Krenko, burn, rituals, Sol Ring, …). This is how you add the next one.
 
 ## 1. Create the file
 

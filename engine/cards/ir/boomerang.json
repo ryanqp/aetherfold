@@ -1,0 +1,13 @@
+{
+  "name": "Boomerang",
+  "abilities": [
+    {
+      "ability_id": "boomerang_spell",
+      "kind": "SPELL",
+      "costs": [{ "kind": "MANA", "mana": "{U}{U}" }],
+      "targets": [{ "id": 0, "kind": "PERMANENT", "count": 1 }],
+      "effects": [{ "kind": "MOVE_ZONE", "params": { "target": 0, "to": "HAND" } }],
+      "text": "Return target permanent to its owner's hand."
+    }
+  ]
+}

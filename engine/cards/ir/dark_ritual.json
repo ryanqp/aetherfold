@@ -1,0 +1,13 @@
+{
+  "name": "Dark Ritual",
+  "abilities": [
+    {
+      "ability_id": "dark_ritual_spell",
+      "kind": "SPELL",
+      "costs": [{ "kind": "MANA", "mana": "{B}" }],
+      "targets": [],
+      "effects": [{ "kind": "ADD_MANA", "params": { "mana": "{B}{B}{B}" } }],
+      "text": "Add {B}{B}{B}."
+    }
+  ]
+}

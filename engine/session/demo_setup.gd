@@ -253,8 +253,13 @@ static func _build_krenko() -> DeckList:
 	_add(list, "Conspicuous Snoop", 1)
 	_add(list, "Forgotten Cave", 1)
 	_add(list, "Pashalik Mons", 1)
+	_add(list, "Sol Ring", 1)
+	_add(list, "Shock", 1)
+	_add(list, "Lightning Bolt", 1)
+	_add(list, "Krenko's Command", 1)
+	_add(list, "Hordeling Outburst", 1)
 	_add(list, "Mountain", 20)
-	for i in 73:
+	for i in 68:
 		_add(list, "Goblin Volunteer %02d" % (i + 1), 1)
 	return list
 
@@ -267,8 +272,11 @@ static func _build_talrand() -> DeckList:
 	_add(list, "Unsummon", 1)
 	_add(list, "Counterspell", 1)
 	_add(list, "Cancel", 1)
+	_add(list, "Divination", 1)
+	_add(list, "Boomerang", 1)
+	_add(list, "Sol Ring", 1)
 	_add(list, "Island", 24)
-	for i in 70:
+	for i in 67:
 		_add(list, "Merfolk Volunteer %02d" % (i + 1), 1)
 	return list
 
@@ -300,6 +308,15 @@ static func _fill_catalog(cat: CatalogSource.Memory) -> void:
 	_add_spell(cat, "Unsummon", "{U}", 1, "Instant", "Return target creature to its owner's hand.", ["U"])
 	_add_spell(cat, "Counterspell", "{U}{U}", 2, "Instant", "Counter target spell.", ["U"])
 	_add_spell(cat, "Cancel", "{1}{U}{U}", 3, "Instant", "Counter target spell.", ["U"])
+	_add_spell(cat, "Sol Ring", "{1}", 1, "Artifact", "{T}: Add {C}{C}.", [])
+	_add_spell(cat, "Shock", "{R}", 1, "Instant", "Shock deals 2 damage to any target.", ["R"])
+	_add_spell(cat, "Lightning Bolt", "{R}", 1, "Instant", "Lightning Bolt deals 3 damage to any target.", ["R"])
+	_add_spell(cat, "Krenko's Command", "{1}{R}", 2, "Sorcery", "Create two 1/1 red Goblin creature tokens.", ["R"])
+	_add_spell(cat, "Hordeling Outburst", "{1}{R}{R}", 3, "Sorcery", "Create three 1/1 red Goblin creature tokens.", ["R"])
+	_add_spell(cat, "Divination", "{2}{U}", 3, "Sorcery", "Draw two cards.", ["U"])
+	_add_spell(cat, "Boomerang", "{U}{U}", 2, "Instant", "Return target permanent to its owner's hand.", ["U"])
+	_add_creature(cat, "Llanowar Elves", "{G}", 1, "Creature — Elf Druid", "{T}: Add {G}.", "1", "1", ["G"])
+	_add_spell(cat, "Dark Ritual", "{B}", 1, "Instant", "Add {B}{B}{B}.", ["B"])
 	for i in 73:
 		var n := "Goblin Volunteer %02d" % (i + 1)
 		_add_creature(cat, n, "{R}", 1, "Creature — Goblin", "", "1", "1", ["R"])

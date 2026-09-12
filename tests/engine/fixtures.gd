@@ -108,6 +108,27 @@ static func memory_catalog() -> CatalogSource:
 		colors = ["U"],
 		commander_legal = true,
 	})
+	cat.add(_spell_row("Sol Ring", "{1}", 1, "Artifact", "{T}: Add {C}{C}.", []))
+	cat.add(_spell_row("Divination", "{2}{U}", 3, "Sorcery", "Draw two cards.", ["U"]))
+	cat.add(_spell_row("Krenko's Command", "{1}{R}", 2, "Sorcery", "Create two 1/1 red Goblin creature tokens.", ["R"]))
+	cat.add(_spell_row("Hordeling Outburst", "{1}{R}{R}", 3, "Sorcery", "Create three 1/1 red Goblin creature tokens.", ["R"]))
+	cat.add(_spell_row("Dark Ritual", "{B}", 1, "Instant", "Add {B}{B}{B}.", ["B"]))
+	cat.add({
+		name = "Llanowar Elves",
+		oracle_id = "llanowar elves",
+		mana_cost = "{G}",
+		cmc = 1,
+		type_line = "Creature — Elf Druid",
+		oracle_text = "{T}: Add {G}.",
+		power = "1",
+		toughness = "1",
+		color_identity = ["G"],
+		colors = ["G"],
+		commander_legal = true,
+	})
+	cat.add(_spell_row("Boomerang", "{U}{U}", 2, "Instant", "Return target permanent to its owner's hand.", ["U"]))
+	cat.add(_spell_row("Shock", "{R}", 1, "Instant", "Shock deals 2 damage to any target.", ["R"]))
+	cat.add(_spell_row("Lightning Bolt", "{R}", 1, "Instant", "Lightning Bolt deals 3 damage to any target.", ["R"]))
 	cat.add({
 		name = "Krenko, Mob Boss",
 		oracle_id = "krenko_mob_boss",
@@ -208,6 +229,23 @@ static func pay_and_resolve_spell(engine: RulesEngine, player_id: int, object_id
 	engine.submit(pay_mana(player_id))
 	engine.submit(confirm_pay(player_id))
 	both_pass(engine)
+
+
+static func _spell_row(p_name: String, cost: String, cmc: int, type_line: String, oracle_text: String, ci: Array) -> Dictionary:
+	var colors: Array = []
+	for c in ci:
+		colors.append(c)
+	return {
+		name = p_name,
+		oracle_id = p_name.to_lower(),
+		mana_cost = cost,
+		cmc = cmc,
+		type_line = type_line,
+		oracle_text = oracle_text,
+		color_identity = ci,
+		colors = colors,
+		commander_legal = true,
+	}
 
 
 static func _land_row(p_name: String, type_line: String, oracle_text: String, ci: Array) -> Dictionary:

@@ -1,0 +1,12 @@
+{
+  "name": "Llanowar Elves",
+  "abilities": [
+    {
+      "ability_id": "llanowar_g",
+      "kind": "MANA",
+      "costs": [{ "kind": "TAP" }],
+      "effects": [{ "kind": "ADD_MANA", "params": { "mana": "{G}" } }],
+      "text": "{T}: Add {G}."
+    }
+  ]
+}

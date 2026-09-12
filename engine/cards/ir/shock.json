@@ -1,0 +1,13 @@
+{
+  "name": "Shock",
+  "abilities": [
+    {
+      "ability_id": "shock",
+      "kind": "SPELL",
+      "costs": [{ "kind": "MANA", "mana": "{R}" }],
+      "targets": [{ "id": 0, "kind": "ANY_TARGET", "count": 1 }],
+      "effects": [{ "kind": "DEAL_DAMAGE", "params": { "n": 2, "target": 0 } }],
+      "text": "Shock deals 2 damage to any target."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Sol Ring",
+  "abilities": [
+    {
+      "ability_id": "sol_ring_c",
+      "kind": "MANA",
+      "costs": [{ "kind": "TAP" }],
+      "effects": [{ "kind": "ADD_MANA", "params": { "mana": "{C}{C}" } }],
+      "text": "{T}: Add {C}{C}."
+    }
+  ]
+}

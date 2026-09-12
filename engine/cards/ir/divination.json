@@ -1,0 +1,13 @@
+{
+  "name": "Divination",
+  "abilities": [
+    {
+      "ability_id": "divination_draw",
+      "kind": "SPELL",
+      "costs": [{ "kind": "MANA", "mana": "{2}{U}" }],
+      "targets": [],
+      "effects": [{ "kind": "DRAW", "params": { "n": 2 } }],
+      "text": "Draw two cards."
+    }
+  ]
+}
