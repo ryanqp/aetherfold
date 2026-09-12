@@ -2,19 +2,22 @@ extends Node
 
 signal status_changed(text: String)
 signal peer_ready
+signal lobby_changed
 signal view_received
 signal match_begin
 
 const GAME_PORT := 27777
 const BEACON_PORT := 27778
 const BEACON_PREFIX := "AETHERFOLD|"
+const MAX_TOTAL_PLAYERS := 6
 
 var peer: ENetMultiplayerPeer
 var udp: PacketPeerUDP
 var code: String = ""
 var role: String = ""
 var last_status: String = "Offline"
-var connected_peer_id: int = 0
+var connected_peer_ids: Array[int] = []
+var guest_decks: Dictionary = {}
 var last_view = null
 var _beacon_acc := 0.0
 var _listen_ip: String = ""
@@ -38,7 +41,7 @@ func host_room(wanted_code: String = "") -> String:
 	if code == "":
 		code = generate_code()
 	peer = ENetMultiplayerPeer.new()
-	var err := peer.create_server(GAME_PORT, 1)
+	var err := peer.create_server(GAME_PORT, MAX_TOTAL_PLAYERS - 1)
 	if err != OK:
 		_set_status("Could not host on port %d." % GAME_PORT)
 		return ""
@@ -47,7 +50,7 @@ func host_room(wanted_code: String = "") -> String:
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	_start_beacon()
-	_set_status("Room %s — waiting for a player…" % code)
+	_set_status("Room %s — waiting for players (1/%d)…" % [code, MAX_TOTAL_PLAYERS])
 	return code
 
 
@@ -82,13 +85,24 @@ func leave() -> void:
 		multiplayer.peer_disconnected.disconnect(_on_peer_disconnected)
 	role = ""
 	code = ""
-	connected_peer_id = 0
+	connected_peer_ids.clear()
+	guest_decks.clear()
+	remote_deck_id = ""
 	last_view = null
 	_set_status("Offline")
 
 
 func is_connected_peer() -> bool:
-	return connected_peer_id != 0
+	return not connected_peer_ids.is_empty()
+
+
+## Total seated players, including the host itself.
+func player_count() -> int:
+	return 1 + connected_peer_ids.size()
+
+
+func max_players() -> int:
+	return MAX_TOTAL_PLAYERS
 
 
 func send_action(kind: String, payload: Dictionary = {}) -> void:
@@ -98,17 +112,24 @@ func send_action(kind: String, payload: Dictionary = {}) -> void:
 
 
 func broadcast_view(view) -> void:
-	if role != "host" or connected_peer_id == 0:
+	if role != "host" or connected_peer_ids.is_empty():
 		return
 	var plain := {}
 	if view != null and view.has_method("to_plain_for_remote"):
 		plain = view.to_plain_for_remote()
-	receive_view.rpc_id(connected_peer_id, plain)
+	# Every connected guest currently gets the same 2-seat (host vs.
+	# seat 1) view until #19/#20 add real per-seat routing for 3+
+	# networked players; guests past the first are spectating seat 1.
+	for pid in connected_peer_ids:
+		receive_view.rpc_id(pid, plain)
 
 
 @rpc("any_peer", "reliable")
 func announce_deck(deck_id: String) -> void:
-	remote_deck_id = deck_id
+	var sender := multiplayer.get_remote_sender_id()
+	guest_decks[sender] = deck_id
+	if remote_deck_id == "":
+		remote_deck_id = deck_id
 
 
 func start_match_rpc(player_deck: String, rival_deck: String) -> void:
@@ -176,20 +197,26 @@ func _connect_to(ip: String) -> void:
 
 
 func _on_peer_connected(id: int) -> void:
-	connected_peer_id = id
-	_set_status("Player joined room %s." % code)
+	if not connected_peer_ids.has(id):
+		connected_peer_ids.append(id)
+	_set_status("Room %s — %d/%d players joined." % [code, player_count(), MAX_TOTAL_PLAYERS])
 	peer_ready.emit()
+	lobby_changed.emit()
 
 
-func _on_peer_disconnected(_id: int) -> void:
-	connected_peer_id = 0
-	_set_status("Player left.")
+func _on_peer_disconnected(id: int) -> void:
+	connected_peer_ids.erase(id)
+	guest_decks.erase(id)
+	_set_status("A player left room %s (%d/%d)." % [code, player_count(), MAX_TOTAL_PLAYERS])
+	lobby_changed.emit()
 
 
 func _on_connected_ok() -> void:
-	connected_peer_id = 1
+	if not connected_peer_ids.has(1):
+		connected_peer_ids.append(1)
 	_set_status("Joined room %s." % code)
 	peer_ready.emit()
+	lobby_changed.emit()
 
 
 func _on_connection_failed() -> void:
@@ -198,7 +225,8 @@ func _on_connection_failed() -> void:
 
 func _on_server_gone() -> void:
 	_set_status("Host disconnected.")
-	connected_peer_id = 0
+	connected_peer_ids.clear()
+	lobby_changed.emit()
 
 
 func _set_status(text: String) -> void:
@@ -209,6 +237,11 @@ func _set_status(text: String) -> void:
 @rpc("any_peer", "reliable")
 func receive_action(kind: String, payload: Dictionary) -> void:
 	if role != "host":
+		return
+	# Only the first guest occupies an active seat until #19 adds
+	# real per-seat routing for 3+ networked players; ignore actions
+	# from anyone else so a spectating guest can't drive seat 1.
+	if connected_peer_ids.is_empty() or multiplayer.get_remote_sender_id() != connected_peer_ids[0]:
 		return
 	var table := get_tree().get_first_node_in_group("aetherfold_table")
 	if table != null and table.has_method("apply_net_action"):

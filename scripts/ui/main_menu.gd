@@ -16,6 +16,7 @@ var vs_diff: int = 1
 var mp_code_edit: LineEdit
 var mp_ip_edit: LineEdit
 var mp_status: Label
+var mp_roster: Label
 var gallery_grid: GridContainer
 var import_overlay: ImportOverlay
 var builder_cmd: LineEdit
@@ -52,6 +53,7 @@ func _ready() -> void:
 	if net and not net.status_changed.is_connected(_on_net_status):
 		net.status_changed.connect(_on_net_status)
 		net.peer_ready.connect(_on_peer_ready)
+		net.lobby_changed.connect(_on_lobby_changed)
 		net.match_begin.connect(_start_table)
 	_show("hub")
 
@@ -299,6 +301,7 @@ func _build_mp() -> void:
 	row.add_child(_btn("Join room", _on_mp_join, 200))
 	c.add_child(row)
 	mp_status = _sub(c, "Not connected.")
+	mp_roster = _sub(c, "")
 	_back_row(c, _btn("Start Match", _on_mp_start, 200, true))
 
 
@@ -335,7 +338,7 @@ func _on_mp_start() -> void:
 		mp_status.text = "Only the host can start the match."
 		return
 	if not net.is_connected_peer():
-		mp_status.text = "Wait for the other player to join."
+		mp_status.text = "Wait for at least one player to join."
 		return
 	app.player_deck_id = vs_player_id
 	var guest_deck: String = str(net.remote_deck_id)
@@ -356,7 +359,18 @@ func _on_peer_ready() -> void:
 	if net and net.role == "client":
 		net.announce_deck.rpc_id(1, vs_player_id)
 	if mp_status:
-		mp_status.text = "Connected. Host can start the match."
+		mp_status.text = "Connected. Host can start whenever ready."
+	_on_lobby_changed()
+
+
+func _on_lobby_changed() -> void:
+	var net := _net()
+	if net == null or mp_roster == null:
+		return
+	if net.role == "host":
+		mp_roster.text = "Players: %d/%d (host can start with 2+)" % [net.player_count(), net.max_players()]
+	elif net.role == "client":
+		mp_roster.text = "Waiting on the host to start…"
 
 
 func _build_library() -> void:
