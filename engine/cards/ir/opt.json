@@ -1,0 +1,19 @@
+{
+  "name": "Opt",
+  "abilities": [
+    {
+      "ability_id": "opt_draw",
+      "kind": "SPELL",
+      "costs": [{ "kind": "MANA", "mana": "{U}" }],
+      "targets": [],
+      "effects": [{ "kind": "DRAW", "params": { "n": 1 } }],
+      "text": "Draw a card."
+    },
+    {
+      "ability_id": "opt_scry",
+      "kind": "SPELL",
+      "unparsed": true,
+      "text": "Scry 1."
+    }
+  ]
+}

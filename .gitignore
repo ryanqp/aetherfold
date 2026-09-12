@@ -1,0 +1,29 @@
+# Godot 4
+.godot/
+.import/
+export.cfg
+export_presets.cfg
+*.translation
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+*~
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Local Scryfall dumps (too large; fetch with tools/fetch_scryfall.py)
+/scryfall_data/
+
+# Exported builds
+/build/
+/exports/
+*.exe
+*.pck
+*.zip

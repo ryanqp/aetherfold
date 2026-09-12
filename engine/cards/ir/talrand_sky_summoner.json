@@ -1,0 +1,21 @@
+{
+  "name": "Talrand, Sky Summoner",
+  "abilities": [
+    {
+      "ability_id": "talrand_drake",
+      "kind": "TRIGGERED",
+      "trigger": {
+        "on": "SPELL_CAST",
+        "filter": {
+          "controller": "SOURCE_CONTROLLER",
+          "types": ["instant", "sorcery"]
+        }
+      },
+      "effects": [{
+        "kind": "CREATE_TOKEN",
+        "params": { "token": "drake_2_2_u_flying", "count": 1 }
+      }],
+      "text": "Whenever you cast an instant or sorcery spell, create a 2/2 blue Drake creature token with flying."
+    }
+  ]
+}

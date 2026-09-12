@@ -1,0 +1,13 @@
+{
+  "name": "Unsummon",
+  "abilities": [
+    {
+      "ability_id": "unsummon",
+      "kind": "SPELL",
+      "costs": [{ "kind": "MANA", "mana": "{U}" }],
+      "targets": [{ "id": 0, "kind": "PERMANENT", "count": 1, "query": { "type": "creature" } }],
+      "effects": [{ "kind": "MOVE_ZONE", "params": { "target": 0, "to": "HAND" } }],
+      "text": "Return target creature to its owner's hand."
+    }
+  ]
+}

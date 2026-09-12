@@ -1,0 +1,27 @@
+{
+  "name": "Krenko, Mob Boss",
+  "abilities": [
+    {
+      "ability_id": "krenko_tap",
+      "kind": "ACTIVATED",
+      "costs": [{ "kind": "TAP" }],
+      "targets": [],
+      "restrictions": [],
+      "text": "{T}: Create X 1/1 red Goblin creature tokens, where X is the number of Goblins you control.",
+      "effects": [{
+        "kind": "CREATE_TOKEN",
+        "params": {
+          "token": "goblin_1_1_r",
+          "count": {
+            "query": {
+              "zone": "BATTLEFIELD",
+              "controller": "SOURCE_CONTROLLER",
+              "type": "creature",
+              "subtype": "Goblin"
+            }
+          }
+        }
+      }]
+    }
+  ]
+}

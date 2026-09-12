@@ -1,0 +1,13 @@
+{
+  "name": "Dragon Fodder",
+  "abilities": [
+    {
+      "ability_id": "dragon_fodder_spell",
+      "kind": "SPELL",
+      "costs": [{ "kind": "MANA", "mana": "{1}{R}" }],
+      "targets": [],
+      "effects": [{ "kind": "CREATE_TOKEN", "params": { "token": "goblin_1_1_r", "count": 2 } }],
+      "text": "Create two 1/1 red Goblin creature tokens."
+    }
+  ]
+}

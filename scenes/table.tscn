@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://ct1pmjrt1wovu"]
+
+[ext_resource type="Script" uid="uid://bptet3tf4sv76" path="res://scripts/table.gd" id="1_02ppr"]
+
+[node name="Table" type="Control" unique_id=986079987]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_02ppr")
