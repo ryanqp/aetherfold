@@ -16,6 +16,8 @@ var krenko_list: DeckList
 var talrand_list: DeckList
 var human_commanders: PackedStringArray = PackedStringArray()
 var human_name: String = "Krenko"
+var rival_commanders: PackedStringArray = PackedStringArray()
+var rival_name: String = "Talrand"
 
 
 static func memory_db() -> CardDatabase:
@@ -153,10 +155,13 @@ func apply(engine: RulesEngine) -> void:
 	var cmds0 := human_commanders
 	if cmds0.is_empty():
 		cmds0 = PackedStringArray([KRENKO])
+	var cmds1 := rival_commanders
+	if cmds1.is_empty():
+		cmds1 = PackedStringArray([TALRAND])
 	_deal(engine, 0, krenko_list, cmds0)
-	_deal(engine, 1, talrand_list, PackedStringArray([TALRAND]))
+	_deal(engine, 1, talrand_list, cmds1)
 	engine.state.players[0].name = human_name if human_name != "" else "Krenko"
-	engine.state.players[1].name = "Talrand"
+	engine.state.players[1].name = rival_name if rival_name != "" else "Talrand"
 
 
 static func imported_vs_talrand(deck: NormalizedDeck, rows: Dictionary) -> DemoSetup:

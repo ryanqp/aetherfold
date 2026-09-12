@@ -64,6 +64,28 @@ func save(deck: NormalizedDeck, rows: Dictionary, validation: Dictionary, replac
 	return path
 
 
+func rename(path: String, new_name: String) -> bool:
+	var rec: Dictionary = load_path(path)
+	if rec.is_empty():
+		return false
+	var nm := DeckText.sanitize_name(new_name)
+	if nm == "":
+		return false
+	rec["name"] = nm
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		return false
+	f.store_string(JSON.stringify(rec, "\t"))
+	f.close()
+	return true
+
+
+func delete_path(path: String) -> bool:
+	if path.strip_edges() == "" or not FileAccess.file_exists(path):
+		return false
+	return DirAccess.remove_absolute(path) == OK
+
+
 func load_path(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {}

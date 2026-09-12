@@ -11,13 +11,15 @@ config_version=5
 [application]
 
 config/name="Aetherfold"
-run/main_scene="res://scenes/table.tscn"
+run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
 [autoload]
 
 ScryfallCatalog="*res://scripts/scryfall_catalog.gd"
+AppState="*res://scripts/app_state.gd"
+GameNet="*res://scripts/net/game_net.gd"
 _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 [display]

@@ -27,9 +27,19 @@ Or on GitHub: **Code → Download ZIP**, then unzip.
 1. Launch Godot 4.7.
 2. **Import** → select the `aetherfold` folder (the one with `project.godot`).
 3. Open the project.
-4. Press **Play** (F5). The main scene is `scenes/table.tscn`.
+4. Press **Play** (F5). The main scene is `scenes/main_menu.tscn`.
 
 ### 4. How to play
+
+From the main menu:
+
+- **Vs. AI** — pick your deck, the bot’s deck, and difficulty, then Start Match.
+- **Multiplayer** — create or join a 6-character room code (LAN). Host starts the match.
+- **Library Builder** — import a URL/list, build a deck, or browse the gallery.
+- **Menu** — audio / fullscreen.
+- **Exit Game** — quits.
+
+At the table:
 
 - **Keep** or **Mulligan** your opening 7.
 - Click a card in hand to play a land or cast it.

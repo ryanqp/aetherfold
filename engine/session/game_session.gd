@@ -24,6 +24,8 @@ var kept: Dictionary = {}
 var debug_enabled: bool = false
 var debug_lines: PackedStringArray = PackedStringArray()
 var last_seed: int = 1
+var skip_ai: bool = false
+var you_seat: int = 0
 
 
 func dbg(msg: String) -> void:
@@ -79,7 +81,7 @@ func start_with_demo(demo: DemoSetup, seed: int = -1) -> void:
 	dbg("Opening draw: 7")
 	dbg("Library remaining: %d" % engine.library_size(0))
 	dbg("Rival library remaining: %d" % engine.library_size(1))
-	kept[1] = true
+	kept[1] = not skip_ai
 	match_start = MatchStart.MULLIGAN_DECISION
 	rebuild_view()
 
@@ -578,9 +580,12 @@ func _ai_has_creature_target(_player_id: int) -> bool:
 func end_you_turn() -> void:
 	if not can_play():
 		return
-	pass_until_active(1)
+	var other := 1 if you_seat == 0 else 0
+	pass_until_active(other)
 	if engine.is_over():
 		return
-	ai_take_turn(1)
-	pass_until_active(0)
+	if skip_ai:
+		return
+	ai_take_turn(other)
+	pass_until_active(you_seat)
 

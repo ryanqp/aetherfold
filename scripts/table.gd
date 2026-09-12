@@ -1,7 +1,7 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 29
+const BUILD := 30
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
 const RivalAI := preload("res://scripts/rival_ai.gd")
@@ -84,10 +84,14 @@ func _ready() -> void:
 	var cat := _catalog()
 	if cat and cat.has_signal("art_updated") and not cat.art_updated.is_connected(_on_art_updated):
 		cat.art_updated.connect(_on_art_updated)
+	var net := get_node_or_null("/root/GameNet")
+	if net and net.has_signal("view_received") and not net.view_received.is_connected(_refresh):
+		net.view_received.connect(_refresh)
+	add_to_group("aetherfold_table")
 	if USE_ENGINE:
 		session = GameSession.new()
 		session.debug_enabled = DEBUG_MATCH
-		session.start_table_demo()
+		_start_from_app_state()
 	else:
 		_hydrate_from_scryfall()
 	_build()
@@ -105,9 +109,67 @@ func _catalog() -> Node:
 
 
 func _board():
+	var app := get_node_or_null("/root/AppState")
+	if app != null and app.is_mp_client():
+		var net := get_node_or_null("/root/GameNet")
+		if net != null and net.last_view != null:
+			return net.last_view
 	if USE_ENGINE and session != null and session.view != null:
 		return session.view
 	return state
+
+
+func _start_from_app_state() -> void:
+	var app := get_node_or_null("/root/AppState")
+	if session == null:
+		session = GameSession.new()
+		session.debug_enabled = DEBUG_MATCH
+	if app != null:
+		session.difficulty = int(app.difficulty)
+		session.skip_ai = bool(app.skip_ai)
+		session.you_seat = int(app.you_seat)
+		if app.is_mp_client():
+			return
+		var demo = app.make_demo()
+		session.start_with_demo(demo)
+		return
+	session.start_table_demo()
+
+
+func _on_main_menu() -> void:
+	var net := get_node_or_null("/root/GameNet")
+	if net and net.has_method("leave"):
+		net.leave()
+	var app := get_node_or_null("/root/AppState")
+	if app:
+		app.reset_match_flags()
+	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+
+
+func apply_net_action(kind: String, payload: Dictionary, player_id: int) -> void:
+	if session == null:
+		return
+	match kind:
+		"keep":
+			session.keep_hand(player_id)
+		"mulligan":
+			session.take_mulligan(player_id)
+		"pass":
+			session.pass_once()
+		"end_turn":
+			session.end_you_turn()
+		"attack":
+			session.attack_all()
+		"play":
+			var oid := int(payload.get("id", 0))
+			var zone := str(payload.get("zone", "hand"))
+			if zone == "battlefield":
+				session.activate_auto(oid)
+			elif str(payload.get("kind", "")) == "land":
+				session.play_land(oid)
+			else:
+				session.cast_auto(player_id, oid)
+	_refresh()
 
 func _set_status(text: String) -> void:
 	if log_label:
@@ -222,6 +284,7 @@ func _build_header() -> Control:
 	row.add_child(sfx_button)
 	row.add_child(_header_button("Dice", Color(0.16, 0.17, 0.18), INK, _on_dice, 72))
 	row.add_child(_header_button("Menu", Color(0.16, 0.17, 0.18), INK, _on_menu, 72))
+	row.add_child(_header_button("Main menu", Color(0.16, 0.17, 0.18), INK, _on_main_menu, 100))
 	bar.add_child(row)
 	return bar
 
@@ -783,6 +846,10 @@ func _refresh() -> void:
 	_paint_match_buttons()
 	_refresh_mulligan()
 	_refresh_debug()
+	var app := get_node_or_null("/root/AppState")
+	var net := get_node_or_null("/root/GameNet")
+	if app != null and app.mp_role == "host" and net != null and session != null and session.view != null:
+		net.broadcast_view(session.view)
 	if USE_ENGINE and session != null and session.view != null:
 		if session.engine != null and session.engine.is_over():
 			_set_status(str(session.view.prompt))
@@ -900,6 +967,10 @@ func _on_hand_card(card_id: String) -> void:
 
 
 func _engine_play_card(card_id: String) -> void:
+	var b = _board()
+	var before: Dictionary = b.find_card(card_id) if b != null else {}
+	if _client_net("play", {id = int(card_id), zone = str(before.get("zone", "hand")), kind = str(before.get("kind", ""))}):
+		return
 	if session == null or session.view == null:
 		return
 	if session.match_start == GameSession.MatchStart.PUT_BACK:
@@ -909,7 +980,8 @@ func _engine_play_card(card_id: String) -> void:
 	if not session.can_play():
 		_set_status("Keep or Mulligan first.")
 		return
-	var before: Dictionary = session.view.find_card(card_id)
+	if before.is_empty():
+		before = session.view.find_card(card_id)
 	if before.is_empty():
 		_set_status("Nothing selected.")
 		return
@@ -973,6 +1045,8 @@ func _paint_match_buttons() -> void:
 
 
 func _on_attack() -> void:
+	if _client_net("attack"):
+		return
 	if not USE_ENGINE or session == null:
 		return
 	if not session.can_play():
@@ -988,6 +1062,8 @@ func _on_attack() -> void:
 
 
 func _on_next_stage() -> void:
+	if _client_net("pass"):
+		return
 	if USE_ENGINE:
 		if session == null or not session.can_play():
 			_set_status("Keep or Mulligan first.")
@@ -1003,7 +1079,20 @@ func _on_next_stage() -> void:
 	_refresh()
 	_set_status("Advanced to %s." % state.phase_name())
 
+func _client_net(kind: String, payload: Dictionary = {}) -> bool:
+
+	var app := get_node_or_null("/root/AppState")
+	if app != null and app.is_mp_client():
+		var net := get_node_or_null("/root/GameNet")
+		if net:
+			net.send_action(kind, payload)
+		return true
+	return false
+
+
 func _on_end_turn() -> void:
+	if _client_net("end_turn"):
+		return
 	if USE_ENGINE:
 		if session == null:
 			return
@@ -1348,6 +1437,7 @@ func _build_mulligan_overlay() -> void:
 	mulligan_overlay = ColorRect.new()
 	mulligan_overlay.color = Color(0.02, 0.03, 0.04, 0.88)
 	mulligan_overlay.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	mulligan_overlay.offset_top = 44
 	mulligan_overlay.z_index = 85
 	mulligan_overlay.visible = false
 	var center := CenterContainer.new()
@@ -1494,18 +1584,27 @@ func _make_card_face(card: Dictionary, sz: Vector2) -> Control:
 
 
 func _refresh_mulligan() -> void:
-	if mulligan_overlay == null or not USE_ENGINE or session == null:
-		if mulligan_overlay:
-			mulligan_overlay.visible = false
+	if mulligan_overlay == null:
 		return
-	var st: int = session.match_start
+	var board = _board()
+	var st := -1
+	if USE_ENGINE and session != null:
+		st = session.match_start
+	elif board is TableView:
+		st = int(board.match_start)
+	if st < 0:
+		mulligan_overlay.visible = false
+		return
 	var show := st == GameSession.MatchStart.MULLIGAN_DECISION or st == GameSession.MatchStart.PUT_BACK
 	mulligan_overlay.visible = show
 	if not show:
 		return
-	var hand: Array = session.view.you.get("hand", [])
-	var lib_n := int(session.view.you.get("library", 0))
-	var mcount: int = session.engine.state.players[0].mulligan_count
+	var you: Dictionary = board.you if board != null else {}
+	var hand: Array = you.get("hand", [])
+	var lib_n := int(you.get("library", 0))
+	var mcount := 0
+	if session != null and session.engine != null:
+		mcount = session.engine.state.players[session.you_seat].mulligan_count
 	if st == GameSession.MatchStart.PUT_BACK:
 		mulligan_title.text = "Put %d card(s) on the bottom" % session.put_back_remaining
 		mulligan_sub.text = "Click a card. Library %d. Mulligans: %d" % [lib_n, mcount]
@@ -1556,6 +1655,8 @@ func _on_mulligan_card(card_id: String) -> void:
 
 
 func _on_keep_hand() -> void:
+	if _client_net("keep"):
+		return
 	if session == null:
 		return
 	session.keep_hand(0)
@@ -1567,6 +1668,8 @@ func _on_keep_hand() -> void:
 
 
 func _on_mulligan_hand() -> void:
+	if _client_net("mulligan"):
+		return
 	if session == null:
 		return
 	session.take_mulligan(0)

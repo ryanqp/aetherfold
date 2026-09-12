@@ -3,6 +3,7 @@ extends ColorRect
 
 signal cancelled
 signal play_imported(deck: NormalizedDeck, rows: Dictionary)
+signal deck_saved(deck: NormalizedDeck, rows: Dictionary)
 
 const GOLD := Color(0.93, 0.78, 0.28)
 const INK := Color(0.93, 0.93, 0.90)
@@ -23,6 +24,7 @@ var preview_row: HBoxContainer
 var last_result: Dictionary = {}
 var existing_path: String = ""
 var busy := false
+var auto_play := true
 
 
 func _ready() -> void:
@@ -185,7 +187,9 @@ func _commit(replace_path: String) -> void:
 	var store := DeckStore.new()
 	store.save(deck, rows, last_result.get("validation", {}), replace_path)
 	visible = false
-	play_imported.emit(deck, rows)
+	deck_saved.emit(deck, rows)
+	if auto_play:
+		play_imported.emit(deck, rows)
 
 
 func _show_result(result: Dictionary) -> void:

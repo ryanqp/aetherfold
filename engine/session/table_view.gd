@@ -21,6 +21,7 @@ var step_name: String = "Main"
 var game_over: bool = false
 var winners: Array = []
 var prompt: String = ""
+var match_start: int = 0
 
 
 func header_text() -> String:
@@ -69,9 +70,12 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 	v.step_name = _step_label(st.step)
 	v.game_over = engine.is_over()
 	v.winners = st.winners.duplicate() if st.winners != null else []
-	v.your_priority = int(st.awaiting.get("player_id", -1)) == 0
-	v.attacker_count = engine.legal_attacker_ids(0).size()
-	v.can_attack = v.attacker_count > 0 and st.active_player_id == 0 and (
+	var seat := 0
+	if session != null:
+		seat = int(session.you_seat)
+	v.your_priority = int(st.awaiting.get("player_id", -1)) == seat
+	v.attacker_count = engine.legal_attacker_ids(seat).size()
+	v.can_attack = v.attacker_count > 0 and st.active_player_id == seat and (
 		st.step == EngineEnums.Step.DECLARE_ATTACKERS or st.phase == EngineEnums.Phase.MAIN_1
 	)
 	if session != null:
@@ -79,10 +83,56 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 		v.difficulty = session.difficulty
 		v.you_drew_this_turn = not session.pending_draw_anim
 		v.prompt = session.prompt_text()
+		v.match_start = session.match_start
 	var cat := _catalog()
-	v.you = _player_dict(engine, 0, cat)
-	v.rival = _player_dict(engine, 1, cat)
+	var other := 1 if seat == 0 else 0
+	v.you = _player_dict(engine, seat, cat)
+	v.rival = _player_dict(engine, other, cat)
 	v.stack = _stack_cards(engine, cat)
+	return v
+
+
+func to_plain() -> Dictionary:
+	return {
+		you = you,
+		rival = rival,
+		turn = turn,
+		active_is_you = active_is_you,
+		phase_name_str = phase_name_str,
+		selected_id = selected_id,
+		difficulty = difficulty,
+		you_drew_this_turn = you_drew_this_turn,
+		stack = stack,
+		your_priority = your_priority,
+		can_attack = can_attack,
+		attacker_count = attacker_count,
+		step_name = step_name,
+		game_over = game_over,
+		winners = winners,
+		prompt = prompt,
+		match_start = match_start,
+	}
+
+
+static func from_plain(d: Dictionary) -> TableView:
+	var v := TableView.new()
+	v.you = d.get("you", {})
+	v.rival = d.get("rival", {})
+	v.turn = int(d.get("turn", 1))
+	v.active_is_you = bool(d.get("active_is_you", true))
+	v.phase_name_str = str(d.get("phase_name_str", "Main"))
+	v.selected_id = str(d.get("selected_id", ""))
+	v.difficulty = int(d.get("difficulty", 1))
+	v.you_drew_this_turn = bool(d.get("you_drew_this_turn", true))
+	v.stack = d.get("stack", [])
+	v.your_priority = bool(d.get("your_priority", true))
+	v.can_attack = bool(d.get("can_attack", false))
+	v.attacker_count = int(d.get("attacker_count", 0))
+	v.step_name = str(d.get("step_name", "Main"))
+	v.game_over = bool(d.get("game_over", false))
+	v.winners = d.get("winners", [])
+	v.prompt = str(d.get("prompt", ""))
+	v.match_start = int(d.get("match_start", 0))
 	return v
 
 
