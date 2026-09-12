@@ -99,6 +99,8 @@ To give a card real rules (draw, tokens, counters, …) add JSON under `engine/c
 
 **Live rules live in `engine/`, not `scripts/match_state.gd`.** What to edit: [docs/migration-status.md](docs/migration-status.md).
 
+Player-count / 1v1 vs N-player notes (before bigger multiplayer): [docs/player-count-audit.md](docs/player-count-audit.md).
+
 ## Requirements
 
 - Godot **4.7** (project feature tag is `4.7`)
