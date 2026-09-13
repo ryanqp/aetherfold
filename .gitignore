@@ -27,7 +27,3 @@ venv/
 *.exe
 *.pck
 *.zip
-
-# Claude Code session artifacts (never commit these)
-.claude/
-CLAUDE.md
