@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Aetherfold"
 run/main_scene="res://scenes/main_menu.tscn"
-config/features=PackedStringArray("4.7", "GL Compatibility")
+config/features=PackedStringArray("4.8", "GL Compatibility")
 config/icon="res://icon.svg"
 
 [autoload]
@@ -28,6 +28,10 @@ window/size/viewport_width=1600
 window/size/viewport_height=900
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+
+[dotnet]
+
+project/assembly_name="Aetherfold"
 
 [editor_plugins]
 
