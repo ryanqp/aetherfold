@@ -1,10 +1,1205 @@
-[gd_scene format=3 uid="uid://ct1pmjrt1wovu"]
+[gd_scene load_steps=23 format=3 uid="uid://ct1pmjrt1wovu"]
 
 [ext_resource type="Script" uid="uid://bptet3tf4sv76" path="res://scripts/table.gd" id="1_02ppr"]
 
-[node name="Table" type="Control" unique_id=986079987]
+[sub_resource type="StyleBoxFlat" id="SB_header_panel"]
+bg_color = Color(0.07, 0.08, 0.09, 1)
+content_margin_left = 14.0
+content_margin_top = 6.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="SB_gray_btn"]
+bg_color = Color(0.16, 0.17, 0.18, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 10.0
+content_margin_right = 10.0
+
+[sub_resource type="StyleBoxFlat" id="SB_pass_btn"]
+bg_color = Color(0.93, 0.78, 0.28, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 10.0
+content_margin_right = 10.0
+
+[sub_resource type="StyleBoxFlat" id="SB_attack_btn"]
+bg_color = Color(0.62, 0.16, 0.12, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 10.0
+content_margin_right = 10.0
+
+[sub_resource type="StyleBoxFlat" id="SB_rival_field"]
+bg_color = Color(0.099, 0.231, 0.264, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.303, 0.507, 0.558, 1)
+
+[sub_resource type="StyleBoxFlat" id="SB_you_field"]
+bg_color = Color(0.231, 0.099, 0.044, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.507, 0.303, 0.218, 1)
+
+[sub_resource type="StyleBoxFlat" id="SB_hand_panel"]
+bg_color = Color(0.04, 0.08, 0.05, 1)
+content_margin_left = 8.0
+content_margin_top = 4.0
+content_margin_right = 8.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="SB_sidebar_panel"]
+bg_color = Color(0.08, 0.09, 0.09, 1)
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="SB_pile_panel"]
+bg_color = Color(0.1, 0.11, 0.12, 0.94)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="SB_menu_panel"]
+bg_color = Color(0.09, 0.1, 0.11, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.744, 0.624, 0.224, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+content_margin_left = 24.0
+content_margin_top = 18.0
+content_margin_right = 24.0
+content_margin_bottom = 18.0
+
+[sub_resource type="StyleBoxFlat" id="SB_dice_panel"]
+bg_color = Color(0.09, 0.1, 0.11, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.744, 0.624, 0.224, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+content_margin_left = 22.0
+content_margin_top = 16.0
+content_margin_right = 22.0
+content_margin_bottom = 16.0
+
+[sub_resource type="StyleBoxFlat" id="SB_mulligan_panel"]
+bg_color = Color(0.08, 0.09, 0.1, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.93, 0.78, 0.28, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+content_margin_left = 18.0
+content_margin_top = 14.0
+content_margin_right = 18.0
+content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="SB_deck_btn"]
+bg_color = Color(0.38, 0.12, 0.08, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.93, 0.78, 0.28, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.55)
+shadow_size = 6
+shadow_offset = Vector2(3, 4)
+
+[sub_resource type="StyleBoxFlat" id="SB_keep_btn"]
+bg_color = Color(0.162, 0.702, 0.288, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="SB_mulligan_btn"]
+bg_color = Color(0.42, 0.18, 0.08, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="SB_die_d4"]
+bg_color = Color(0.25, 0.55, 0.48, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.35)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="SB_die_d6"]
+bg_color = Color(0.85, 0.82, 0.72, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.35)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="SB_die_d8"]
+bg_color = Color(0.72, 0.22, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.35)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="SB_die_d10"]
+bg_color = Color(0.12, 0.12, 0.14, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.35)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="SB_die_d12"]
+bg_color = Color(0.42, 0.28, 0.62, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.35)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="SB_die_d20"]
+bg_color = Color(0.82, 0.58, 0.16, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.35)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="Table" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+clip_contents = true
 script = ExtResource("1_02ppr")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.05, 0.06, 0.06, 1)
+
+[node name="Root" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+clip_contents = true
+
+[node name="HeaderBar" type="PanelContainer" parent="Root"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("SB_header_panel")
+
+[node name="Row" type="HBoxContainer" parent="Root/HeaderBar"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HeaderLabel" type="Label" parent="Root/HeaderBar/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+theme_override_font_sizes/font_size = 18
+
+[node name="PassBtn" type="Button" parent="Root/HeaderBar/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(88, 32)
+theme_override_styles/normal = SubResource("SB_pass_btn")
+theme_override_colors/font_color = Color(0.12, 0.1, 0.04, 1)
+text = "Pass"
+
+[node name="AttackBtn" type="Button" parent="Root/HeaderBar/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(96, 32)
+theme_override_styles/normal = SubResource("SB_attack_btn")
+theme_override_colors/font_color = Color(0.98, 0.94, 0.88, 1)
+text = "Attack"
+
+[node name="EndTurnBtn" type="Button" parent="Root/HeaderBar/Row"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 32)
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "End turn"
+
+[node name="MuteBtn" type="Button" parent="Root/HeaderBar/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(72, 32)
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Mute"
+
+[node name="SfxBtn" type="Button" parent="Root/HeaderBar/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(72, 32)
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "SFX"
+
+[node name="DiceBtn" type="Button" parent="Root/HeaderBar/Row"]
+layout_mode = 2
+custom_minimum_size = Vector2(72, 32)
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Dice"
+
+[node name="MenuBtn" type="Button" parent="Root/HeaderBar/Row"]
+layout_mode = 2
+custom_minimum_size = Vector2(72, 32)
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Menu"
+
+[node name="MainMenuBtn" type="Button" parent="Root/HeaderBar/Row"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 32)
+theme_override_styles/normal = SubResource("SB_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Main menu"
+
+[node name="Body" type="HBoxContainer" parent="Root"]
+layout_mode = 2
+size_flags_vertical = 3
+clip_contents = true
+theme_override_constants/separation = 0
+
+[node name="Board" type="VBoxContainer" parent="Root/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+clip_contents = true
+theme_override_constants/separation = 2
+
+[node name="RivalField" type="PanelContainer" parent="Root/Body/Board"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("SB_rival_field")
+
+[node name="ZonesCol" type="VBoxContainer" parent="Root/Body/Board/RivalField"]
+layout_mode = 2
+clip_contents = true
+
+[node name="ZoneLands" type="HBoxContainer" parent="Root/Body/Board/RivalField/ZonesCol"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 84)
+
+[node name="ZoneLabel" type="Label" parent="Root/Body/Board/RivalField/ZonesCol/ZoneLands"]
+layout_mode = 2
+custom_minimum_size = Vector2(78, 0)
+theme_override_colors/font_color = Color(1, 1, 1, 0.55)
+theme_override_font_sizes/font_size = 11
+text = "Lands"
+
+[node name="ZoneScroll" type="ScrollContainer" parent="Root/Body/Board/RivalField/ZonesCol/ZoneLands"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+vertical_scroll_mode = 0
+horizontal_scroll_mode = 3
+
+[node name="RivalLandsCards" type="HBoxContainer" parent="Root/Body/Board/RivalField/ZonesCol/ZoneLands/ZoneScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 76)
+theme_override_constants/separation = 5
+
+[node name="ZoneNonCreature" type="HBoxContainer" parent="Root/Body/Board/RivalField/ZonesCol"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 84)
+
+[node name="ZoneLabel" type="Label" parent="Root/Body/Board/RivalField/ZonesCol/ZoneNonCreature"]
+layout_mode = 2
+custom_minimum_size = Vector2(78, 0)
+theme_override_colors/font_color = Color(1, 1, 1, 0.55)
+theme_override_font_sizes/font_size = 11
+text = "Non-creature permanents"
+
+[node name="ZoneScroll" type="ScrollContainer" parent="Root/Body/Board/RivalField/ZonesCol/ZoneNonCreature"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+vertical_scroll_mode = 0
+horizontal_scroll_mode = 3
+
+[node name="RivalNoncreaturesCards" type="HBoxContainer" parent="Root/Body/Board/RivalField/ZonesCol/ZoneNonCreature/ZoneScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 76)
+theme_override_constants/separation = 5
+
+[node name="ZoneCreatures" type="HBoxContainer" parent="Root/Body/Board/RivalField/ZonesCol"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 84)
+
+[node name="ZoneLabel" type="Label" parent="Root/Body/Board/RivalField/ZonesCol/ZoneCreatures"]
+layout_mode = 2
+custom_minimum_size = Vector2(78, 0)
+theme_override_colors/font_color = Color(1, 1, 1, 0.55)
+theme_override_font_sizes/font_size = 11
+text = "Creatures"
+
+[node name="ZoneScroll" type="ScrollContainer" parent="Root/Body/Board/RivalField/ZonesCol/ZoneCreatures"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+vertical_scroll_mode = 0
+horizontal_scroll_mode = 3
+
+[node name="RivalCreaturesCards" type="HBoxContainer" parent="Root/Body/Board/RivalField/ZonesCol/ZoneCreatures/ZoneScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 76)
+theme_override_constants/separation = 5
+
+[node name="YouField" type="PanelContainer" parent="Root/Body/Board"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("SB_you_field")
+
+[node name="ZonesCol" type="VBoxContainer" parent="Root/Body/Board/YouField"]
+layout_mode = 2
+clip_contents = true
+
+[node name="ZoneCreatures" type="HBoxContainer" parent="Root/Body/Board/YouField/ZonesCol"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 84)
+
+[node name="ZoneLabel" type="Label" parent="Root/Body/Board/YouField/ZonesCol/ZoneCreatures"]
+layout_mode = 2
+custom_minimum_size = Vector2(78, 0)
+theme_override_colors/font_color = Color(1, 1, 1, 0.55)
+theme_override_font_sizes/font_size = 11
+text = "Creatures"
+
+[node name="ZoneScroll" type="ScrollContainer" parent="Root/Body/Board/YouField/ZonesCol/ZoneCreatures"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+vertical_scroll_mode = 0
+horizontal_scroll_mode = 3
+
+[node name="YouCreaturesCards" type="HBoxContainer" parent="Root/Body/Board/YouField/ZonesCol/ZoneCreatures/ZoneScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 76)
+theme_override_constants/separation = 5
+
+[node name="ZoneNonCreature" type="HBoxContainer" parent="Root/Body/Board/YouField/ZonesCol"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 84)
+
+[node name="ZoneLabel" type="Label" parent="Root/Body/Board/YouField/ZonesCol/ZoneNonCreature"]
+layout_mode = 2
+custom_minimum_size = Vector2(78, 0)
+theme_override_colors/font_color = Color(1, 1, 1, 0.55)
+theme_override_font_sizes/font_size = 11
+text = "Non-creature permanents"
+
+[node name="ZoneScroll" type="ScrollContainer" parent="Root/Body/Board/YouField/ZonesCol/ZoneNonCreature"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+vertical_scroll_mode = 0
+horizontal_scroll_mode = 3
+
+[node name="YouNoncreaturesCards" type="HBoxContainer" parent="Root/Body/Board/YouField/ZonesCol/ZoneNonCreature/ZoneScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 76)
+theme_override_constants/separation = 5
+
+[node name="ZoneLands" type="HBoxContainer" parent="Root/Body/Board/YouField/ZonesCol"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 84)
+
+[node name="ZoneLabel" type="Label" parent="Root/Body/Board/YouField/ZonesCol/ZoneLands"]
+layout_mode = 2
+custom_minimum_size = Vector2(78, 0)
+theme_override_colors/font_color = Color(1, 1, 1, 0.55)
+theme_override_font_sizes/font_size = 11
+text = "Lands"
+
+[node name="ZoneScroll" type="ScrollContainer" parent="Root/Body/Board/YouField/ZonesCol/ZoneLands"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+vertical_scroll_mode = 0
+horizontal_scroll_mode = 3
+
+[node name="YouLandsCards" type="HBoxContainer" parent="Root/Body/Board/YouField/ZonesCol/ZoneLands/ZoneScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 76)
+theme_override_constants/separation = 5
+
+[node name="BuildLabel" type="Label" parent="Root/Body/Board"]
+layout_mode = 2
+mouse_filter = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 18
+text = "BF-30"
+
+[node name="HandWrap" type="PanelContainer" parent="Root/Body/Board"]
+layout_mode = 2
+size_flags_vertical = 1
+custom_minimum_size = Vector2(0, 140)
+theme_override_styles/panel = SubResource("SB_hand_panel")
+
+[node name="HandInner" type="VBoxContainer" parent="Root/Body/Board/HandWrap"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HandLabel" type="Label" parent="Root/Body/Board/HandWrap/HandInner"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+text = "Hand — click a card to play it"
+
+[node name="HandScroll" type="ScrollContainer" parent="Root/Body/Board/HandWrap/HandInner"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 114)
+clip_contents = true
+vertical_scroll_mode = 0
+horizontal_scroll_mode = 1
+
+[node name="HandRow" type="HBoxContainer" parent="Root/Body/Board/HandWrap/HandInner/HandScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 6
+
+[node name="Sidebar" type="PanelContainer" parent="Root/Body"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 3
+clip_contents = true
+custom_minimum_size = Vector2(228, 0)
+theme_override_styles/panel = SubResource("SB_sidebar_panel")
+
+[node name="Col" type="VBoxContainer" parent="Root/Body/Sidebar"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 6
+
+[node name="LifeRow" type="HBoxContainer" parent="Root/Body/Sidebar/Col"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="YouLifeBlock" type="VBoxContainer" parent="Root/Body/Sidebar/Col/LifeRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="WhoLabel" type="Label" parent="Root/Body/Sidebar/Col/LifeRow/YouLifeBlock"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+theme_override_font_sizes/font_size = 11
+text = "You"
+
+[node name="YouLifeLabel" type="Label" parent="Root/Body/Sidebar/Col/LifeRow/YouLifeBlock"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 26
+text = "40"
+
+[node name="SubtitleLabel" type="Label" parent="Root/Body/Sidebar/Col/LifeRow/YouLifeBlock"]
+layout_mode = 2
+clip_text = true
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 11
+text = "Krenko"
+
+[node name="RivalLifeBlock" type="VBoxContainer" parent="Root/Body/Sidebar/Col/LifeRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="WhoLabel" type="Label" parent="Root/Body/Sidebar/Col/LifeRow/RivalLifeBlock"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+theme_override_font_sizes/font_size = 11
+text = "Rival"
+
+[node name="RivalLifeLabel" type="Label" parent="Root/Body/Sidebar/Col/LifeRow/RivalLifeBlock"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 26
+text = "40"
+
+[node name="RivalTitleLabel" type="Label" parent="Root/Body/Sidebar/Col/LifeRow/RivalLifeBlock"]
+unique_name_in_owner = true
+layout_mode = 2
+clip_text = true
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 11
+text = "Talrand · Normal"
+
+[node name="PileTable" type="PanelContainer" parent="Root/Body/Sidebar/Col"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("SB_pile_panel")
+
+[node name="Grid" type="GridContainer" parent="Root/Body/Sidebar/Col/PileTable"]
+layout_mode = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 3
+columns = 3
+
+[node name="CornerLabel" type="Label" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+layout_mode = 2
+custom_minimum_size = Vector2(52, 16)
+clip_text = true
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+
+[node name="YouHeaderLabel" type="Label" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+layout_mode = 2
+custom_minimum_size = Vector2(52, 16)
+clip_text = true
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 12
+text = "You"
+
+[node name="RivalHeaderLabel" type="Label" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+layout_mode = 2
+custom_minimum_size = Vector2(52, 16)
+clip_text = true
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 12
+text = "Rival"
+
+[node name="LibraryRowLabel" type="Label" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+layout_mode = 2
+custom_minimum_size = Vector2(52, 16)
+clip_text = true
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+text = "Library"
+
+[node name="YouLibraryBtn" type="Button" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(52, 22)
+theme_override_font_sizes/font_size = 12
+text = "0"
+
+[node name="RivalLibraryLabel" type="Label" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(52, 16)
+clip_text = true
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+theme_override_font_sizes/font_size = 12
+text = "0"
+
+[node name="GyRowLabel" type="Label" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+layout_mode = 2
+custom_minimum_size = Vector2(52, 16)
+clip_text = true
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+text = "GY"
+
+[node name="YouGyLabel" type="Label" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(52, 16)
+clip_text = true
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+theme_override_font_sizes/font_size = 12
+text = "0"
+
+[node name="RivalGyLabel" type="Label" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(52, 16)
+clip_text = true
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+theme_override_font_sizes/font_size = 12
+text = "0"
+
+[node name="ExileRowLabel" type="Label" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+layout_mode = 2
+custom_minimum_size = Vector2(52, 16)
+clip_text = true
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+text = "Exile"
+
+[node name="YouExileLabel" type="Label" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(52, 16)
+clip_text = true
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+theme_override_font_sizes/font_size = 12
+text = "0"
+
+[node name="RivalExileLabel" type="Label" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(52, 16)
+clip_text = true
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+theme_override_font_sizes/font_size = 12
+text = "0"
+
+[node name="CommandRowLabel" type="Label" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+layout_mode = 2
+custom_minimum_size = Vector2(52, 16)
+clip_text = true
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+text = "Command"
+
+[node name="YouCommandBtn" type="Button" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(52, 22)
+theme_override_font_sizes/font_size = 12
+text = "—"
+
+[node name="RivalCommandLabel" type="Label" parent="Root/Body/Sidebar/Col/PileTable/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(52, 16)
+clip_text = true
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+theme_override_font_sizes/font_size = 12
+text = "0"
+
+[node name="Inspector" type="HBoxContainer" parent="Root/Body/Sidebar/Col"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 118)
+theme_override_constants/separation = 8
+
+[node name="InspectorArt" type="TextureRect" parent="Root/Body/Sidebar/Col/Inspector"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(78, 110)
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Texts" type="VBoxContainer" parent="Root/Body/Sidebar/Col/Inspector"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="InspectorTitle" type="Label" parent="Root/Body/Sidebar/Col/Inspector/Texts"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+max_lines_visible = 2
+theme_override_font_sizes/font_size = 14
+
+[node name="InspectorType" type="Label" parent="Root/Body/Sidebar/Col/Inspector/Texts"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+max_lines_visible = 2
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+theme_override_font_sizes/font_size = 11
+
+[node name="InspectorText" type="Label" parent="Root/Body/Sidebar/Col/Inspector/Texts"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+autowrap_mode = 3
+max_lines_visible = 4
+theme_override_font_sizes/font_size = 11
+
+[node name="PlayBtn" type="Button" parent="Root/Body/Sidebar/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 34)
+text = "Play selected"
+
+[node name="LogLabel" type="Label" parent="Root/Body/Sidebar/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 12
+text = "What happened"
+
+[node name="TurnBorder" type="Panel" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+z_index = 20
+
+[node name="HoverWrap" type="CenterContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+z_index = 40
+
+[node name="Col" type="VBoxContainer" parent="HoverWrap"]
+layout_mode = 2
+mouse_filter = 2
+alignment = 1
+
+[node name="HoverArt" type="TextureRect" parent="HoverWrap/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+custom_minimum_size = Vector2(280, 392)
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HoverName" type="Label" parent="HoverWrap/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 18
+
+[node name="DeckBtn" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -272.0
+offset_top = -128.0
+offset_right = -196.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+z_index = 25
+custom_minimum_size = Vector2(72, 100)
+theme_override_styles/normal = SubResource("SB_deck_btn")
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 16
+text = "92"
+tooltip_text = "Your library — click to draw"
+
+[node name="DrawBtn" type="Button" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -186.0
+offset_top = -80.0
+offset_right = -18.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+z_index = 25
+custom_minimum_size = Vector2(156, 58)
+theme_override_font_sizes/font_size = 24
+text = "Draw"
+
+[node name="DiceOverlay" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+z_index = 100
+z_as_relative = false
+color = Color(0.02, 0.03, 0.03, 0.72)
+
+[node name="Center" type="CenterContainer" parent="DiceOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="DiceOverlay/Center"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("SB_dice_panel")
+
+[node name="Col" type="VBoxContainer" parent="DiceOverlay/Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="DiceOverlay/Center/Panel/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 22
+text = "Dice"
+
+[node name="Hint" type="Label" parent="DiceOverlay/Center/Panel/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+text = "Click a die to roll it."
+
+[node name="DiceRow" type="HBoxContainer" parent="DiceOverlay/Center/Panel/Col"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="DieD4" type="Button" parent="DiceOverlay/Center/Panel/Col/DiceRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(72, 72)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("SB_die_d4")
+theme_override_styles/hover = SubResource("SB_die_d4")
+text = "d4
+-"
+
+[node name="DieD6" type="Button" parent="DiceOverlay/Center/Panel/Col/DiceRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(72, 72)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("SB_die_d6")
+theme_override_styles/hover = SubResource("SB_die_d6")
+text = "d6
+-"
+
+[node name="DieD8" type="Button" parent="DiceOverlay/Center/Panel/Col/DiceRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(72, 72)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("SB_die_d8")
+theme_override_styles/hover = SubResource("SB_die_d8")
+text = "d8
+-"
+
+[node name="DieD10" type="Button" parent="DiceOverlay/Center/Panel/Col/DiceRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(72, 72)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("SB_die_d10")
+theme_override_styles/hover = SubResource("SB_die_d10")
+text = "d10
+-"
+
+[node name="DieD12" type="Button" parent="DiceOverlay/Center/Panel/Col/DiceRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(72, 72)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("SB_die_d12")
+theme_override_styles/hover = SubResource("SB_die_d12")
+text = "d12
+-"
+
+[node name="DieD20" type="Button" parent="DiceOverlay/Center/Panel/Col/DiceRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(72, 72)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("SB_die_d20")
+theme_override_styles/hover = SubResource("SB_die_d20")
+text = "d20
+-"
+
+[node name="DiceCloseBtn" type="Button" parent="DiceOverlay/Center/Panel/Col"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 32)
+text = "Close"
+
+[node name="MenuOverlay" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.02, 0.03, 0.03, 0.78)
+
+[node name="Center" type="CenterContainer" parent="MenuOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="MenuOverlay/Center"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("SB_menu_panel")
+
+[node name="Col" type="VBoxContainer" parent="MenuOverlay/Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="MenuOverlay/Center/Panel/Col"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 22
+text = "Talrand difficulty"
+
+[node name="DiffBtn0" type="Button" parent="MenuOverlay/Center/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(360, 36)
+
+[node name="DiffBtn1" type="Button" parent="MenuOverlay/Center/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(360, 36)
+
+[node name="DiffBtn2" type="Button" parent="MenuOverlay/Center/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(360, 36)
+
+[node name="DiffBtn3" type="Button" parent="MenuOverlay/Center/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(360, 36)
+
+[node name="Actions" type="HBoxContainer" parent="MenuOverlay/Center/Panel/Col"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="NewGameBtn" type="Button" parent="MenuOverlay/Center/Panel/Col/Actions"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 32)
+text = "New game"
+
+[node name="OpenImportBtn" type="Button" parent="MenuOverlay/Center/Panel/Col/Actions"]
+layout_mode = 2
+custom_minimum_size = Vector2(140, 32)
+text = "Import Deck"
+
+[node name="MenuCloseBtn" type="Button" parent="MenuOverlay/Center/Panel/Col/Actions"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 32)
+text = "Close"
+
+[node name="DrawPreviewHost" type="CenterContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+z_index = 60
+
+[node name="MulliganOverlay" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 44.0
+grow_horizontal = 2
+grow_vertical = 2
+z_index = 85
+color = Color(0.02, 0.03, 0.04, 0.88)
+
+[node name="Center" type="CenterContainer" parent="MulliganOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="MulliganOverlay/Center"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("SB_mulligan_panel")
+
+[node name="Col" type="VBoxContainer" parent="MulliganOverlay/Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MulliganTitle" type="Label" parent="MulliganOverlay/Center/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 26
+text = "Keep hand?"
+
+[node name="MulliganSub" type="Label" parent="MulliganOverlay/Center/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+
+[node name="MulliganHandRow" type="HBoxContainer" parent="MulliganOverlay/Center/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="Btns" type="HBoxContainer" parent="MulliganOverlay/Center/Panel/Col"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 16
+
+[node name="KeepBtn" type="Button" parent="MulliganOverlay/Center/Panel/Col/Btns"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(160, 44)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("SB_keep_btn")
+theme_override_colors/font_color = Color(0.06, 0.12, 0.05, 1)
+text = "KEEP"
+
+[node name="MulliganBtn" type="Button" parent="MulliganOverlay/Center/Panel/Col/Btns"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(160, 44)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("SB_mulligan_btn")
+theme_override_colors/font_color = Color(0.98, 0.94, 0.88, 1)
+text = "MULLIGAN"
+
+[node name="DebugLabel" type="Label" parent="."]
+unique_name_in_owner = true
+visible = true
+layout_mode = 1
+anchors_preset = 0
+offset_left = 10.0
+offset_top = 52.0
+offset_right = 430.0
+offset_bottom = 220.0
+mouse_filter = 2
+z_index = 40
+theme_override_colors/font_color = Color(0.75, 0.82, 0.7, 0.9)
+theme_override_font_sizes/font_size = 11
+autowrap_mode = 3
+
+[connection signal="pressed" from="Root/HeaderBar/Row/PassBtn" to="." method="_on_next_stage"]
+[connection signal="pressed" from="Root/HeaderBar/Row/AttackBtn" to="." method="_on_attack"]
+[connection signal="pressed" from="Root/HeaderBar/Row/EndTurnBtn" to="." method="_on_end_turn"]
+[connection signal="pressed" from="Root/HeaderBar/Row/MuteBtn" to="." method="_on_mute"]
+[connection signal="pressed" from="Root/HeaderBar/Row/SfxBtn" to="." method="_on_sfx"]
+[connection signal="pressed" from="Root/HeaderBar/Row/DiceBtn" to="." method="_on_dice"]
+[connection signal="pressed" from="Root/HeaderBar/Row/MenuBtn" to="." method="_on_menu"]
+[connection signal="pressed" from="Root/HeaderBar/Row/MainMenuBtn" to="." method="_on_main_menu"]
+[connection signal="pressed" from="Root/Body/Sidebar/Col/PlayBtn" to="." method="_on_activate"]
+[connection signal="pressed" from="Root/Body/Sidebar/Col/PileTable/Grid/YouLibraryBtn" to="." method="_on_click_library"]
+[connection signal="pressed" from="Root/Body/Sidebar/Col/PileTable/Grid/YouCommandBtn" to="." method="_on_click_command"]
+[connection signal="pressed" from="DeckBtn" to="." method="_on_click_library"]
+[connection signal="pressed" from="DrawBtn" to="." method="_on_click_library"]
+[connection signal="pressed" from="DiceOverlay/Center/Panel/Col/DiceCloseBtn" to="." method="_hide_dice"]
+[connection signal="pressed" from="MenuOverlay/Center/Panel/Col/Actions/NewGameBtn" to="." method="_on_new_game"]
+[connection signal="pressed" from="MenuOverlay/Center/Panel/Col/Actions/OpenImportBtn" to="." method="_on_open_import"]
+[connection signal="pressed" from="MenuOverlay/Center/Panel/Col/Actions/MenuCloseBtn" to="." method="_hide_menu"]
+[connection signal="pressed" from="MulliganOverlay/Center/Panel/Col/Btns/KeepBtn" to="." method="_on_keep_hand"]
+[connection signal="pressed" from="MulliganOverlay/Center/Panel/Col/Btns/MulliganBtn" to="." method="_on_mulligan_hand"]

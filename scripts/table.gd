@@ -15,7 +15,6 @@ const INK := Color(0.93, 0.93, 0.90)
 const MUTED := Color(0.72, 0.74, 0.70)
 const HAND_CHIP := Vector2(80, 112)
 const BOARD_CHIP := Vector2(48, 68)
-const SIDE_W := 228
 const TURN_GREEN := Color(0.18, 0.78, 0.32)
 const TURN_RED := Color(0.86, 0.16, 0.14)
 const DIFFICULTY_HINTS := [
@@ -24,63 +23,95 @@ const DIFFICULTY_HINTS := [
 	"Dumps cheap spells for Drakes.",
 	"Always attacks, casts commander, holds counters.",
 ]
+const DIE_SPECS := [
+	{sides = 4, color = Color(0.25, 0.55, 0.48)},
+	{sides = 6, color = Color(0.85, 0.82, 0.72)},
+	{sides = 8, color = Color(0.72, 0.22, 0.18)},
+	{sides = 10, color = Color(0.12, 0.12, 0.14)},
+	{sides = 12, color = Color(0.42, 0.28, 0.62)},
+	{sides = 20, color = Color(0.82, 0.58, 0.16)},
+]
 
 var state = MatchStateScript.new()
 var session = null
-var header_label: Label
-var you_life: Label
-var rival_life: Label
-var rival_title_label: Label
-var inspector_art: TextureRect
-var inspector_title: Label
-var inspector_type: Label
-var inspector_text: Label
-var log_label: Label
-var mute_button: Button
-var sfx_button: Button
 var music
 var sfx
 var you_zones: Dictionary = {}
 var rival_zones: Dictionary = {}
-var hand_row: HBoxContainer
 var pile_labels: Dictionary = {}
-var menu_overlay: ColorRect
 var menu_diff_buttons: Array = []
-var turn_border: Panel
-var hover_wrap: CenterContainer
-var hover_art: TextureRect
-var hover_name: Label
-var you_library_btn: Button
-var draw_btn: Button
-var deck_btn: Button
-var play_btn: Button
-var pass_btn: Button
-var attack_btn: Button
 var _flash_t := 0.0
 var _was_tapped: Dictionary = {}
-var dice_overlay: ColorRect
 var _dice_busy: Dictionary = {}
-var mulligan_overlay: ColorRect
-var mulligan_hand_row: HBoxContainer
-var mulligan_title: Label
-var mulligan_sub: Label
-var keep_btn: Button
-var mulligan_btn: Button
-var debug_label: Label
-var draw_preview: Control
-var draw_preview_host: CenterContainer
 var _mulligan_sig := ""
 var import_overlay: ImportOverlay
 
+@onready var header_label: Label = %HeaderLabel
+@onready var you_life: Label = %YouLifeLabel
+@onready var rival_life: Label = %RivalLifeLabel
+@onready var rival_title_label: Label = %RivalTitleLabel
+@onready var inspector_art: TextureRect = %InspectorArt
+@onready var inspector_title: Label = %InspectorTitle
+@onready var inspector_type: Label = %InspectorType
+@onready var inspector_text: Label = %InspectorText
+@onready var log_label: Label = %LogLabel
+@onready var mute_button: Button = %MuteBtn
+@onready var sfx_button: Button = %SfxBtn
+@onready var hand_row: HBoxContainer = %HandRow
+@onready var menu_overlay: ColorRect = %MenuOverlay
+@onready var turn_border: Panel = %TurnBorder
+@onready var hover_wrap: CenterContainer = %HoverWrap
+@onready var hover_art: TextureRect = %HoverArt
+@onready var hover_name: Label = %HoverName
+@onready var you_library_btn: Button = %YouLibraryBtn
+@onready var draw_btn: Button = %DrawBtn
+@onready var deck_btn: Button = %DeckBtn
+@onready var play_btn: Button = %PlayBtn
+@onready var pass_btn: Button = %PassBtn
+@onready var attack_btn: Button = %AttackBtn
+@onready var dice_overlay: ColorRect = %DiceOverlay
+@onready var mulligan_overlay: ColorRect = %MulliganOverlay
+@onready var mulligan_hand_row: HBoxContainer = %MulliganHandRow
+@onready var mulligan_title: Label = %MulliganTitle
+@onready var mulligan_sub: Label = %MulliganSub
+@onready var keep_btn: Button = %KeepBtn
+@onready var mulligan_btn: Button = %MulliganBtn
+@onready var debug_label: Label = %DebugLabel
+@onready var draw_preview_host: CenterContainer = %DrawPreviewHost
+
 func _ready() -> void:
-	clip_contents = true
-	set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	music = ThemeMusicScript.new()
 	music.name = "ThemeMusic"
 	add_child(music)
 	sfx = TavernSfxScript.new()
 	sfx.name = "TavernSfx"
 	add_child(sfx)
+	you_zones = {
+		"Creatures": %YouCreaturesCards,
+		"Non-creature permanents": %YouNoncreaturesCards,
+		"Lands": %YouLandsCards,
+	}
+	rival_zones = {
+		"Creatures": %RivalCreaturesCards,
+		"Non-creature permanents": %RivalNoncreaturesCards,
+		"Lands": %RivalLandsCards,
+	}
+	pile_labels = {
+		"you_library": you_library_btn,
+		"you_graveyard": %YouGyLabel,
+		"you_exile": %YouExileLabel,
+		"you_command": %YouCommandBtn,
+		"rival_library": %RivalLibraryLabel,
+		"rival_graveyard": %RivalGyLabel,
+		"rival_exile": %RivalExileLabel,
+		"rival_command": %RivalCommandLabel,
+	}
+	menu_diff_buttons = [%DiffBtn0, %DiffBtn1, %DiffBtn2, %DiffBtn3]
+	for i in menu_diff_buttons.size():
+		var b: Button = menu_diff_buttons[i]
+		b.text = "%s — %s" % [RivalAI.label(i), DIFFICULTY_HINTS[i]]
+		b.pressed.connect(_on_pick_difficulty.bind(i))
+	_setup_die_buttons()
 	var cat := _catalog()
 	if cat and cat.has_signal("art_updated") and not cat.art_updated.is_connected(_on_art_updated):
 		cat.art_updated.connect(_on_art_updated)
@@ -94,15 +125,27 @@ func _ready() -> void:
 		_start_from_app_state()
 	else:
 		_hydrate_from_scryfall()
-	_build()
-	import_overlay = ImportOverlay.new()
+	import_overlay = preload("res://scenes/ui/import_overlay.tscn").instantiate()
 	add_child(import_overlay)
 	import_overlay.play_imported.connect(_on_play_imported)
+	_paint_turn_border()
 	_refresh()
 	if USE_ENGINE:
 		_set_status("Opening hand — Keep or Mulligan.")
 	else:
 		_set_status("Your turn. Hover a card to enlarge it. Click a card to play it.")
+
+
+func _setup_die_buttons() -> void:
+	var buttons := [%DieD4, %DieD6, %DieD8, %DieD10, %DieD12, %DieD20]
+	for i in buttons.size():
+		var b: Button = buttons[i]
+		var spec: Dictionary = DIE_SPECS[i]
+		var color: Color = spec.color
+		var ink := Color(0.08, 0.08, 0.08) if color.get_luminance() > 0.45 else Color(0.95, 0.95, 0.92)
+		b.add_theme_color_override("font_color", ink)
+		b.pressed.connect(_roll_die.bind(int(spec.sides), b))
+
 
 func _catalog() -> Node:
 	return get_node_or_null("/root/ScryfallCatalog")
@@ -207,400 +250,6 @@ func _apply_scryfall(pile: Array) -> void:
 			card["toughness"] = str(found.get("toughness"))
 		pile[i] = card
 
-func _build() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0.05, 0.06, 0.06)
-	bg.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(bg)
-
-	var root := VBoxContainer.new()
-	root.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	root.add_theme_constant_override("separation", 0)
-	root.clip_contents = true
-	add_child(root)
-
-	root.add_child(_build_header())
-
-	var body := HBoxContainer.new()
-	body.size_flags_vertical = SIZE_EXPAND_FILL
-	body.clip_contents = true
-	body.add_theme_constant_override("separation", 0)
-	root.add_child(body)
-
-	var board := VBoxContainer.new()
-	board.size_flags_horizontal = SIZE_EXPAND_FILL
-	board.size_flags_vertical = SIZE_EXPAND_FILL
-	board.clip_contents = true
-	board.add_theme_constant_override("separation", 2)
-	body.add_child(board)
-
-	rival_zones = _make_field(board, RIVAL_TEAL, ["Lands", "Non-creature permanents", "Creatures"])
-	you_zones = _make_field(board, YOU_EMBER, ["Creatures", "Non-creature permanents", "Lands"])
-	var build_lab := Label.new()
-	build_lab.text = "BF-%d" % BUILD
-	build_lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	build_lab.add_theme_color_override("font_color", GOLD)
-	build_lab.add_theme_font_size_override("font_size", 18)
-	build_lab.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	board.add_child(build_lab)
-	board.add_child(_build_hand())
-	body.add_child(_build_sidebar())
-	_build_turn_border()
-	_build_hover()
-	_build_deck_pile()
-	_build_draw_button()
-	_build_dice_tray()
-	_build_menu()
-	_build_draw_preview()
-	_build_mulligan_overlay()
-	_build_debug_label()
-	_paint_turn_border()
-
-func _build_header() -> Control:
-	var bar := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.07, 0.08, 0.09)
-	style.content_margin_left = 14
-	style.content_margin_right = 10
-	style.content_margin_top = 6
-	style.content_margin_bottom = 6
-	bar.add_theme_stylebox_override("panel", style)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	header_label = Label.new()
-	header_label.size_flags_horizontal = SIZE_EXPAND_FILL
-	header_label.add_theme_font_size_override("font_size", 18)
-	header_label.add_theme_color_override("font_color", INK)
-	row.add_child(header_label)
-	pass_btn = _header_button("Pass", GOLD, Color(0.12, 0.10, 0.04), _on_next_stage, 88)
-	row.add_child(pass_btn)
-	attack_btn = _header_button("Attack", Color(0.62, 0.16, 0.12), Color(0.98, 0.94, 0.88), _on_attack, 96)
-	row.add_child(attack_btn)
-	row.add_child(_header_button("End turn", Color(0.16, 0.17, 0.18), INK, _on_end_turn, 100))
-	mute_button = _header_button("Mute", Color(0.16, 0.17, 0.18), INK, _on_mute, 72)
-	row.add_child(mute_button)
-	sfx_button = _header_button("SFX", Color(0.16, 0.17, 0.18), INK, _on_sfx, 72)
-	row.add_child(sfx_button)
-	row.add_child(_header_button("Dice", Color(0.16, 0.17, 0.18), INK, _on_dice, 72))
-	row.add_child(_header_button("Menu", Color(0.16, 0.17, 0.18), INK, _on_menu, 72))
-	row.add_child(_header_button("Main menu", Color(0.16, 0.17, 0.18), INK, _on_main_menu, 100))
-	bar.add_child(row)
-	return bar
-
-func _header_button(text: String, bg: Color, fg: Color, cb: Callable, width: float = 120) -> Button:
-	var b := Button.new()
-	b.text = text
-	b.custom_minimum_size = Vector2(width, 32)
-	var n := StyleBoxFlat.new()
-	n.bg_color = bg
-	n.set_corner_radius_all(6)
-	n.content_margin_left = 10
-	n.content_margin_right = 10
-	b.add_theme_stylebox_override("normal", n)
-	b.add_theme_color_override("font_color", fg)
-	b.pressed.connect(cb)
-	return b
-
-func _make_field(parent: Control, tint: Color, zone_order: Array) -> Dictionary:
-	var field := PanelContainer.new()
-	field.size_flags_vertical = SIZE_EXPAND_FILL
-	field.clip_contents = false
-	var style := StyleBoxFlat.new()
-	style.bg_color = tint.darkened(0.45)
-	style.border_color = tint.lightened(0.15)
-	style.set_border_width_all(2)
-	field.add_theme_stylebox_override("panel", style)
-	var zones_col := VBoxContainer.new()
-	zones_col.clip_contents = true
-	var map := {}
-	for zone_name in zone_order:
-		var zone := HBoxContainer.new()
-		zone.size_flags_vertical = SIZE_EXPAND_FILL
-		zone.clip_contents = false
-		zone.custom_minimum_size = Vector2(0, BOARD_CHIP.y + 16)
-		var lab := Label.new()
-		lab.text = str(zone_name)
-		lab.custom_minimum_size = Vector2(78, 0)
-		lab.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
-		lab.add_theme_font_size_override("font_size", 11)
-		var scroll := ScrollContainer.new()
-		scroll.size_flags_horizontal = SIZE_EXPAND_FILL
-		scroll.size_flags_vertical = SIZE_EXPAND_FILL
-		scroll.clip_contents = false
-		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
-		var cards := HBoxContainer.new()
-		cards.custom_minimum_size = Vector2(0, BOARD_CHIP.y + 8)
-		cards.add_theme_constant_override("separation", 5)
-		scroll.add_child(cards)
-		zone.add_child(lab)
-		zone.add_child(scroll)
-		zones_col.add_child(zone)
-		map[str(zone_name)] = cards
-	field.add_child(zones_col)
-	parent.add_child(field)
-	return map
-
-func _build_hand() -> Control:
-	var hand_wrap := PanelContainer.new()
-	hand_wrap.size_flags_vertical = SIZE_FILL
-	hand_wrap.custom_minimum_size = Vector2(0, 140)
-	var hand_style := StyleBoxFlat.new()
-	hand_style.bg_color = Color(0.04, 0.08, 0.05)
-	hand_style.content_margin_left = 8
-	hand_style.content_margin_right = 8
-	hand_style.content_margin_top = 4
-	hand_style.content_margin_bottom = 6
-	hand_wrap.add_theme_stylebox_override("panel", hand_style)
-	var hand_inner := VBoxContainer.new()
-	hand_inner.add_theme_constant_override("separation", 2)
-	var hand_label := Label.new()
-	hand_label.text = "Hand — click a card to play it"
-	hand_label.add_theme_color_override("font_color", MUTED)
-	hand_label.add_theme_font_size_override("font_size", 12)
-	hand_inner.add_child(hand_label)
-	var hand_scroll := ScrollContainer.new()
-	hand_scroll.size_flags_horizontal = SIZE_EXPAND_FILL
-	hand_scroll.custom_minimum_size = Vector2(0, 114)
-	hand_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	hand_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	hand_scroll.clip_contents = true
-	hand_row = HBoxContainer.new()
-	hand_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	hand_row.add_theme_constant_override("separation", 6)
-	hand_scroll.add_child(hand_row)
-	hand_inner.add_child(hand_scroll)
-	hand_wrap.add_child(hand_inner)
-	return hand_wrap
-
-func _build_sidebar() -> Control:
-	var side := PanelContainer.new()
-	side.custom_minimum_size = Vector2(SIDE_W, 0)
-	side.size_flags_horizontal = SIZE_SHRINK_END
-	side.size_flags_vertical = SIZE_EXPAND_FILL
-	side.clip_contents = true
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.09, 0.09)
-	style.content_margin_left = 8
-	style.content_margin_right = 8
-	style.content_margin_top = 8
-	style.content_margin_bottom = 8
-	side.add_theme_stylebox_override("panel", style)
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = SIZE_EXPAND_FILL
-	col.size_flags_vertical = SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 6)
-
-	var life_row := HBoxContainer.new()
-	life_row.add_theme_constant_override("separation", 8)
-	life_row.add_child(_life_block("You", "Krenko", true))
-	life_row.add_child(_life_block("Rival", "Talrand · Normal", false))
-	col.add_child(life_row)
-	col.add_child(_pile_table())
-	col.add_child(_build_inspector())
-
-	play_btn = Button.new()
-	play_btn.text = "Play selected"
-	play_btn.custom_minimum_size = Vector2(0, 34)
-	play_btn.pressed.connect(_on_activate)
-	col.add_child(play_btn)
-
-	log_label = Label.new()
-	log_label.add_theme_color_override("font_color", GOLD)
-	log_label.add_theme_font_size_override("font_size", 12)
-	log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	log_label.max_lines_visible = 5
-	log_label.size_flags_vertical = SIZE_EXPAND_FILL
-	log_label.text = "What happened"
-	col.add_child(log_label)
-
-	side.add_child(col)
-	return side
-
-func _life_block(who: String, subtitle: String, is_you: bool) -> Control:
-	var box := VBoxContainer.new()
-	box.size_flags_horizontal = SIZE_EXPAND_FILL
-	box.add_theme_constant_override("separation", 0)
-	var who_lab := Label.new()
-	who_lab.text = who
-	who_lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	who_lab.add_theme_font_size_override("font_size", 11)
-	who_lab.add_theme_color_override("font_color", MUTED)
-	box.add_child(who_lab)
-	var life := Label.new()
-	life.text = "40"
-	life.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	life.add_theme_font_size_override("font_size", 26)
-	life.add_theme_color_override("font_color", GOLD)
-	if is_you:
-		you_life = life
-	else:
-		rival_life = life
-	box.add_child(life)
-	var title_label := Label.new()
-	title_label.text = subtitle
-	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_label.add_theme_font_size_override("font_size", 11)
-	title_label.clip_text = true
-	if not is_you:
-		rival_title_label = title_label
-	box.add_child(title_label)
-	return box
-
-func _pile_table() -> Control:
-	var box := PanelContainer.new()
-	var st := StyleBoxFlat.new()
-	st.bg_color = PANEL
-	st.set_corner_radius_all(6)
-	st.content_margin_left = 8
-	st.content_margin_right = 8
-	st.content_margin_top = 6
-	st.content_margin_bottom = 6
-	box.add_theme_stylebox_override("panel", st)
-	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 3)
-	grid.add_child(_mini("", MUTED))
-	grid.add_child(_mini("You", GOLD))
-	grid.add_child(_mini("Rival", GOLD))
-	for pile in ["Library", "GY", "Exile", "Command"]:
-		var key: String = "graveyard" if pile == "GY" else pile.to_lower()
-		grid.add_child(_mini(pile, MUTED))
-		var rival_v := _mini("0", INK)
-		if key == "library":
-			you_library_btn = Button.new()
-			you_library_btn.text = "0"
-			you_library_btn.custom_minimum_size = Vector2(52, 22)
-			you_library_btn.add_theme_font_size_override("font_size", 12)
-			you_library_btn.pressed.connect(_on_click_library)
-			grid.add_child(you_library_btn)
-			pile_labels["you_library"] = you_library_btn
-		elif key == "command":
-			var you_cmd := Button.new()
-			you_cmd.text = "—"
-			you_cmd.custom_minimum_size = Vector2(52, 22)
-			you_cmd.add_theme_font_size_override("font_size", 12)
-			you_cmd.pressed.connect(_on_click_command)
-			grid.add_child(you_cmd)
-			pile_labels["you_command"] = you_cmd
-		else:
-			var you_v := _mini("0", INK)
-			grid.add_child(you_v)
-			pile_labels["you_%s" % key] = you_v
-		grid.add_child(rival_v)
-		pile_labels["rival_%s" % key] = rival_v
-	box.add_child(grid)
-	return box
-
-func _mini(text: String, color: Color) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.add_theme_color_override("font_color", color)
-	l.add_theme_font_size_override("font_size", 12)
-	l.custom_minimum_size = Vector2(52, 16)
-	l.clip_text = true
-	l.autowrap_mode = TextServer.AUTOWRAP_OFF
-	return l
-
-func _build_inspector() -> Control:
-	var wrap := HBoxContainer.new()
-	wrap.add_theme_constant_override("separation", 8)
-	wrap.custom_minimum_size = Vector2(0, 118)
-	inspector_art = TextureRect.new()
-	inspector_art.custom_minimum_size = Vector2(78, 110)
-	inspector_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	inspector_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	wrap.add_child(inspector_art)
-	var texts := VBoxContainer.new()
-	texts.size_flags_horizontal = SIZE_EXPAND_FILL
-	inspector_title = Label.new()
-	inspector_title.add_theme_font_size_override("font_size", 14)
-	inspector_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	inspector_title.max_lines_visible = 2
-	texts.add_child(inspector_title)
-	inspector_type = Label.new()
-	inspector_type.add_theme_color_override("font_color", MUTED)
-	inspector_type.add_theme_font_size_override("font_size", 11)
-	inspector_type.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	inspector_type.max_lines_visible = 2
-	texts.add_child(inspector_type)
-	inspector_text = Label.new()
-	inspector_text.add_theme_font_size_override("font_size", 11)
-	inspector_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	inspector_text.max_lines_visible = 4
-	inspector_text.size_flags_vertical = SIZE_EXPAND_FILL
-	texts.add_child(inspector_text)
-	wrap.add_child(texts)
-	return wrap
-
-func _build_menu() -> void:
-	menu_overlay = ColorRect.new()
-	menu_overlay.color = Color(0.02, 0.03, 0.03, 0.78)
-	menu_overlay.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	menu_overlay.visible = false
-	menu_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	menu_overlay.add_child(center)
-	var panel := PanelContainer.new()
-	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.09, 0.10, 0.11, 0.98)
-	st.set_corner_radius_all(12)
-	st.set_border_width_all(2)
-	st.border_color = GOLD.darkened(0.2)
-	st.content_margin_left = 24
-	st.content_margin_right = 24
-	st.content_margin_top = 18
-	st.content_margin_bottom = 18
-	panel.add_theme_stylebox_override("panel", st)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 8)
-	var title := Label.new()
-	title.text = "Talrand difficulty"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 22)
-	title.add_theme_color_override("font_color", GOLD)
-	col.add_child(title)
-	menu_diff_buttons.clear()
-	for i in 4:
-		var b := Button.new()
-		b.text = "%s — %s" % [RivalAI.label(i), DIFFICULTY_HINTS[i]]
-		b.custom_minimum_size = Vector2(360, 36)
-		b.pressed.connect(_on_pick_difficulty.bind(i))
-		menu_diff_buttons.append(b)
-		col.add_child(b)
-	var actions := HBoxContainer.new()
-	actions.alignment = BoxContainer.ALIGNMENT_CENTER
-	actions.add_theme_constant_override("separation", 12)
-	var restart := Button.new()
-	restart.text = "New game"
-	restart.custom_minimum_size = Vector2(120, 32)
-	restart.pressed.connect(_on_new_game)
-	var import_b := Button.new()
-	import_b.text = "Import Deck"
-	import_b.custom_minimum_size = Vector2(140, 32)
-	import_b.pressed.connect(_on_open_import)
-	var close := Button.new()
-	close.text = "Close"
-	close.custom_minimum_size = Vector2(120, 32)
-	close.pressed.connect(_hide_menu)
-	actions.add_child(restart)
-	actions.add_child(import_b)
-	actions.add_child(close)
-	col.add_child(actions)
-	panel.add_child(col)
-	center.add_child(panel)
-	add_child(menu_overlay)
-
-func _build_turn_border() -> void:
-	turn_border = Panel.new()
-	turn_border.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	turn_border.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	turn_border.z_index = 20
-	add_child(turn_border)
-
 func _waiting_for_draw() -> bool:
 	if USE_ENGINE:
 		return session != null and session.pending_draw_anim
@@ -630,54 +279,6 @@ func _paint_flash() -> void:
 		st.border_color = TURN_GREEN.lerp(Color(0.65, 1.0, 0.5), pulse)
 		turn_border.add_theme_stylebox_override("panel", st)
 
-func _build_deck_pile() -> void:
-	deck_btn = Button.new()
-	deck_btn.text = "92"
-	deck_btn.custom_minimum_size = Vector2(72, 100)
-	deck_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	deck_btn.anchor_left = 1.0
-	deck_btn.anchor_top = 1.0
-	deck_btn.anchor_right = 1.0
-	deck_btn.anchor_bottom = 1.0
-	deck_btn.offset_left = -272
-	deck_btn.offset_top = -128
-	deck_btn.offset_right = -196
-	deck_btn.offset_bottom = -16
-	deck_btn.z_index = 25
-	deck_btn.add_theme_font_size_override("font_size", 16)
-	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.38, 0.12, 0.08)
-	st.border_color = GOLD
-	st.set_border_width_all(3)
-	st.set_corner_radius_all(8)
-	st.shadow_color = Color(0, 0, 0, 0.55)
-	st.shadow_size = 6
-	st.shadow_offset = Vector2(3, 4)
-	deck_btn.add_theme_stylebox_override("normal", st)
-	deck_btn.add_theme_color_override("font_color", GOLD)
-	deck_btn.pressed.connect(_on_click_library)
-	deck_btn.tooltip_text = "Your library — click to draw"
-	add_child(deck_btn)
-
-func _build_draw_button() -> void:
-	draw_btn = Button.new()
-	draw_btn.text = "Draw"
-	draw_btn.custom_minimum_size = Vector2(156, 58)
-	draw_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	draw_btn.anchor_left = 1.0
-	draw_btn.anchor_top = 1.0
-	draw_btn.anchor_right = 1.0
-	draw_btn.anchor_bottom = 1.0
-	draw_btn.offset_left = -186
-	draw_btn.offset_top = -80
-	draw_btn.offset_right = -18
-	draw_btn.offset_bottom = -16
-	draw_btn.z_index = 25
-	draw_btn.add_theme_font_size_override("font_size", 24)
-	draw_btn.pressed.connect(_on_click_library)
-	draw_btn.visible = false
-	add_child(draw_btn)
-
 func _paint_turn_border() -> void:
 	if turn_border == null:
 		return
@@ -689,30 +290,6 @@ func _paint_turn_border() -> void:
 	st.set_border_width_all(8)
 	st.border_color = TURN_GREEN if state.active_is_you else TURN_RED
 	turn_border.add_theme_stylebox_override("panel", st)
-
-func _build_hover() -> void:
-	hover_wrap = CenterContainer.new()
-	hover_wrap.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	hover_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hover_wrap.z_index = 40
-	hover_wrap.visible = false
-	var col := VBoxContainer.new()
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.alignment = BoxContainer.ALIGNMENT_CENTER
-	hover_art = TextureRect.new()
-	hover_art.custom_minimum_size = Vector2(280, 392)
-	hover_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	hover_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	hover_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hover_name = Label.new()
-	hover_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hover_name.add_theme_font_size_override("font_size", 18)
-	hover_name.add_theme_color_override("font_color", GOLD)
-	hover_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(hover_art)
-	col.add_child(hover_name)
-	hover_wrap.add_child(col)
-	add_child(hover_wrap)
 
 func _on_hover_card(card: Dictionary) -> void:
 	if hover_wrap == null:
@@ -1269,82 +846,6 @@ func _hide_dice() -> void:
 	if dice_overlay:
 		dice_overlay.visible = false
 
-func _build_dice_tray() -> void:
-	dice_overlay = ColorRect.new()
-	dice_overlay.color = Color(0.02, 0.03, 0.03, 0.72)
-	dice_overlay.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	dice_overlay.visible = false
-	dice_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	dice_overlay.z_index = 100
-	dice_overlay.z_as_relative = false
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	dice_overlay.add_child(center)
-	var panel := PanelContainer.new()
-	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.09, 0.10, 0.11, 0.98)
-	st.set_corner_radius_all(12)
-	st.set_border_width_all(2)
-	st.border_color = GOLD.darkened(0.2)
-	st.content_margin_left = 22
-	st.content_margin_right = 22
-	st.content_margin_top = 16
-	st.content_margin_bottom = 16
-	panel.add_theme_stylebox_override("panel", st)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 12)
-	var title := Label.new()
-	title.text = "Dice"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 22)
-	title.add_theme_color_override("font_color", GOLD)
-	col.add_child(title)
-	var hint := Label.new()
-	hint.text = "Click a die to roll it."
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_color_override("font_color", MUTED)
-	col.add_child(hint)
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 10)
-	var colors: Array[Color] = [
-		Color(0.25, 0.55, 0.48),
-		Color(0.85, 0.82, 0.72),
-		Color(0.72, 0.22, 0.18),
-		Color(0.12, 0.12, 0.14),
-		Color(0.42, 0.28, 0.62),
-		Color(0.82, 0.58, 0.16),
-	]
-	var sides_list: Array[int] = [4, 6, 8, 10, 12, 20]
-	for i in sides_list.size():
-		row.add_child(_make_die_button(sides_list[i], colors[i]))
-	col.add_child(row)
-	var close := Button.new()
-	close.text = "Close"
-	close.custom_minimum_size = Vector2(120, 32)
-	close.pressed.connect(_hide_dice)
-	col.add_child(close)
-	panel.add_child(col)
-	center.add_child(panel)
-	add_child(dice_overlay)
-
-func _make_die_button(sides: int, color: Color) -> Button:
-	var b := Button.new()
-	b.text = "d%d\n-" % sides
-	b.custom_minimum_size = Vector2(72, 72)
-	b.add_theme_font_size_override("font_size", 16)
-	var st := StyleBoxFlat.new()
-	st.bg_color = color
-	st.set_corner_radius_all(10)
-	st.set_border_width_all(2)
-	st.border_color = Color(1, 1, 1, 0.35)
-	b.add_theme_stylebox_override("normal", st)
-	b.add_theme_stylebox_override("hover", st)
-	var ink := Color(0.08, 0.08, 0.08) if color.get_luminance() > 0.45 else Color(0.95, 0.95, 0.92)
-	b.add_theme_color_override("font_color", ink)
-	b.pressed.connect(_roll_die.bind(sides, b))
-	return b
-
 func _roll_die(sides: int, btn: Button) -> void:
 	if bool(_dice_busy.get(sides, false)):
 		return
@@ -1377,14 +878,6 @@ func _finish_die_roll(btn: Button, sides: int, result: int) -> void:
 	_dice_busy[sides] = false
 	_set_status("Rolled a d%d: %d." % [sides, result])
 
-func _build_draw_preview() -> void:
-	draw_preview_host = CenterContainer.new()
-	draw_preview_host.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	draw_preview_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	draw_preview_host.z_index = 60
-	draw_preview_host.visible = false
-	add_child(draw_preview_host)
-
 
 func _show_draw_preview(card: Dictionary) -> void:
 	if draw_preview_host == null:
@@ -1401,22 +894,6 @@ func _hide_draw_preview() -> void:
 		draw_preview_host.visible = false
 
 
-func _build_debug_label() -> void:
-	debug_label = Label.new()
-	debug_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	debug_label.offset_left = 10
-	debug_label.offset_top = 52
-	debug_label.offset_right = 430
-	debug_label.offset_bottom = 220
-	debug_label.add_theme_font_size_override("font_size", 11)
-	debug_label.add_theme_color_override("font_color", Color(0.75, 0.82, 0.7, 0.9))
-	debug_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	debug_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	debug_label.z_index = 40
-	debug_label.visible = DEBUG_MATCH
-	add_child(debug_label)
-
-
 func _refresh_debug() -> void:
 	if debug_label == null or not DEBUG_MATCH or session == null or session.engine == null:
 		if debug_label:
@@ -1431,74 +908,6 @@ func _refresh_debug() -> void:
 	for dline in session.debug_lines:
 		lines.append(str(dline))
 	debug_label.text = "\n".join(lines)
-
-
-func _build_mulligan_overlay() -> void:
-	mulligan_overlay = ColorRect.new()
-	mulligan_overlay.color = Color(0.02, 0.03, 0.04, 0.88)
-	mulligan_overlay.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	mulligan_overlay.offset_top = 44
-	mulligan_overlay.z_index = 85
-	mulligan_overlay.visible = false
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	mulligan_overlay.add_child(center)
-	var panel := PanelContainer.new()
-	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.08, 0.09, 0.10, 0.98)
-	st.set_corner_radius_all(12)
-	st.set_border_width_all(2)
-	st.border_color = GOLD
-	st.content_margin_left = 18
-	st.content_margin_right = 18
-	st.content_margin_top = 14
-	st.content_margin_bottom = 14
-	panel.add_theme_stylebox_override("panel", st)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 10)
-	mulligan_title = Label.new()
-	mulligan_title.text = "Keep hand?"
-	mulligan_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	mulligan_title.add_theme_font_size_override("font_size", 26)
-	mulligan_title.add_theme_color_override("font_color", GOLD)
-	col.add_child(mulligan_title)
-	mulligan_sub = Label.new()
-	mulligan_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	mulligan_sub.add_theme_color_override("font_color", MUTED)
-	col.add_child(mulligan_sub)
-	mulligan_hand_row = HBoxContainer.new()
-	mulligan_hand_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	mulligan_hand_row.add_theme_constant_override("separation", 8)
-	col.add_child(mulligan_hand_row)
-	var btns := HBoxContainer.new()
-	btns.alignment = BoxContainer.ALIGNMENT_CENTER
-	btns.add_theme_constant_override("separation", 16)
-	keep_btn = Button.new()
-	keep_btn.text = "KEEP"
-	keep_btn.custom_minimum_size = Vector2(160, 44)
-	keep_btn.add_theme_font_size_override("font_size", 18)
-	var keep_st := StyleBoxFlat.new()
-	keep_st.bg_color = TURN_GREEN.darkened(0.1)
-	keep_st.set_corner_radius_all(8)
-	keep_btn.add_theme_stylebox_override("normal", keep_st)
-	keep_btn.add_theme_color_override("font_color", Color(0.06, 0.12, 0.05))
-	keep_btn.pressed.connect(_on_keep_hand)
-	btns.add_child(keep_btn)
-	mulligan_btn = Button.new()
-	mulligan_btn.text = "MULLIGAN"
-	mulligan_btn.custom_minimum_size = Vector2(160, 44)
-	mulligan_btn.add_theme_font_size_override("font_size", 18)
-	var mul_st := StyleBoxFlat.new()
-	mul_st.bg_color = YOU_EMBER
-	mul_st.set_corner_radius_all(8)
-	mulligan_btn.add_theme_stylebox_override("normal", mul_st)
-	mulligan_btn.add_theme_color_override("font_color", Color(0.98, 0.94, 0.88))
-	mulligan_btn.pressed.connect(_on_mulligan_hand)
-	btns.add_child(mulligan_btn)
-	col.add_child(btns)
-	panel.add_child(col)
-	center.add_child(panel)
-	add_child(mulligan_overlay)
 
 
 func _make_card_face(card: Dictionary, sz: Vector2) -> Control:

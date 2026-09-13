@@ -4,47 +4,63 @@ const GOLD := Color(0.93, 0.78, 0.28)
 const INK := Color(0.93, 0.93, 0.90)
 const MUTED := Color(0.72, 0.74, 0.70)
 const PANEL := Color(0.09, 0.10, 0.11, 0.96)
-const YOU_EMBER := Color(0.42, 0.18, 0.08)
 const RivalAI := preload("res://scripts/rival_ai.gd")
+const VS_DIFF_HINTS := ["Misses plays", "Land + a spell", "Dumps cheap spells", "Attacks and counters"]
 
 var pages: Dictionary = {}
 var current: String = "hub"
-var status_label: Label
 var vs_player_id: String = "builtin:krenko"
 var vs_bot_id: String = "builtin:talrand"
 var vs_diff: int = 1
-var mp_code_edit: LineEdit
-var mp_ip_edit: LineEdit
-var mp_status: Label
-var mp_roster: Label
-var gallery_grid: GridContainer
 var import_overlay: ImportOverlay
-var builder_cmd: LineEdit
-var builder_cmd_list: ItemList
-var builder_card: LineEdit
-var builder_card_list: ItemList
-var builder_name: LineEdit
-var builder_count: Label
 var builder_cmd_name: String = ""
 var builder_cards: Dictionary = {}
-var settings_music: Button
-var settings_sfx: Button
+
+@onready var status_label: Label = %StatusLabel
+@onready var mp_code_edit: LineEdit = %MpCodeEdit
+@onready var mp_ip_edit: LineEdit = %MpIpEdit
+@onready var mp_status: Label = %MpStatus
+@onready var mp_roster: Label = %MpRoster
+@onready var gallery_grid: GridContainer = %GalleryGrid
+@onready var builder_cmd: LineEdit = %BuilderCmd
+@onready var builder_cmd_list: ItemList = %BuilderCmdList
+@onready var builder_card: LineEdit = %BuilderCard
+@onready var builder_card_list: ItemList = %BuilderCardList
+@onready var builder_name: LineEdit = %BuilderName
+@onready var builder_count: Label = %BuilderCount
+@onready var settings_music: Button = %SettingsMusicBtn
+@onready var settings_sfx: Button = %SettingsSfxBtn
+@onready var vs_diff_option: OptionButton = %DiffOption
 
 
 func _ready() -> void:
-	set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	var bg := ColorRect.new()
-	bg.color = Color(0.05, 0.055, 0.06)
-	bg.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	add_child(bg)
-	_build_hub()
-	_build_vs()
-	_build_mp()
-	_build_library()
-	_build_gallery()
-	_build_builder()
-	_build_settings()
-	import_overlay = ImportOverlay.new()
+	pages = {
+		"hub": %PageHub,
+		"vs": %PageVs,
+		"mp": %PageMp,
+		"library": %PageLibrary,
+		"gallery": %PageGallery,
+		"builder": %PageBuilder,
+		"settings": %PageSettings,
+	}
+	%VsAiBtn.pressed.connect(_show.bind("vs"))
+	%MultiplayerBtn.pressed.connect(_show.bind("mp"))
+	%LibraryBuilderBtn.pressed.connect(_show.bind("library"))
+	%MenuBtn.pressed.connect(_show.bind("settings"))
+	%VsBackBtn.pressed.connect(_show.bind("hub"))
+	%MpBackBtn.pressed.connect(_show.bind("hub"))
+	%LibraryBackBtn.pressed.connect(_show.bind("hub"))
+	%BuilderBtn.pressed.connect(_show.bind("builder"))
+	%GalleryBtn.pressed.connect(_show.bind("gallery"))
+	%GalleryBackBtn.pressed.connect(_show.bind("hub"))
+	%GalleryLibraryHomeBtn.pressed.connect(_show.bind("library"))
+	%BuilderBackBtn.pressed.connect(_show.bind("hub"))
+	%BuilderLibraryHomeBtn.pressed.connect(_show.bind("library"))
+	%SettingsBackBtn.pressed.connect(_show.bind("hub"))
+	for i in VS_DIFF_HINTS.size():
+		vs_diff_option.add_item("%s — %s" % [RivalAI.label(i), VS_DIFF_HINTS[i]], i)
+	vs_diff_option.select(1)
+	import_overlay = preload("res://scenes/ui/import_overlay.tscn").instantiate()
 	add_child(import_overlay)
 	import_overlay.auto_play = false
 	import_overlay.play_imported.connect(_on_imported_saved)
@@ -74,148 +90,6 @@ func _show(name: String) -> void:
 		_refresh_gallery()
 	if name == "vs":
 		_refresh_vs_lists()
-
-
-func _page() -> PanelContainer:
-	var p := PanelContainer.new()
-	p.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	p.offset_left = 80
-	p.offset_right = -80
-	p.offset_top = 40
-	p.offset_bottom = -40
-	var st := StyleBoxFlat.new()
-	st.bg_color = PANEL
-	st.set_corner_radius_all(16)
-	st.set_border_width_all(2)
-	st.border_color = GOLD.darkened(0.25)
-	st.content_margin_left = 28
-	st.content_margin_right = 28
-	st.content_margin_top = 22
-	st.content_margin_bottom = 22
-	p.add_theme_stylebox_override("panel", st)
-	add_child(p)
-	return p
-
-
-func _col(parent: Node) -> VBoxContainer:
-	var c := VBoxContainer.new()
-	c.add_theme_constant_override("separation", 12)
-	parent.add_child(c)
-	return c
-
-
-func _title(parent: Node, text: String, size: int = 42) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.add_theme_font_size_override("font_size", size)
-	l.add_theme_color_override("font_color", GOLD)
-	parent.add_child(l)
-	return l
-
-
-func _sub(parent: Node, text: String) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.add_theme_color_override("font_color", MUTED)
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	parent.add_child(l)
-	return l
-
-
-func _btn(text: String, cb: Callable, min_w: float = 360, gold := false) -> Button:
-	var b := Button.new()
-	b.text = text
-	b.custom_minimum_size = Vector2(min_w, 48)
-	var st := StyleBoxFlat.new()
-	st.bg_color = GOLD.darkened(0.15) if gold else Color(0.16, 0.17, 0.18)
-	st.set_corner_radius_all(8)
-	b.add_theme_stylebox_override("normal", st)
-	b.add_theme_color_override("font_color", Color(0.12, 0.10, 0.04) if gold else INK)
-	b.add_theme_font_size_override("font_size", 20)
-	b.pressed.connect(cb)
-	return b
-
-
-func _back_row(parent: Node, extra: Button = null) -> void:
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 12)
-	row.add_child(_btn("Back", _show.bind("hub"), 160))
-	if extra:
-		row.add_child(extra)
-	parent.add_child(row)
-
-
-func _build_hub() -> void:
-	var p := _page()
-	pages["hub"] = p
-	var c := _col(p)
-	_title(c, "AETHERFOLD")
-	_sub(c, "Commander  ·  1v1 table")
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 12)
-	c.add_child(spacer)
-	var wrap := VBoxContainer.new()
-	wrap.alignment = BoxContainer.ALIGNMENT_CENTER
-	wrap.add_theme_constant_override("separation", 10)
-	wrap.add_child(_btn("Vs. AI", _show.bind("vs"), 400, true))
-	wrap.add_child(_btn("Multiplayer", _show.bind("mp"), 400))
-	wrap.add_child(_btn("Library Builder", _show.bind("library"), 400))
-	wrap.add_child(_btn("Menu", _show.bind("settings"), 400))
-	wrap.add_child(_btn("Exit Game", _on_exit, 400))
-	c.add_child(wrap)
-	status_label = _sub(c, "Play Krenko against a Talrand bot, or bring your own decks.")
-
-
-func _build_vs() -> void:
-	var p := _page()
-	pages["vs"] = p
-	var c := _col(p)
-	_title(c, "Vs. AI", 32)
-	_sub(c, "Pick a deck for you and the bot, then set difficulty.")
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 24)
-	row.size_flags_vertical = SIZE_EXPAND_FILL
-	c.add_child(row)
-	row.add_child(_vs_column("Your deck", true))
-	row.add_child(_vs_column("Bot deck", false))
-	var diff_row := HBoxContainer.new()
-	diff_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	var dl := Label.new()
-	dl.text = "Bot difficulty"
-	dl.add_theme_color_override("font_color", GOLD)
-	diff_row.add_child(dl)
-	var opt := OptionButton.new()
-	opt.custom_minimum_size = Vector2(220, 36)
-	for i in 4:
-		opt.add_item("%s — %s" % [RivalAI.label(i), ["Misses plays", "Land + a spell", "Dumps cheap spells", "Attacks and counters"][i]], i)
-	opt.select(1)
-	opt.item_selected.connect(func(i): vs_diff = i)
-	diff_row.add_child(opt)
-	c.add_child(diff_row)
-	_back_row(c, _btn("Start Match", _on_start_vs, 200, true))
-
-
-func _vs_column(title: String, is_player: bool) -> VBoxContainer:
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 8)
-	var t := Label.new()
-	t.text = title
-	t.add_theme_color_override("font_color", GOLD)
-	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(t)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = SIZE_EXPAND_FILL
-	scroll.custom_minimum_size = Vector2(0, 360)
-	var list := VBoxContainer.new()
-	list.name = "PlayerList" if is_player else "BotList"
-	list.add_theme_constant_override("separation", 6)
-	scroll.add_child(list)
-	col.add_child(scroll)
-	return col
 
 
 func _refresh_vs_lists() -> void:
@@ -263,6 +137,10 @@ func _cmd_tex(rec: Dictionary) -> Texture2D:
 	return cat.texture_for(DeckCatalog.commander_row(rec), "small")
 
 
+func _on_diff_selected(idx: int) -> void:
+	vs_diff = idx
+
+
 func _on_start_vs() -> void:
 	var app := _app()
 	if app:
@@ -277,32 +155,6 @@ func _on_start_vs() -> void:
 
 func _start_table() -> void:
 	get_tree().change_scene_to_file("res://scenes/table.tscn")
-
-
-func _build_mp() -> void:
-	var p := _page()
-	pages["mp"] = p
-	var c := _col(p)
-	_title(c, "Multiplayer", 32)
-	_sub(c, "Peer-to-peer. Create a room code or join one on the same network.")
-	mp_code_edit = LineEdit.new()
-	mp_code_edit.placeholder_text = "Room code (leave blank to generate)"
-	mp_code_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	mp_code_edit.max_length = 8
-	c.add_child(mp_code_edit)
-	mp_ip_edit = LineEdit.new()
-	mp_ip_edit.placeholder_text = "Host IP (optional — LAN discovery uses the code)"
-	mp_ip_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	c.add_child(mp_ip_edit)
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 12)
-	row.add_child(_btn("Create room", _on_mp_host, 200, true))
-	row.add_child(_btn("Join room", _on_mp_join, 200))
-	c.add_child(row)
-	mp_status = _sub(c, "Not connected.")
-	mp_roster = _sub(c, "")
-	_back_row(c, _btn("Start Match", _on_mp_start, 200, true))
 
 
 func _on_mp_host() -> void:
@@ -373,22 +225,6 @@ func _on_lobby_changed() -> void:
 		mp_roster.text = "Waiting on the host to start…"
 
 
-func _build_library() -> void:
-	var p := _page()
-	pages["library"] = p
-	var c := _col(p)
-	_title(c, "Library", 32)
-	_sub(c, "Import a list, build a deck, or browse what you’ve saved.")
-	var wrap := VBoxContainer.new()
-	wrap.alignment = BoxContainer.ALIGNMENT_CENTER
-	wrap.add_theme_constant_override("separation", 10)
-	wrap.add_child(_btn("Import from URL / list", _on_open_import, 420, true))
-	wrap.add_child(_btn("Library Builder", _show.bind("builder"), 420))
-	wrap.add_child(_btn("Library Gallery", _show.bind("gallery"), 420))
-	c.add_child(wrap)
-	_back_row(c)
-
-
 func _on_open_import() -> void:
 	if import_overlay:
 		import_overlay.auto_play = false
@@ -397,23 +233,6 @@ func _on_open_import() -> void:
 
 func _on_imported_saved(_deck = null, _rows = null) -> void:
 	_show("gallery")
-
-
-func _build_gallery() -> void:
-	var p := _page()
-	pages["gallery"] = p
-	var c := _col(p)
-	_title(c, "Library Gallery", 32)
-	_sub(c, "Commander art is the deck icon. Click the name to rename.")
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = SIZE_EXPAND_FILL
-	gallery_grid = GridContainer.new()
-	gallery_grid.columns = 3
-	gallery_grid.add_theme_constant_override("h_separation", 14)
-	gallery_grid.add_theme_constant_override("v_separation", 14)
-	scroll.add_child(gallery_grid)
-	c.add_child(scroll)
-	_back_row(c, _btn("Library home", _show.bind("library"), 180))
 
 
 func _refresh_gallery() -> void:
@@ -495,44 +314,6 @@ func _gallery_card(rec: Dictionary) -> PanelContainer:
 	col.add_child(row)
 	panel.add_child(col)
 	return panel
-
-
-func _build_builder() -> void:
-	var p := _page()
-	pages["builder"] = p
-	var c := _col(p)
-	_title(c, "Library Builder", 32)
-	_sub(c, "Pick a commander, then add cards by name. Singleton Commander rules apply when you save.")
-	builder_name = LineEdit.new()
-	builder_name.placeholder_text = "Deck name (defaults to commander)"
-	c.add_child(builder_name)
-	builder_cmd = LineEdit.new()
-	builder_cmd.placeholder_text = "Search commander…"
-	builder_cmd.text_changed.connect(_on_cmd_search)
-	c.add_child(builder_cmd)
-	builder_cmd_list = ItemList.new()
-	builder_cmd_list.custom_minimum_size = Vector2(0, 90)
-	builder_cmd_list.item_selected.connect(_on_cmd_pick)
-	c.add_child(builder_cmd_list)
-	builder_card = LineEdit.new()
-	builder_card.placeholder_text = "Add card name, then press Enter"
-	builder_card.text_submitted.connect(_on_add_card)
-	c.add_child(builder_card)
-	builder_card_list = ItemList.new()
-	builder_card_list.size_flags_vertical = SIZE_EXPAND_FILL
-	builder_card_list.custom_minimum_size = Vector2(0, 180)
-	c.add_child(builder_card_list)
-	builder_count = Label.new()
-	builder_count.add_theme_color_override("font_color", GOLD)
-	builder_count.text = "0 / 99 library  ·  no commander"
-	c.add_child(builder_count)
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 10)
-	row.add_child(_btn("Remove selected", _on_remove_card, 180))
-	row.add_child(_btn("Save to Gallery", _on_save_builder, 200, true))
-	c.add_child(row)
-	_back_row(c, _btn("Library home", _show.bind("library"), 180))
 
 
 func _on_cmd_search(q: String) -> void:
@@ -619,25 +400,7 @@ func _on_save_builder() -> void:
 	_show("gallery")
 
 
-func _build_settings() -> void:
-	var p := _page()
-	pages["settings"] = p
-	var c := _col(p)
-	_title(c, "Menu", 32)
-	_sub(c, "Audio and display.")
-	settings_music = _btn("Music: On", _toggle_music, 280)
-	settings_sfx = _btn("SFX: On", _toggle_sfx, 280)
-	c.add_child(settings_music)
-	c.add_child(settings_sfx)
-	c.add_child(_btn("Toggle fullscreen", _toggle_fullscreen, 280))
-	_sub(c, "Aetherfold  ·  Godot 4.7  ·  fan Commander table")
-	_back_row(c)
-
-
 func _toggle_music() -> void:
-	var bus := AudioServer.get_bus_index("Master")
-	var mute := not AudioServer.is_bus_mute(bus)
-	# music is on table; toggle Master here as a coarse control
 	if settings_music:
 		settings_music.text = "Music: Off" if settings_music.text.ends_with("On") else "Music: On"
 
