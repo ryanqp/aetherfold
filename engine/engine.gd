@@ -694,8 +694,12 @@ func apply_combat_damage() -> void:
 	var n := state.players.size()
 	if n <= 0:
 		return
-	var defender := (state.active_player_id + 1) % n
-	cs.defending_player_id = defender
+	var defender := cs.defending_player_id
+	if not _is_legal_defender(state.active_player_id, defender):
+		defender = _default_defender(state.active_player_id)
+		cs.defending_player_id = defender
+	if defender < 0:
+		return
 	for aid in cs.attacker_ids:
 		var obj: GameObject = state.objects.get(int(aid))
 		if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
@@ -745,8 +749,33 @@ func _submit_declare_attackers(action: GameAction) -> SubmitResult:
 		var obj: GameObject = state.objects.get(oid)
 		if obj != null:
 			obj.tapped = true
+	var requested_defender := int(action.extra.get("defending_player_id", -1))
+	if _is_legal_defender(action.player_id, requested_defender):
+		cs.defending_player_id = requested_defender
+	else:
+		cs.defending_player_id = _default_defender(action.player_id)
 	r.ok = true
 	return r
+
+
+func _is_legal_defender(attacking_player_id: int, defender_id: int) -> bool:
+	if defender_id < 0 or defender_id == attacking_player_id:
+		return false
+	for p in state.players:
+		if p.player_id == defender_id:
+			return not p.lost
+	return false
+
+
+func _default_defender(attacking_player_id: int) -> int:
+	var n := state.players.size()
+	if n <= 0:
+		return -1
+	for step in range(1, n):
+		var candidate := (attacking_player_id + step) % n
+		if _is_legal_defender(attacking_player_id, candidate):
+			return candidate
+	return -1
 
 
 func _auto_finish_payment(player_id: int) -> bool:
