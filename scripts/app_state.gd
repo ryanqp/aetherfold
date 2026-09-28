@@ -9,6 +9,7 @@ var mp_role: String = ""
 var mp_code: String = ""
 var skip_ai: bool = false
 var you_seat: int = 0
+var sfx_muted: bool = false
 
 
 func reset_match_flags() -> void:
