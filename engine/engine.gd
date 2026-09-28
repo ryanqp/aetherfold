@@ -197,6 +197,10 @@ func submit(action: GameAction) -> SubmitResult:
 			r = _submit_declare_attackers(action)
 			if r.ok:
 				priority.note_action(state, action.player_id)
+		GameAction.Kind.DECLARE_BLOCKERS:
+			r = _submit_declare_blockers(action)
+			if r.ok:
+				priority.note_action(state, action.player_id)
 		_:
 			r.error = "not implemented"
 	r.mode = state.mode if state else 0
@@ -696,23 +700,34 @@ func apply_combat_damage() -> void:
 		return
 	var defender := (state.active_player_id + 1) % n
 	cs.defending_player_id = defender
+	var pending_lethal: Array[int] = []
 	for aid in cs.attacker_ids:
-		var obj: GameObject = state.objects.get(int(aid))
-		if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		var attacker: GameObject = state.objects.get(int(aid))
+		if attacker == null or attacker.zone != EngineEnums.ZoneId.BATTLEFIELD:
 			continue
-		var dmg := layers.power(state, obj) if layers != null else 0
-		if dmg <= 0:
+		var atk_dmg := _power_of(attacker)
+		var blocker := _assigned_blocker(cs, int(aid))
+		if blocker == null:
+			if atk_dmg <= 0:
+				continue
+			state.players[defender].life -= atk_dmg
+			state.log.append(EngineEnums.EventType.DAMAGE, state.active_player_id, {
+				to_player = defender,
+				amount = atk_dmg,
+				object_id = attacker.object_id,
+			})
+			if attacker.is_commander:
+				var key := str(attacker.owner_id) + ":" + str((attacker.definition as CardDefinition).name if attacker.definition is CardDefinition else attacker.object_id)
+				var prev := int(state.players[defender].commander_damage_from.get(key, 0))
+				state.players[defender].commander_damage_from[key] = prev + atk_dmg
 			continue
-		state.players[defender].life -= dmg
-		state.log.append(EngineEnums.EventType.DAMAGE, state.active_player_id, {
-			to_player = defender,
-			amount = dmg,
-			object_id = obj.object_id,
-		})
-		if obj.is_commander:
-			var key := str(obj.owner_id) + ":" + str((obj.definition as CardDefinition).name if obj.definition is CardDefinition else obj.object_id)
-			var prev := int(state.players[defender].commander_damage_from.get(key, 0))
-			state.players[defender].commander_damage_from[key] = prev + dmg
+		if atk_dmg > 0:
+			_mark_combat_damage(attacker, blocker, atk_dmg, pending_lethal)
+		var blk_dmg := _power_of(blocker)
+		if blk_dmg > 0:
+			_mark_combat_damage(blocker, attacker, blk_dmg, pending_lethal)
+	for oid in pending_lethal:
+		_bury_if_lethal(oid)
 	if sba != null:
 		sba.check(self)
 
@@ -739,6 +754,7 @@ func _submit_declare_attackers(action: GameAction) -> SubmitResult:
 		state.combat = CombatState.new()
 	var cs := state.combat as CombatState
 	cs.attacker_ids.clear()
+	cs.blockers.clear()
 	for raw in ids:
 		var oid := int(raw)
 		cs.attacker_ids.append(oid)
@@ -747,6 +763,123 @@ func _submit_declare_attackers(action: GameAction) -> SubmitResult:
 			obj.tapped = true
 	r.ok = true
 	return r
+
+
+func _submit_declare_blockers(action: GameAction) -> SubmitResult:
+	var r := SubmitResult.new()
+	r.ok = false
+	if state.step != EngineEnums.Step.DECLARE_BLOCKERS:
+		r.error = "not declare blockers"
+		return r
+	if state.players.is_empty():
+		r.error = "no players"
+		return r
+	var defender := (state.active_player_id + 1) % state.players.size()
+	if action.player_id != defender:
+		r.error = "not the defending player"
+		return r
+	if action.player_id != int(state.awaiting.get("player_id", -1)):
+		r.error = "not your priority"
+		return r
+	if not (state.combat is CombatState):
+		r.error = "no combat"
+		return r
+	var cs := state.combat as CombatState
+	var raw: Variant = action.extra.get("blockers", {})
+	if not (raw is Dictionary):
+		r.error = "blockers must be a dictionary"
+		return r
+	var next_blocks := {}
+	var used := {}
+	for key in (raw as Dictionary).keys():
+		var attacker_id := int(key)
+		if not cs.attacker_ids.has(attacker_id):
+			r.error = "not an attacker"
+			return r
+		var entry: Variant = (raw as Dictionary)[key]
+		var ids: Array = []
+		if entry is Array:
+			ids = entry
+		elif typeof(entry) == TYPE_INT or typeof(entry) == TYPE_FLOAT or str(entry).is_valid_int():
+			ids = [int(entry)]
+		else:
+			r.error = "bad blocker assignment"
+			return r
+		if ids.size() > 1:
+			r.error = "one blocker per attacker"
+			return r
+		if ids.is_empty():
+			continue
+		var bid := int(ids[0])
+		if used.has(bid):
+			r.error = "blocker already assigned"
+			return r
+		if not _can_block(bid, defender):
+			r.error = "illegal blocker"
+			return r
+		used[bid] = true
+		next_blocks[attacker_id] = [bid]
+	cs.blockers = next_blocks
+	cs.defending_player_id = defender
+	r.ok = true
+	return r
+
+
+func _can_block(object_id: int, defender_id: int) -> bool:
+	var obj: GameObject = state.objects.get(object_id)
+	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return false
+	if obj.controller_id != defender_id or obj.tapped:
+		return false
+	return obj.definition is CardDefinition and (obj.definition as CardDefinition).is_creature()
+
+
+func _assigned_blocker(cs: CombatState, attacker_id: int) -> GameObject:
+	var raw: Variant = cs.blockers.get(attacker_id, [])
+	if not (raw is Array) or (raw as Array).is_empty():
+		return null
+	var blocker: GameObject = state.objects.get(int((raw as Array)[0]))
+	if blocker == null or blocker.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return null
+	return blocker
+
+
+func _power_of(obj: GameObject) -> int:
+	if layers != null:
+		return layers.power(state, obj)
+	if obj.definition is CardDefinition and (obj.definition as CardDefinition).power.is_valid_int():
+		return int((obj.definition as CardDefinition).power)
+	return 0
+
+
+func _toughness_of(obj: GameObject) -> int:
+	if layers != null:
+		return int(layers.snapshot(state, obj).get("toughness", 0))
+	if obj.definition is CardDefinition and (obj.definition as CardDefinition).toughness.is_valid_int():
+		return int((obj.definition as CardDefinition).toughness)
+	return 0
+
+
+func _mark_combat_damage(source: GameObject, target: GameObject, amount: int, pending_lethal: Array[int]) -> void:
+	target.damage_marked += amount
+	state.log.append(EngineEnums.EventType.DAMAGE, source.controller_id, {
+		to_object = target.object_id,
+		amount = amount,
+		object_id = source.object_id,
+	})
+	if target.definition is CardDefinition and (target.definition as CardDefinition).is_creature():
+		if target.damage_marked >= _toughness_of(target) and not pending_lethal.has(target.object_id):
+			pending_lethal.append(target.object_id)
+
+
+func _bury_if_lethal(object_id: int) -> void:
+	var obj: GameObject = state.objects.get(object_id)
+	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
+	if not (obj.definition is CardDefinition) or not (obj.definition as CardDefinition).is_creature():
+		return
+	if obj.damage_marked >= _toughness_of(obj):
+		state.zones.move(obj.object_id, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
 
 
 func _auto_finish_payment(player_id: int) -> bool:

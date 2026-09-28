@@ -47,3 +47,117 @@ func test_commander_damage_tally() -> void:
 	engine.apply_combat_damage()
 	assert_eq(engine.state.players[1].life, 37)
 	assert_eq(engine.state.players[1].commander_damage_from.size(), 1)
+
+
+func test_blocker_absorbs_damage() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var piker := _ready_attacker(engine, "Goblin Piker")
+	var krenko := _ready_blocker(engine, "Krenko, Mob Boss")
+	assert_true(_declare_block(engine, piker, krenko).ok)
+	engine.apply_combat_damage()
+	assert_eq(engine.state.players[1].life, 40)
+	assert_false(_on_battlefield(engine, "Goblin Piker"))
+	assert_true(_on_battlefield(engine, "Krenko, Mob Boss"))
+	assert_true(_in_graveyard(engine, 0, "Goblin Piker"))
+
+
+func test_blocker_dies_to_lethal() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var krenko := _ready_attacker(engine, "Krenko, Mob Boss")
+	var piker := _ready_blocker(engine, "Goblin Piker")
+	assert_true(_declare_block(engine, krenko, piker).ok)
+	engine.apply_combat_damage()
+	assert_eq(engine.state.players[1].life, 40)
+	assert_true(_on_battlefield(engine, "Krenko, Mob Boss"))
+	assert_false(_on_battlefield(engine, "Goblin Piker"))
+	assert_true(_in_graveyard(engine, 1, "Goblin Piker"))
+
+
+func test_unblocked_attacker_still_hits_player() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var blocked := _ready_attacker(engine, "Goblin Piker")
+	var open := _ready_attacker(engine, "Goblin Piker")
+	var wall := _ready_blocker(engine, "Krenko, Mob Boss")
+	var cs := engine.state.combat as CombatState
+	cs.attacker_ids = [blocked.object_id, open.object_id]
+	var act := GameAction.new()
+	act.kind = GameAction.Kind.DECLARE_BLOCKERS
+	act.player_id = 1
+	act.extra = {blockers = {blocked.object_id: [wall.object_id]}}
+	assert_true(engine.submit(act).ok)
+	engine.apply_combat_damage()
+	assert_eq(engine.state.players[1].life, 38)
+	assert_true(_on_battlefield(engine, "Krenko, Mob Boss"))
+
+
+func test_tapped_creature_cannot_block() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var piker := _ready_attacker(engine, "Goblin Piker")
+	var krenko := _ready_blocker(engine, "Krenko, Mob Boss")
+	krenko.tapped = true
+	var r := _declare_block(engine, piker, krenko)
+	assert_false(r.ok)
+	assert_eq(r.error, "illegal blocker")
+
+
+func test_two_blockers_on_one_attacker_rejected() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var piker := _ready_attacker(engine, "Goblin Piker")
+	var a := _ready_blocker(engine, "Goblin Piker")
+	var b := _ready_blocker(engine, "Krenko, Mob Boss")
+	var act := GameAction.new()
+	act.kind = GameAction.Kind.DECLARE_BLOCKERS
+	act.player_id = 1
+	act.extra = {blockers = {piker.object_id: [a.object_id, b.object_id]}}
+	var r := engine.submit(act)
+	assert_false(r.ok)
+	assert_eq(r.error, "one blocker per attacker")
+
+
+func _ready_attacker(engine: RulesEngine, card_name: String) -> GameObject:
+	var obj := Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.BATTLEFIELD, card_name)
+	obj.summoned_this_turn = false
+	obj.tapped = true
+	if not (engine.state.combat is CombatState):
+		engine.state.combat = CombatState.new()
+	var cs := engine.state.combat as CombatState
+	cs.attacker_ids.append(obj.object_id)
+	engine.state.active_player_id = 0
+	engine.state.step = EngineEnums.Step.DECLARE_BLOCKERS
+	engine.state.phase = EngineEnums.Phase.COMBAT
+	engine.priority.give(engine.state, 1)
+	return obj
+
+
+func _ready_blocker(engine: RulesEngine, card_name: String) -> GameObject:
+	var obj := Fixtures.spawn_named(engine, db, 1, EngineEnums.ZoneId.BATTLEFIELD, card_name)
+	obj.summoned_this_turn = false
+	obj.tapped = false
+	return obj
+
+
+func _declare_block(engine: RulesEngine, attacker: GameObject, blocker: GameObject) -> SubmitResult:
+	var act := GameAction.new()
+	act.kind = GameAction.Kind.DECLARE_BLOCKERS
+	act.player_id = 1
+	act.extra = {blockers = {attacker.object_id: [blocker.object_id]}}
+	return engine.submit(act)
+
+
+func _on_battlefield(engine: RulesEngine, card_name: String) -> bool:
+	return _zone_has(engine, EngineEnums.ZoneId.BATTLEFIELD, 0, card_name)
+
+
+func _in_graveyard(engine: RulesEngine, player_id: int, card_name: String) -> bool:
+	return _zone_has(engine, EngineEnums.ZoneId.GRAVEYARD, player_id, card_name)
+
+
+func _zone_has(engine: RulesEngine, zone_id: int, player_id: int, card_name: String) -> bool:
+	var zone: Zone = engine.state.zones.get_zone(zone_id, player_id)
+	if zone == null:
+		return false
+	for oid in zone.object_ids:
+		var obj: GameObject = engine.state.objects.get(oid)
+		if obj != null and obj.definition is CardDefinition and (obj.definition as CardDefinition).name == card_name:
+			return true
+	return false
