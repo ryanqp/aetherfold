@@ -134,7 +134,10 @@ func _start_tba(eng: RulesEngine, st: GameState) -> void:
 			if eng.layers != null:
 				eng.layers.clear_until_eot(st)
 			if st.combat is CombatState:
-				(st.combat as CombatState).attacker_ids.clear()
+				var cs := st.combat as CombatState
+				cs.attacker_ids.clear()
+				cs.blockers.clear()
+				cs.defenders.clear()
 		_:
 			pass
 
