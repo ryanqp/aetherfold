@@ -114,6 +114,32 @@ func to_plain() -> Dictionary:
 	}
 
 
+## Same shape as to_plain(), but with `you`'s hand replaced by
+## face-down placeholders. Use this (never to_plain()) for anything
+## that crosses the network: `you` is *our own* hand from the host's
+## perspective, which becomes the *opponent's* hand once the remote
+## client swaps you/rival on receipt (see GameNet.receive_view). The
+## remote client must never receive real card data for a hand that
+## isn't theirs, even if the UI only ever renders it as a count.
+func to_plain_for_remote() -> Dictionary:
+	var d := to_plain()
+	d.you = _redacted_player(you)
+	return d
+
+
+static func _redacted_player(p: Dictionary) -> Dictionary:
+	var out := p.duplicate(true)
+	out.hand = _redacted_hand(p.get("hand", []))
+	return out
+
+
+static func _redacted_hand(hand: Array) -> Array:
+	var out: Array = []
+	for i in hand.size():
+		out.append({hidden = true, id = "hidden_%d" % i})
+	return out
+
+
 static func from_plain(d: Dictionary) -> TableView:
 	var v := TableView.new()
 	v.you = d.get("you", {})
