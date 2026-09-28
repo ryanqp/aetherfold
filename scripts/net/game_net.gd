@@ -17,6 +17,7 @@ var code: String = ""
 var role: String = ""
 var last_status: String = "Offline"
 var connected_peer_ids: Array[int] = []
+var ready_peer_ids: Array[int] = []
 var guest_decks: Dictionary = {}
 var last_view = null
 var _beacon_acc := 0.0
@@ -86,6 +87,7 @@ func leave() -> void:
 	role = ""
 	code = ""
 	connected_peer_ids.clear()
+	ready_peer_ids.clear()
 	guest_decks.clear()
 	remote_deck_id = ""
 	last_view = null
@@ -105,6 +107,25 @@ func max_players() -> int:
 	return MAX_TOTAL_PLAYERS
 
 
+func set_ready(is_ready: bool) -> void:
+	if role != "client":
+		return
+	announce_ready.rpc_id(1, is_ready)
+
+
+func all_guests_ready() -> bool:
+	if connected_peer_ids.is_empty():
+		return false
+	for pid in connected_peer_ids:
+		if not ready_peer_ids.has(pid):
+			return false
+	return true
+
+
+func ready_count() -> int:
+	return ready_peer_ids.size()
+
+
 func send_action(kind: String, payload: Dictionary = {}) -> void:
 	if role != "client":
 		return
@@ -122,6 +143,19 @@ func broadcast_view(view) -> void:
 	# networked players; guests past the first are spectating seat 1.
 	for pid in connected_peer_ids:
 		receive_view.rpc_id(pid, plain)
+
+
+@rpc("any_peer", "reliable")
+func announce_ready(is_ready: bool) -> void:
+	if role != "host":
+		return
+	var sender := multiplayer.get_remote_sender_id()
+	if is_ready:
+		if not ready_peer_ids.has(sender):
+			ready_peer_ids.append(sender)
+	else:
+		ready_peer_ids.erase(sender)
+	lobby_changed.emit()
 
 
 @rpc("any_peer", "reliable")
@@ -199,6 +233,7 @@ func _connect_to(ip: String) -> void:
 func _on_peer_connected(id: int) -> void:
 	if not connected_peer_ids.has(id):
 		connected_peer_ids.append(id)
+	ready_peer_ids.erase(id)
 	_set_status("Room %s — %d/%d players joined." % [code, player_count(), MAX_TOTAL_PLAYERS])
 	peer_ready.emit()
 	lobby_changed.emit()
@@ -206,6 +241,7 @@ func _on_peer_connected(id: int) -> void:
 
 func _on_peer_disconnected(id: int) -> void:
 	connected_peer_ids.erase(id)
+	ready_peer_ids.erase(id)
 	guest_decks.erase(id)
 	_set_status("A player left room %s (%d/%d)." % [code, player_count(), MAX_TOTAL_PLAYERS])
 	lobby_changed.emit()
@@ -226,6 +262,7 @@ func _on_connection_failed() -> void:
 func _on_server_gone() -> void:
 	_set_status("Host disconnected.")
 	connected_peer_ids.clear()
+	ready_peer_ids.clear()
 	lobby_changed.emit()
 
 

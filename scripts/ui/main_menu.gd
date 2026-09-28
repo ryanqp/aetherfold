@@ -138,7 +138,7 @@ func _btn(text: String, cb: Callable, min_w: float = 360, gold := false) -> Butt
 	return b
 
 
-func _back_row(parent: Node, extra: Button = null) -> void:
+func _back_row(parent: Node, extra: Node = null) -> void:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 12)
@@ -302,7 +302,12 @@ func _build_mp() -> void:
 	c.add_child(row)
 	mp_status = _sub(c, "Not connected.")
 	mp_roster = _sub(c, "")
-	_back_row(c, _btn("Start Match", _on_mp_start, 200, true))
+	var actions := HBoxContainer.new()
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	actions.add_theme_constant_override("separation", 12)
+	actions.add_child(_btn("Ready", _on_mp_ready, 160))
+	actions.add_child(_btn("Start Match", _on_mp_start, 200, true))
+	_back_row(c, actions)
 
 
 func _on_mp_host() -> void:
@@ -340,6 +345,9 @@ func _on_mp_start() -> void:
 	if not net.is_connected_peer():
 		mp_status.text = "Wait for at least one player to join."
 		return
+	if not net.all_guests_ready():
+		mp_status.text = "Waiting for every guest to ready up."
+		return
 	app.player_deck_id = vs_player_id
 	var guest_deck: String = str(net.remote_deck_id)
 	if guest_deck == "":
@@ -368,9 +376,20 @@ func _on_lobby_changed() -> void:
 	if net == null or mp_roster == null:
 		return
 	if net.role == "host":
-		mp_roster.text = "Players: %d/%d (host can start with 2+)" % [net.player_count(), net.max_players()]
+		mp_roster.text = "Players: %d/%d. Ready: %d/%d." % [net.player_count(), net.max_players(), net.ready_count(), net.connected_peer_ids.size()]
 	elif net.role == "client":
-		mp_roster.text = "Waiting on the host to start…"
+		mp_roster.text = "Press Ready, then wait for the host to start."
+
+
+func _on_mp_ready() -> void:
+	var net := _net()
+	if net == null or net.role != "client":
+		if mp_status:
+			mp_status.text = "Only guests ready up. The host starts the match."
+		return
+	net.set_ready(true)
+	if mp_status:
+		mp_status.text = "You are ready."
 
 
 func _build_library() -> void:
