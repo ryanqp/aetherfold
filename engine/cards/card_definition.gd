@@ -78,10 +78,58 @@ func is_permanent_type() -> bool:
 
 
 func spell_ability() -> Ability:
+	var spells := parsed_spell_abilities()
+	if spells.is_empty():
+		return null
+	return spells[0]
+
+
+func parsed_spell_abilities() -> Array:
+	var out: Array = []
 	for a in abilities:
 		if a is Ability and (a as Ability).kind == &"SPELL" and not (a as Ability).unparsed:
-			return a
-	return null
+			out.append(a)
+	return out
+
+
+## True when any parsed ability has an effect of this kind (COUNTER_SPELL, DRAW, ...).
+func has_effect(effect_kind: StringName) -> bool:
+	for a in abilities:
+		if not (a is Ability) or (a as Ability).unparsed:
+			continue
+		for e in (a as Ability).effects:
+			if e is AbilityEffect and (e as AbilityEffect).kind == effect_kind:
+				return true
+	return false
+
+
+func spell_effect_param(effect_kind: StringName, param: String, fallback: Variant = null) -> Variant:
+	for a in parsed_spell_abilities():
+		for e in (a as Ability).effects:
+			if e is AbilityEffect and (e as AbilityEffect).kind == effect_kind:
+				return (e as AbilityEffect).params.get(param, fallback)
+	return fallback
+
+
+## A parsed spell target whose query requires a creature (Unsummon). Any-target burn is not this.
+func spell_requires_creature_target() -> bool:
+	for a in parsed_spell_abilities():
+		for t in (a as Ability).targets:
+			if not (t is Dictionary):
+				continue
+			var query: Variant = (t as Dictionary).get("query", {})
+			if query is Dictionary and str((query as Dictionary).get("type", "")) == "creature":
+				return true
+	return false
+
+
+func spell_moves_target_to_hand() -> bool:
+	for a in parsed_spell_abilities():
+		for e in (a as Ability).effects:
+			if e is AbilityEffect and (e as AbilityEffect).kind == &"MOVE_ZONE":
+				if str((e as AbilityEffect).params.get("to", "")) == "HAND":
+					return true
+	return false
 
 
 func find_ability(p_ability_id: StringName) -> Ability:

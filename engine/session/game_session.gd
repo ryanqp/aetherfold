@@ -510,6 +510,18 @@ func pass_until_active(player_id: int, max_steps: int = 80) -> void:
 		pass_priority(pid)
 
 
+## Skip a cast that cannot do anything: a counter with an empty stack, or a
+## creature-only spell with no creature on the battlefield. Uses effect kinds, not names.
+static func ai_should_skip_cast(def: CardDefinition, stack_empty: bool, battlefield_has_creature: bool) -> bool:
+	if def == null:
+		return false
+	if stack_empty and def.has_effect(&"COUNTER_SPELL"):
+		return true
+	if not battlefield_has_creature and def.spell_requires_creature_target():
+		return true
+	return false
+
+
 func ai_take_turn(player_id: int) -> void:
 	var n := 0
 	var skip_cast: Dictionary = {}
@@ -540,11 +552,8 @@ func ai_take_turn(player_id: int) -> void:
 					continue
 				var obj: GameObject = engine.state.objects.get(ga.object_id)
 				var def: CardDefinition = obj.definition as CardDefinition if obj != null and obj.definition is CardDefinition else null
-				var nm := def.name if def else ""
 				var stack_empty := engine.state.stack == null or (engine.state.stack as MagicStack).is_empty()
-				if stack_empty and (nm == "Counterspell" or nm == "Cancel"):
-					continue
-				if nm == "Unsummon" and not _ai_has_creature_target(player_id):
+				if ai_should_skip_cast(def, stack_empty, _ai_has_creature_target(player_id)):
 					continue
 				if spell == null:
 					spell = ga

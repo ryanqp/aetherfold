@@ -40,7 +40,7 @@ Do **not** add new gameplay to `scripts/match_state.gd`. That file is the old di
 
 - **`USE_ENGINE` flag** — default true. False still wires `MatchState` + `RivalAI.take_turn`. Planned delete: design-doc PR-23.
 - **`MatchState` instance on the table** — allocated even when unused.
-- **`rival_ai.gd` name checks** (`opt`, `ponder`, `unsummon`, `counterspell`) — only the old path.
+- **`rival_ai.gd` `take_turn`** — still MatchState-only. Spell decisions read IR effect kinds (`DRAW`, `COUNTER_SPELL`, `MOVE_ZONE`), same as `GameSession.ai_should_skip_cast`. The Talrand Drake is still recognized by name on this legacy path.
 - Design-doc “current architecture” (no `res://engine/`, main scene `table.tscn`) — **stale**. Main scene is `scenes/main_menu.tscn`.
 
 ## If you are changing rules
