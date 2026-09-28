@@ -16,6 +16,7 @@ var vs_diff: int = 1
 var mp_code_edit: LineEdit
 var mp_ip_edit: LineEdit
 var mp_status: Label
+var mp_roster: Label
 var gallery_grid: GridContainer
 var import_overlay: ImportOverlay
 var builder_cmd: LineEdit
@@ -52,6 +53,7 @@ func _ready() -> void:
 	if net and not net.status_changed.is_connected(_on_net_status):
 		net.status_changed.connect(_on_net_status)
 		net.peer_ready.connect(_on_peer_ready)
+		net.lobby_changed.connect(_on_lobby_changed)
 		net.match_begin.connect(_start_table)
 	_show("hub")
 
@@ -136,7 +138,7 @@ func _btn(text: String, cb: Callable, min_w: float = 360, gold := false) -> Butt
 	return b
 
 
-func _back_row(parent: Node, extra: Button = null) -> void:
+func _back_row(parent: Node, extra: Node = null) -> void:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 12)
@@ -299,7 +301,13 @@ func _build_mp() -> void:
 	row.add_child(_btn("Join room", _on_mp_join, 200))
 	c.add_child(row)
 	mp_status = _sub(c, "Not connected.")
-	_back_row(c, _btn("Start Match", _on_mp_start, 200, true))
+	mp_roster = _sub(c, "")
+	var actions := HBoxContainer.new()
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	actions.add_theme_constant_override("separation", 12)
+	actions.add_child(_btn("Ready", _on_mp_ready, 160))
+	actions.add_child(_btn("Start Match", _on_mp_start, 200, true))
+	_back_row(c, actions)
 
 
 func _on_mp_host() -> void:
@@ -335,7 +343,10 @@ func _on_mp_start() -> void:
 		mp_status.text = "Only the host can start the match."
 		return
 	if not net.is_connected_peer():
-		mp_status.text = "Wait for the other player to join."
+		mp_status.text = "Wait for at least one player to join."
+		return
+	if not net.all_guests_ready():
+		mp_status.text = "Waiting for every guest to ready up."
 		return
 	app.player_deck_id = vs_player_id
 	var guest_deck: String = str(net.remote_deck_id)
@@ -356,7 +367,29 @@ func _on_peer_ready() -> void:
 	if net and net.role == "client":
 		net.announce_deck.rpc_id(1, vs_player_id)
 	if mp_status:
-		mp_status.text = "Connected. Host can start the match."
+		mp_status.text = "Connected. Host can start whenever ready."
+	_on_lobby_changed()
+
+
+func _on_lobby_changed() -> void:
+	var net := _net()
+	if net == null or mp_roster == null:
+		return
+	if net.role == "host":
+		mp_roster.text = "Players: %d/%d. Ready: %d/%d." % [net.player_count(), net.max_players(), net.ready_count(), net.connected_peer_ids.size()]
+	elif net.role == "client":
+		mp_roster.text = "Press Ready, then wait for the host to start."
+
+
+func _on_mp_ready() -> void:
+	var net := _net()
+	if net == null or net.role != "client":
+		if mp_status:
+			mp_status.text = "Only guests ready up. The host starts the match."
+		return
+	net.set_ready(true)
+	if mp_status:
+		mp_status.text = "You are ready."
 
 
 func _build_library() -> void:
