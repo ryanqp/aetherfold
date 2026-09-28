@@ -86,10 +86,12 @@ static func _play_spell(state, card: Dictionary, d: int, log: PackedStringArray)
 		log.append("Cast %s for %d." % [card.get("name", "a spell"), cost])
 
 static func _on_spell(state, card: Dictionary, d: int, log: PackedStringArray) -> void:
-	var n := str(card.get("name", "")).to_lower()
-	if n == "opt" or n == "ponder":
-		_draw_one(state, log)
-	if n == "unsummon" and d >= 2:
+	var def := _definition_from_card(card)
+	if def.has_effect(&"DRAW"):
+		var n := int(def.spell_effect_param(&"DRAW", "n", 1))
+		for _i in maxi(n, 0):
+			_draw_one(state, log)
+	if def.spell_moves_target_to_hand() and d >= 2:
 		_bounce_you(state, log)
 
 static func _bounce_you(state, log: PackedStringArray) -> void:
@@ -199,9 +201,32 @@ static func _is_instant_or_sorcery(card: Dictionary) -> bool:
 	var type_line := str(card.get("type", ""))
 	return type_line.find("Instant") >= 0 or type_line.find("Sorcery") >= 0
 
+static var _ir_by_name: Dictionary = {}
+static var _ir_ready := false
+
+
+static func _ensure_ir() -> void:
+	if _ir_ready:
+		return
+	_ir_ready = true
+	var loader := IrLoader.new()
+	var loaded: Dictionary = loader.load_dir("res://engine/cards/ir")
+	for key in loaded.keys():
+		_ir_by_name[str(key).strip_edges().to_lower()] = loaded[key]
+
+
+static func _definition_from_card(card: Dictionary) -> CardDefinition:
+	_ensure_ir()
+	var d := CardDefinition.new()
+	d.name = str(card.get("name", ""))
+	var key := d.name.strip_edges().to_lower()
+	if _ir_by_name.has(key):
+		d.abilities = _ir_by_name[key]
+	return d
+
+
 static func _is_counterspell(card: Dictionary) -> bool:
-	var n := str(card.get("name", "")).to_lower()
-	return n == "counterspell" or n == "cancel" or n == "swan song"
+	return _definition_from_card(card).has_effect(&"COUNTER_SPELL")
 
 static func _power_of(card: Dictionary) -> int:
 	return str(card.get("power", "0")).to_int()
