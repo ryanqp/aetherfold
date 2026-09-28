@@ -1,0 +1,13 @@
+{
+  "name": "Raise the Alarm",
+  "abilities": [
+    {
+      "ability_id": "raise_the_alarm",
+      "kind": "SPELL",
+      "costs": [{ "kind": "MANA", "mana": "{1}{W}" }],
+      "targets": [],
+      "effects": [{ "kind": "CREATE_TOKEN", "params": { "token": "soldier_1_1_w", "count": 2 } }],
+      "text": "Create two 1/1 white Soldier creature tokens."
+    }
+  ]
+}

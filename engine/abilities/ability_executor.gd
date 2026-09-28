@@ -40,6 +40,8 @@ func _apply(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: Abil
 			engine.mana.add(entry.controller_id, produced)
 		"DEAL_DAMAGE":
 			_deal_damage(engine, entry, fx)
+		"LOSE_LIFE":
+			_lose_life(engine, entry, fx)
 		"TAP":
 			_set_tapped(engine, entry, fx, true)
 		"UNTAP":
@@ -76,6 +78,28 @@ func _counter_spell(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -
 	var obj: GameObject = engine.state.objects.get(found.object_id)
 	if obj != null and obj.zone == EngineEnums.ZoneId.STACK:
 		engine.state.zones.move(obj.object_id, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
+
+
+func _lose_life(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
+	var n := int(fx.params.get("n", 0))
+	if n <= 0:
+		return
+	var idx := int(fx.params.get("target", 0))
+	if idx < 0 or idx >= entry.targets.size():
+		return
+	var obj: GameObject = engine.state.objects.get(int(entry.targets[idx]))
+	if obj == null:
+		return
+	var pid := obj.controller_id
+	if pid < 0 or pid >= engine.state.players.size():
+		return
+	engine.state.players[pid].life -= n
+	engine.state.log.append(EngineEnums.EventType.LIFE_CHANGE, entry.controller_id, {
+		to_player = pid,
+		amount = n,
+	})
+	if engine.sba != null:
+		engine.sba.check(engine)
 
 
 func _deal_damage(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:

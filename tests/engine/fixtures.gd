@@ -113,6 +113,16 @@ static func memory_catalog() -> CatalogSource:
 	cat.add(_spell_row("Krenko's Command", "{1}{R}", 2, "Sorcery", "Create two 1/1 red Goblin creature tokens.", ["R"]))
 	cat.add(_spell_row("Hordeling Outburst", "{1}{R}{R}", 3, "Sorcery", "Create three 1/1 red Goblin creature tokens.", ["R"]))
 	cat.add(_spell_row("Dark Ritual", "{B}", 1, "Instant", "Add {B}{B}{B}.", ["B"]))
+	cat.add(_creature_row("Elvish Mystic", "{G}", 1, "Creature — Elf Druid", "{T}: Add {G}.", ["G"]))
+	cat.add(_creature_row("Fyndhorn Elves", "{G}", 1, "Creature — Elf Druid", "{T}: Add {G}.", ["G"]))
+	cat.add(_spell_row("Flame Slash", "{R}", 1, "Sorcery", "Flame Slash deals 4 damage to target creature.", ["R"]))
+	cat.add(_spell_row("Lightning Strike", "{1}{R}", 2, "Instant", "Lightning Strike deals 3 damage to any target.", ["R"]))
+	cat.add(_spell_row("Tidings", "{3}{U}", 4, "Sorcery", "Draw four cards.", ["U"]))
+	cat.add(_spell_row("Pyretic Ritual", "{1}{R}", 2, "Instant", "Add {R}{R}{R}.", ["R"]))
+	cat.add(_spell_row("Negate", "{1}{U}", 2, "Instant", "Counter target noncreature spell.", ["U"]))
+	cat.add(_spell_row("Essence Scatter", "{1}{U}", 2, "Instant", "Counter target creature spell.", ["U"]))
+	cat.add(_spell_row("Vapor Snag", "{U}", 1, "Instant", "Return target creature to its owner's hand. Its controller loses 1 life.", ["U"]))
+	cat.add(_spell_row("Raise the Alarm", "{1}{W}", 2, "Instant", "Create two 1/1 white Soldier creature tokens.", ["W"]))
 	cat.add({
 		name = "Llanowar Elves",
 		oracle_id = "llanowar elves",
@@ -229,6 +239,13 @@ static func pay_and_resolve_spell(engine: RulesEngine, player_id: int, object_id
 	engine.submit(pay_mana(player_id))
 	engine.submit(confirm_pay(player_id))
 	both_pass(engine)
+
+
+static func _creature_row(p_name: String, cost: String, cmc: int, type_line: String, oracle_text: String, ci: Array) -> Dictionary:
+	var row := _spell_row(p_name, cost, cmc, type_line, oracle_text, ci)
+	row["power"] = "1"
+	row["toughness"] = "1"
+	return row
 
 
 static func _spell_row(p_name: String, cost: String, cmc: int, type_line: String, oracle_text: String, ci: Array) -> Dictionary:

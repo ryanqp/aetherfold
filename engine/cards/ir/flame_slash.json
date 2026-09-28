@@ -1,0 +1,13 @@
+{
+  "name": "Flame Slash",
+  "abilities": [
+    {
+      "ability_id": "flame_slash",
+      "kind": "SPELL",
+      "costs": [{ "kind": "MANA", "mana": "{R}" }],
+      "targets": [{ "id": 0, "kind": "PERMANENT", "count": 1, "query": { "type": "creature" } }],
+      "effects": [{ "kind": "DEAL_DAMAGE", "params": { "n": 4, "target": 0 } }],
+      "text": "Flame Slash deals 4 damage to target creature."
+    }
+  ]
+}

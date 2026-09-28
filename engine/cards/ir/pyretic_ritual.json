@@ -1,0 +1,13 @@
+{
+  "name": "Pyretic Ritual",
+  "abilities": [
+    {
+      "ability_id": "pyretic_ritual",
+      "kind": "SPELL",
+      "costs": [{ "kind": "MANA", "mana": "{1}{R}" }],
+      "targets": [],
+      "effects": [{ "kind": "ADD_MANA", "params": { "mana": "{R}{R}{R}" } }],
+      "text": "Add {R}{R}{R}."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Tidings",
+  "abilities": [
+    {
+      "ability_id": "tidings",
+      "kind": "SPELL",
+      "costs": [{ "kind": "MANA", "mana": "{3}{U}" }],
+      "targets": [],
+      "effects": [{ "kind": "DRAW", "params": { "n": 4 } }],
+      "text": "Draw four cards."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Lightning Strike",
+  "abilities": [
+    {
+      "ability_id": "lightning_strike",
+      "kind": "SPELL",
+      "costs": [{ "kind": "MANA", "mana": "{1}{R}" }],
+      "targets": [{ "id": 0, "kind": "ANY_TARGET", "count": 1 }],
+      "effects": [{ "kind": "DEAL_DAMAGE", "params": { "n": 3, "target": 0 } }],
+      "text": "Lightning Strike deals 3 damage to any target."
+    }
+  ]
+}

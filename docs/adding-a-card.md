@@ -103,6 +103,7 @@ Allowed keys: `kind`, `params`
 | `TAP` | `target` | |
 | `UNTAP` | `target` | |
 | `DEAL_DAMAGE` | `n`, `target` | |
+| `LOSE_LIFE` | `n`, `target` | That object's controller loses `n` life. Not damage. |
 | `CREATE_CONTINUOUS_EFFECT` | `layer`, `mod`, `duration`, `query` | |
 | `SCRY` | `n` | Loader accepts it; Opt still marks Scry `unparsed` |
 | `LOOK` | `n` | |
@@ -114,6 +115,7 @@ Allowed keys: `kind`, `params`
 
 - `goblin_1_1_r` — 1/1 red Goblin
 - `drake_2_2_u_flying` — 2/2 blue Drake with flying
+- `soldier_1_1_w` — 1/1 white Soldier
 
 A new token type needs a new branch in `TokenCatalog.definition_for()` **and** the IR id.
 
