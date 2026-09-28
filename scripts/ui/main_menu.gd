@@ -299,6 +299,7 @@ func _build_mp() -> void:
 	row.add_theme_constant_override("separation", 12)
 	row.add_child(_btn("Create room", _on_mp_host, 200, true))
 	row.add_child(_btn("Join room", _on_mp_join, 200))
+	row.add_child(_btn("Copy code", _on_mp_copy, 140))
 	c.add_child(row)
 	mp_status = _sub(c, "Not connected.")
 	mp_roster = _sub(c, "")
@@ -645,7 +646,11 @@ func _build_settings() -> void:
 	_title(c, "Menu", 32)
 	_sub(c, "Audio and display.")
 	settings_music = _btn("Music: On", _toggle_music, 280)
-	settings_sfx = _btn("SFX: On", _toggle_sfx, 280)
+	var sfx_off := false
+	var app_now := _app()
+	if app_now != null:
+		sfx_off = bool(app_now.sfx_muted)
+	settings_sfx = _btn("SFX: Off" if sfx_off else "SFX: On", _toggle_sfx, 280)
 	c.add_child(settings_music)
 	c.add_child(settings_sfx)
 	c.add_child(_btn("Toggle fullscreen", _toggle_fullscreen, 280))
@@ -662,8 +667,25 @@ func _toggle_music() -> void:
 
 
 func _toggle_sfx() -> void:
+	var app := _app()
+	if app == null:
+		return
+	app.sfx_muted = not bool(app.sfx_muted)
 	if settings_sfx:
-		settings_sfx.text = "SFX: Off" if settings_sfx.text.ends_with("On") else "SFX: On"
+		settings_sfx.text = "SFX: Off" if app.sfx_muted else "SFX: On"
+
+
+func _on_mp_copy() -> void:
+	var code := ""
+	if mp_code_edit:
+		code = mp_code_edit.text.strip_edges()
+	if code == "":
+		if mp_status:
+			mp_status.text = "No room code to copy yet."
+		return
+	DisplayServer.clipboard_set(code)
+	if mp_status:
+		mp_status.text = "Copied room code %s." % code
 
 
 func _toggle_fullscreen() -> void:

@@ -38,6 +38,7 @@ var inspector_text: Label
 var log_label: Label
 var mute_button: Button
 var sfx_button: Button
+var quit_dialog: ConfirmationDialog
 var music
 var sfx
 var you_zones: Dictionary = {}
@@ -81,6 +82,9 @@ func _ready() -> void:
 	sfx = TavernSfxScript.new()
 	sfx.name = "TavernSfx"
 	add_child(sfx)
+	var app := get_node_or_null("/root/AppState")
+	if app != null and bool(app.sfx_muted):
+		sfx.set_muted(true)
 	var cat := _catalog()
 	if cat and cat.has_signal("art_updated") and not cat.art_updated.is_connected(_on_art_updated):
 		cat.art_updated.connect(_on_art_updated)
@@ -137,6 +141,13 @@ func _start_from_app_state() -> void:
 
 
 func _on_main_menu() -> void:
+	if quit_dialog:
+		quit_dialog.popup_centered()
+		return
+	_leave_to_menu()
+
+
+func _leave_to_menu() -> void:
 	var net := get_node_or_null("/root/GameNet")
 	if net and net.has_method("leave"):
 		net.leave()
@@ -252,6 +263,7 @@ func _build() -> void:
 	_build_draw_button()
 	_build_dice_tray()
 	_build_menu()
+	_build_quit_confirm()
 	_build_draw_preview()
 	_build_mulligan_overlay()
 	_build_debug_label()
@@ -276,6 +288,7 @@ func _build_header() -> Control:
 	pass_btn = _header_button("Pass", GOLD, Color(0.12, 0.10, 0.04), _on_next_stage, 88)
 	row.add_child(pass_btn)
 	attack_btn = _header_button("Attack", Color(0.62, 0.16, 0.12), Color(0.98, 0.94, 0.88), _on_attack, 96)
+	attack_btn.tooltip_text = "Declare every creature that can attack. Space passes priority. Enter ends the turn."
 	row.add_child(attack_btn)
 	row.add_child(_header_button("End turn", Color(0.16, 0.17, 0.18), INK, _on_end_turn, 100))
 	mute_button = _header_button("Mute", Color(0.16, 0.17, 0.18), INK, _on_mute, 72)
@@ -286,6 +299,8 @@ func _build_header() -> Control:
 	row.add_child(_header_button("Menu", Color(0.16, 0.17, 0.18), INK, _on_menu, 72))
 	row.add_child(_header_button("Main menu", Color(0.16, 0.17, 0.18), INK, _on_main_menu, 100))
 	bar.add_child(row)
+	if sfx != null and sfx.muted and sfx_button:
+		sfx_button.text = "SFX off"
 	return bar
 
 func _header_button(text: String, bg: Color, fg: Color, cb: Callable, width: float = 120) -> Button:
@@ -807,10 +822,8 @@ func _apply_tap_visual(chip: Control, card: Dictionary) -> void:
 func _refresh() -> void:
 	var b = _board()
 	header_label.text = "%s   BF-%d" % [b.header_text(), BUILD]
-	if you_life:
-		you_life.text = str(b.you["life"])
-	if rival_life:
-		rival_life.text = str(b.rival["life"])
+	_paint_life(you_life, int(b.you["life"]))
+	_paint_life(rival_life, int(b.rival["life"]))
 	if rival_title_label:
 		rival_title_label.text = "Talrand · %s" % RivalAI.label(b.difficulty)
 	_fill_zone(you_zones["Creatures"], b.you["creatures"])
@@ -1053,7 +1066,7 @@ func _on_attack() -> void:
 		_set_status("Keep or Mulligan first.")
 		return
 	var r: SubmitResult = session.attack_all()
-	_tap_sfx("card")
+	_tap_sfx("hit")
 	_refresh()
 	if not r.ok:
 		_set_status(r.error)
@@ -1240,6 +1253,8 @@ func _tap_sfx(kind: String) -> void:
 	match kind:
 		"card":
 			sfx.play_card()
+		"hit":
+			sfx.play_hit()
 		"draw":
 			sfx.play_draw()
 		"mug":
@@ -1259,7 +1274,32 @@ func _on_sfx() -> void:
 		return
 	var on: bool = sfx.toggle_mute()
 	sfx_button.text = "SFX off" if on else "SFX"
+	var app := get_node_or_null("/root/AppState")
+	if app != null:
+		app.sfx_muted = on
 	_set_status("Tavern sounds off." if on else "Tavern sounds on.")
+
+
+func _paint_life(label: Label, life: int) -> void:
+	if label == null:
+		return
+	label.text = str(life)
+	var low := Color(0.86, 0.22, 0.18)
+	label.add_theme_color_override("font_color", low if life < 10 else GOLD)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not (event is InputEventKey):
+		return
+	var key := event as InputEventKey
+	if not key.pressed or key.echo:
+		return
+	if key.keycode == KEY_SPACE:
+		_on_next_stage()
+		get_viewport().set_input_as_handled()
+	elif key.keycode == KEY_ENTER or key.keycode == KEY_KP_ENTER:
+		_on_end_turn()
+		get_viewport().set_input_as_handled()
 
 func _on_dice() -> void:
 	if dice_overlay:
@@ -1675,6 +1715,15 @@ func _on_mulligan_hand() -> void:
 	session.take_mulligan(0)
 	_refresh()
 	_set_status("Mulligan %d. New 7 from the shuffled library." % session.engine.state.players[0].mulligan_count)
+
+
+func _build_quit_confirm() -> void:
+	quit_dialog = ConfirmationDialog.new()
+	quit_dialog.title = "Leave match"
+	quit_dialog.dialog_text = "Leave this match and return to the main menu?"
+	quit_dialog.ok_button_text = "Leave"
+	quit_dialog.confirmed.connect(_leave_to_menu)
+	add_child(quit_dialog)
 
 
 func _on_menu() -> void:

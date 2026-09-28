@@ -105,6 +105,10 @@ func toggle_mute() -> bool:
 func play_card() -> void:
 	_fx.append({"kind": "card", "age": 0.0, "life": 0.14, "amp": 0.11})
 
+
+func play_hit() -> void:
+	_fx.append({"kind": "hit", "age": 0.0, "life": 0.22, "amp": 0.28})
+
 func play_draw() -> void:
 	_spawn_shuffle(0.12, 0.28)
 
@@ -174,6 +178,9 @@ func _fx_sample() -> float:
 		elif kind == "card":
 			env = exp(-age * 18.0)
 			tone = _brown * 0.5 + white * 0.4
+		elif kind == "hit":
+			env = exp(-age * 10.0)
+			tone = sin(age * 180.0) * 0.7 + _brown * 0.8
 		elif kind == "dice":
 			var hits := 0.0
 			for k in 6:

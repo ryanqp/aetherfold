@@ -117,7 +117,7 @@ Allowed keys: `kind`, `params`
 - `drake_2_2_u_flying` — 2/2 blue Drake with flying
 - `soldier_1_1_w` — 1/1 white Soldier
 
-A new token type needs a new branch in `TokenCatalog.definition_for()` **and** the IR id.
+A token is not its own IR file. Add a branch in `TokenCatalog.definition_for()`, then point a spell's `CREATE_TOKEN` effect at that id. Step by step: [adding-a-token.md](adding-a-token.md).
 
 Krenko’s `count` is a query, not a number:
 

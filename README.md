@@ -2,7 +2,9 @@
 
 A 1v1 **Magic: The Gathering Commander** table for Godot 4.7. You play Krenko (or an imported Commander deck) against a **Talrand bot**.
 
-This is a rules-engine prototype, not a complete MTG client. You can keep/mulligan, play lands, cast spells, attack, activate Krenko, and take turns against the AI.
+This is a rules-engine prototype, not a complete MTG client. You can keep/mulligan, play lands, cast spells, attack, block, activate Krenko, and take turns against the AI.
+
+The executable rules are the JSON files in `engine/cards/ir/` (28 cards today: cantrips, burn, counters, token makers, mana creatures, and the two commanders). Anything else in a Scryfall catalog still shows its name and art, and plays as a vanilla body unless it has an IR file. Basic lands do not need one. Details: [docs/creatures-without-ir.md](docs/creatures-without-ir.md).
 
 ## Play against the bot (Windows)
 
@@ -112,7 +114,7 @@ If a bot land looks like it entered tapped: [docs/land-tap-investigation.md](doc
 
 Talrand is a scripted opponent: it plays lands, casts cheap instants/sorceries (and can Counterspell), and attacks. Difficulty is in **Menu**.
 
-Want to change the engine or UI? See [CONTRIBUTING.md](CONTRIBUTING.md).
+Want to change the engine or UI? See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/first-contribution.md](docs/first-contribution.md). Where the project is headed: [docs/roadmap.md](docs/roadmap.md). Words the table uses: [docs/glossary.md](docs/glossary.md).
 
 ## License
 
