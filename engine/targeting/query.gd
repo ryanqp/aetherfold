@@ -30,6 +30,9 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 	var type_need := str(spec.get("type", "")).strip_edges()
 	if type_need != "" and type_line.to_lower().find(type_need.to_lower()) == -1:
 		return false
+	var not_type := str(spec.get("not_type", "")).strip_edges()
+	if not_type != "" and type_line.to_lower().find(not_type.to_lower()) >= 0:
+		return false
 	var sub := str(spec.get("subtype", "")).strip_edges()
 	if sub != "" and type_line.find(sub) == -1:
 		return false

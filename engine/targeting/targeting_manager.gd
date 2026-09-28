@@ -23,11 +23,20 @@ func legal_ids(engine: RulesEngine, query: Dictionary) -> Array:
 		if kind == "PLAYER":
 			return out
 	if kind == "SPELL_ON_STACK":
+		var spec: Dictionary = {}
+		var qv: Variant = query.get("query", {})
+		if qv is Dictionary:
+			spec = qv
 		if engine.state.stack is MagicStack:
 			for e in (engine.state.stack as MagicStack).entries:
 				var entry := e as StackEntry
-				if entry != null and entry.kind == StackEntry.Kind.SPELL:
-					out.append(entry.stack_id)
+				if entry == null or entry.kind != StackEntry.Kind.SPELL:
+					continue
+				if not spec.is_empty():
+					var spell: GameObject = engine.state.objects.get(entry.object_id)
+					if spell == null or not Query._matches(spell, null, spec):
+						continue
+				out.append(entry.stack_id)
 	elif kind == "PERMANENT":
 		var q: Dictionary = query.get("query", {})
 		if not (q is Dictionary):

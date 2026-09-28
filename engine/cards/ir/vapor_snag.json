@@ -1,0 +1,16 @@
+{
+  "name": "Vapor Snag",
+  "abilities": [
+    {
+      "ability_id": "vapor_snag",
+      "kind": "SPELL",
+      "costs": [{ "kind": "MANA", "mana": "{U}" }],
+      "targets": [{ "id": 0, "kind": "PERMANENT", "count": 1, "query": { "type": "creature" } }],
+      "effects": [
+        { "kind": "LOSE_LIFE", "params": { "n": 1, "target": 0 } },
+        { "kind": "MOVE_ZONE", "params": { "target": 0, "to": "HAND" } }
+      ],
+      "text": "Return target creature to its owner's hand. Its controller loses 1 life."
+    }
+  ]
+}

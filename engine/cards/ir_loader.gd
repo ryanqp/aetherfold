@@ -13,6 +13,7 @@ const EFFECT_PARAM_KEYS := {
 	"TAP": ["target"],
 	"UNTAP": ["target"],
 	"DEAL_DAMAGE": ["n", "target"],
+	"LOSE_LIFE": ["n", "target"],
 	"CREATE_CONTINUOUS_EFFECT": ["layer", "mod", "duration", "query"],
 	"SCRY": ["n"],
 	"LOOK": ["n"],

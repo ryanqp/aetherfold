@@ -1,0 +1,12 @@
+{
+  "name": "Elvish Mystic",
+  "abilities": [
+    {
+      "ability_id": "elvish_mystic_g",
+      "kind": "MANA",
+      "costs": [{ "kind": "TAP" }],
+      "effects": [{ "kind": "ADD_MANA", "params": { "mana": "{G}" } }],
+      "text": "{T}: Add {G}."
+    }
+  ]
+}

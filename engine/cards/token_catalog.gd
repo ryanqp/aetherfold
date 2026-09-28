@@ -3,6 +3,7 @@ extends RefCounted
 
 const GOBLIN_1_1_R := "goblin_1_1_r"
 const DRAKE_2_2_U_FLYING := "drake_2_2_u_flying"
+const SOLDIER_1_1_W := "soldier_1_1_w"
 
 
 func definition_for(token_id: String) -> CardDefinition:
@@ -26,6 +27,15 @@ func definition_for(token_id: String) -> CardDefinition:
 			d.colors = PackedStringArray(["U"])
 			d.color_identity = PackedStringArray(["U"])
 			d.keywords = PackedStringArray(["Flying"])
+			return d
+		SOLDIER_1_1_W:
+			d.name = "Soldier"
+			d.type_line = "Token Creature — Soldier"
+			d.oracle_text = ""
+			d.power = "1"
+			d.toughness = "1"
+			d.colors = PackedStringArray(["W"])
+			d.color_identity = PackedStringArray(["W"])
 			return d
 		_:
 			return null

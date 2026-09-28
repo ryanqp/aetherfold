@@ -1,0 +1,13 @@
+{
+  "name": "Essence Scatter",
+  "abilities": [
+    {
+      "ability_id": "essence_scatter",
+      "kind": "SPELL",
+      "costs": [{ "kind": "MANA", "mana": "{1}{U}" }],
+      "targets": [{ "id": 0, "kind": "SPELL_ON_STACK", "count": 1, "query": { "type": "creature" } }],
+      "effects": [{ "kind": "COUNTER_SPELL", "params": { "target": 0 } }],
+      "text": "Counter target creature spell."
+    }
+  ]
+}
