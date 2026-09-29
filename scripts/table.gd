@@ -7,6 +7,7 @@ const MatchStateScript := preload("res://scripts/match_state.gd")
 const RivalAI := preload("res://scripts/rival_ai.gd")
 const ThemeMusicScript := preload("res://scripts/theme_music.gd")
 const TavernSfxScript := preload("res://scripts/tavern_sfx.gd")
+const CardFaceScript := preload("res://scripts/card_face.gd")
 const RIVAL_TEAL := Color(0.18, 0.42, 0.48)
 const YOU_EMBER := Color(0.42, 0.18, 0.08)
 const PANEL := Color(0.10, 0.11, 0.12, 0.94)
@@ -51,10 +52,12 @@ var turn_border: Panel
 var hover_wrap: CenterContainer
 var hover_art: TextureRect
 var hover_name: Label
+var hover_printed: Control
 var you_library_btn: Button
 var draw_btn: Button
 var deck_btn: Button
 var play_btn: Button
+var ability_box: VBoxContainer
 var pass_btn: Button
 var attack_btn: Button
 var _flash_t := 0.0
@@ -415,6 +418,11 @@ func _build_sidebar() -> Control:
 	col.add_child(_pile_table())
 	col.add_child(_build_inspector())
 
+	ability_box = VBoxContainer.new()
+	ability_box.add_theme_constant_override("separation", 4)
+	ability_box.size_flags_horizontal = SIZE_EXPAND_FILL
+	col.add_child(ability_box)
+
 	play_btn = Button.new()
 	play_btn.text = "Play selected"
 	play_btn.custom_minimum_size = Vector2(0, 34)
@@ -671,7 +679,7 @@ func _build_deck_pile() -> void:
 	deck_btn.add_theme_stylebox_override("normal", st)
 	deck_btn.add_theme_color_override("font_color", GOLD)
 	deck_btn.pressed.connect(_on_click_library)
-	deck_btn.tooltip_text = "Your library — click to draw"
+	deck_btn.tooltip_text = "Your library. You draw one card at the start of your turn."
 	add_child(deck_btn)
 
 func _build_draw_button() -> void:
@@ -733,14 +741,23 @@ func _on_hover_card(card: Dictionary) -> void:
 	if hover_wrap == null:
 		return
 	hover_name.text = str(card.get("name", ""))
+	if hover_printed != null:
+		hover_printed.queue_free()
+		hover_printed = null
 	var cat := _catalog()
 	var tex: Texture2D = null
-	if cat:
+	if cat and CardFaceScript.mode(card) == CardFaceScript.MODE_ART:
 		tex = cat.texture_for(card, "normal")
 		if tex == null:
 			tex = cat.texture_for(card, "small")
 	hover_art.texture = tex
 	hover_art.visible = tex != null
+	hover_name.visible = tex != null
+	if tex == null:
+		hover_printed = _make_card_face(card, Vector2(280, 392))
+		var col := hover_wrap.get_child(0)
+		col.add_child(hover_printed)
+		col.move_child(hover_printed, 0)
 	hover_wrap.visible = true
 	hover_wrap.modulate = Color(1, 1, 1, 0)
 	hover_wrap.scale = Vector2(0.82, 0.82)
@@ -839,7 +856,10 @@ func _refresh() -> void:
 	_set_pile("rival", b.rival)
 	if deck_btn:
 		deck_btn.text = "Deck\n%d" % int(b.you["library"])
-		deck_btn.tooltip_text = "Library: %d cards left. Click to ack draw." % int(b.you["library"])
+		if _waiting_for_draw():
+			deck_btn.tooltip_text = "Click to take the one card you drew this turn."
+		else:
+			deck_btn.tooltip_text = "Library: %d cards. One draw per turn." % int(b.you["library"])
 	var selected: Dictionary = b.find_card(b.selected_id)
 	if selected.is_empty() and not b.you["hand"].is_empty():
 		_set_selected(str(b.you["hand"].back()["id"]))
@@ -857,6 +877,7 @@ func _refresh() -> void:
 	_paint_turn_border()
 	_paint_library_btn()
 	_paint_match_buttons()
+	_refresh_ability_panel()
 	_refresh_mulligan()
 	_refresh_debug()
 	var app := get_node_or_null("/root/AppState")
@@ -1163,15 +1184,14 @@ func _on_click_library() -> void:
 		if session == null or not session.can_play():
 			_set_status("Keep or Mulligan first.")
 			return
-		var drawn: Dictionary = {}
-		if session.pending_draw_anim:
-			drawn = session.ack_draw()
-		else:
-			drawn = session.draw_from_library(0)
-			if drawn.is_empty():
-				_refresh()
-				_set_status("Library is empty.")
-				return
+		if not session.pending_draw_anim:
+			_set_status("One draw per turn. It happens at the start of your turn.")
+			return
+		var drawn: Dictionary = session.ack_draw()
+		if drawn.is_empty():
+			_refresh()
+			_set_status("No card to draw.")
+			return
 		_tap_sfx("draw")
 		_show_draw_preview(drawn)
 		var from_pos := Vector2(size.x - 250, size.y - 110)
@@ -1441,6 +1461,103 @@ func _hide_draw_preview() -> void:
 		draw_preview_host.visible = false
 
 
+func _refresh_ability_panel() -> void:
+	if ability_box == null:
+		return
+	while ability_box.get_child_count() > 0:
+		var old := ability_box.get_child(0)
+		ability_box.remove_child(old)
+		old.free()
+	if not USE_ENGINE or session == null or session.engine == null:
+		return
+	var eng: RulesEngine = session.engine
+	if eng.state.mode == EngineEnums.EngineMode.AWAITING_DECISION and int(eng.state.awaiting.get("player_id", -1)) == 0:
+		var dec: PlayerDecision = eng.state.pending_decision as PlayerDecision
+		if dec != null:
+			var prompt := Label.new()
+			prompt.text = dec.prompt
+			prompt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			prompt.add_theme_font_size_override("font_size", 12)
+			ability_box.add_child(prompt)
+			if dec.kind == &"OPTIONAL_YES_NO":
+				ability_box.add_child(_decision_button("Yes", true, null))
+				ability_box.add_child(_decision_button("No", false, null))
+			else:
+				for cand in dec.candidates:
+					ability_box.add_child(_decision_button(str(cand), true, cand))
+				if dec.optional:
+					ability_box.add_child(_decision_button("Decline", false, null))
+		return
+	var sid := str(session.selected_id)
+	if sid == "" or not sid.is_valid_int():
+		return
+	var obj: GameObject = eng.state.objects.get(int(sid))
+	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
+	var report: Dictionary = eng.activation_report(obj.object_id)
+	var rows: Array = report.get("abilities", [])
+	var shown := 0
+	for row in rows:
+		if not (row is Dictionary):
+			continue
+		var info: Dictionary = row
+		if not bool(info.get("can_activate", false)):
+			continue
+		shown += 1
+		var btn := Button.new()
+		var cost := str(info.get("cost", ""))
+		var cond := str(info.get("condition", ""))
+		btn.text = cost if cond == "" or cond == "—" else "%s  (%s)" % [cost, cond]
+		btn.pressed.connect(_on_ability_button.bind(obj.object_id, str(info.get("ability_id", ""))))
+		ability_box.add_child(btn)
+	if shown == 0 and not rows.is_empty():
+		var why := Label.new()
+		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		why.add_theme_font_size_override("font_size", 11)
+		var parts: PackedStringArray = PackedStringArray()
+		for row2 in rows:
+			if row2 is Dictionary:
+				parts.append("%s: %s" % [str((row2 as Dictionary).get("cost", "")), str((row2 as Dictionary).get("reason", ""))])
+		why.text = "\n".join(parts)
+		ability_box.add_child(why)
+
+
+func _decision_button(label: String, accept: bool, choice: Variant) -> Button:
+	var btn := Button.new()
+	btn.text = label
+	btn.pressed.connect(func() -> void:
+		_on_decision_button(accept, choice)
+	)
+	return btn
+
+
+func _on_ability_button(object_id: int, ability_id: String) -> void:
+	if session == null:
+		return
+	var r: SubmitResult = session.activate_ability(object_id, StringName(ability_id))
+	_refresh()
+	if r.ok:
+		_set_status("Activated.")
+	else:
+		_set_status(r.error)
+
+
+func _on_decision_button(accept: bool, choice: Variant) -> void:
+	if session == null or session.engine == null:
+		return
+	var a := GameAction.new()
+	a.kind = GameAction.Kind.SUBMIT_DECISION if accept else GameAction.Kind.DECLINE_DECISION
+	a.player_id = 0
+	if choice != null:
+		a.extra = {choice = choice}
+	var r: SubmitResult = session.submit(a)
+	if r.ok:
+		session.resolve_stack_then_yield()
+	_refresh()
+	if not r.ok:
+		_set_status(r.error)
+
+
 func _build_debug_label() -> void:
 	debug_label = Label.new()
 	debug_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -1470,7 +1587,14 @@ func _refresh_debug() -> void:
 	lines.append("Mulligans: %d" % session.engine.state.players[0].mulligan_count)
 	for dline in session.debug_lines:
 		lines.append(str(dline))
+	var sid := str(session.selected_id)
+	if sid.is_valid_int():
+		var selected_obj: GameObject = session.engine.state.objects.get(int(sid))
+		if selected_obj != null and selected_obj.zone == EngineEnums.ZoneId.BATTLEFIELD:
+			var report: Dictionary = session.engine.activation_report(selected_obj.object_id)
+			lines.append(str(report.get("text", "")))
 	debug_label.text = "\n".join(lines)
+	debug_label.offset_bottom = 560
 
 
 func _build_mulligan_overlay() -> void:
@@ -1566,7 +1690,7 @@ func _make_card_face(card: Dictionary, sz: Vector2) -> Control:
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		wrap.add_child(tr)
 		return wrap
-	var awaiting_art := str(card.get("scryfall_id", "")) != "" or str(card.get("imageUrl", "")) != ""
+	var caption := CardFaceScript.art_caption(card)
 	var inner := VBoxContainer.new()
 	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inner.add_theme_constant_override("separation", 2)
@@ -1589,15 +1713,16 @@ func _make_card_face(card: Dictionary, sz: Vector2) -> Control:
 	art_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	art_box.color = card.get("color", Color(0.32, 0.14, 0.08, 0.95))
 	art_box.custom_minimum_size = Vector2(sz.x - 12, maxf(28.0, sz.y * 0.38))
-	var art_lab := Label.new()
-	art_lab.text = "Loading art…" if awaiting_art else "Card frame"
-	art_lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	art_lab.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	art_lab.add_theme_font_size_override("font_size", 10)
-	art_lab.add_theme_color_override("font_color", Color(1, 1, 1, 0.72))
-	art_lab.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	art_lab.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	art_box.add_child(art_lab)
+	if caption != "":
+		var art_lab := Label.new()
+		art_lab.text = caption
+		art_lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		art_lab.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		art_lab.add_theme_font_size_override("font_size", 10)
+		art_lab.add_theme_color_override("font_color", Color(1, 1, 1, 0.72))
+		art_lab.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		art_lab.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		art_box.add_child(art_lab)
 	inner.add_child(art_box)
 	var ty := Label.new()
 	ty.text = str(card.get("type", ""))

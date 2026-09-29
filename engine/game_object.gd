@@ -19,3 +19,5 @@ var summoned_this_turn: bool = false
 var damage_marked: int = 0
 var counters: Dictionary = {}
 var attachments: Array[int] = []
+## CR 601.3 / "you may play that card this turn". -1 means no permission.
+var may_play_controller: int = -1

@@ -49,6 +49,7 @@ enum EngineMode {
 	CHOOSING_SBA,
 	CHOOSING_REPLACEMENT,
 	GAME_OVER,
+	AWAITING_DECISION,
 }
 
 enum EventType {

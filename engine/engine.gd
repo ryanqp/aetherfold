@@ -18,6 +18,8 @@ var _payment: ManaCost
 var _cast_queries: Array = []
 var _cast_targets: Array = []
 var _cast_from_command: bool = false
+var _act_ability_id: StringName = &""
+var _act_paying: bool = false
 
 
 func _init() -> void:
@@ -75,6 +77,8 @@ func setup(rules: FormatRules, seed: int = 1) -> void:
 	_payment = null
 	_cast_queries = []
 	_cast_targets = []
+	_act_ability_id = &""
+	_act_paying = false
 	state.active_player_id = 0
 	state.priority_player_id = 0
 	state.mode = EngineEnums.EngineMode.GIVING_PRIORITY
@@ -110,6 +114,8 @@ func legal_actions(player_id: int) -> Array:
 		return _legal_choose_sba(player_id)
 	if state.mode == EngineEnums.EngineMode.CHOOSING_REPLACEMENT:
 		return _legal_choose_replacement(player_id)
+	if state.mode == EngineEnums.EngineMode.AWAITING_DECISION:
+		return _legal_decision(player_id)
 	if state.mode != EngineEnums.EngineMode.GIVING_PRIORITY:
 		return out
 	if int(state.awaiting.get("player_id", -1)) != player_id:
@@ -129,13 +135,15 @@ func legal_actions(player_id: int) -> Array:
 					a.player_id = player_id
 					a.object_id = int(oid)
 					out.append(a)
-	for zone_id in [EngineEnums.ZoneId.HAND, EngineEnums.ZoneId.COMMAND]:
+	for zone_id in [EngineEnums.ZoneId.HAND, EngineEnums.ZoneId.COMMAND, EngineEnums.ZoneId.EXILE]:
 		var z: Zone = state.zones.get_zone(zone_id, player_id)
 		if z == null:
 			continue
 		for oid in z.object_ids:
 			var obj: GameObject = state.objects.get(oid)
 			if obj == null or _is_land(obj):
+				continue
+			if obj.zone == EngineEnums.ZoneId.EXILE and obj.may_play_controller != player_id:
 				continue
 			if not _timing_ok_to_cast(player_id, obj):
 				continue
@@ -185,8 +193,12 @@ func submit(action: GameAction) -> SubmitResult:
 			r = _submit_cancel_cast(action)
 		GameAction.Kind.ACTIVATE_ABILITY:
 			r = _submit_activate_ability(action)
-			if r.ok:
+			if r.ok and state.mode == EngineEnums.EngineMode.GIVING_PRIORITY:
 				priority.note_action(state, action.player_id)
+		GameAction.Kind.SUBMIT_DECISION:
+			r = _submit_decision(action, true)
+		GameAction.Kind.DECLINE_DECISION:
+			r = _submit_decision(action, false)
 		GameAction.Kind.CHOOSE_TARGETS:
 			r = _submit_choose_targets(action)
 		GameAction.Kind.CHOOSE_SBA:
@@ -287,8 +299,18 @@ func put_library_bottom(object_id: int, player_id: int) -> GameObject:
 
 
 func resolve_top() -> void:
-	if state.stack is MagicStack:
-		(state.stack as MagicStack).resolve_top(self)
+	finish_top_resolution()
+
+
+func finish_top_resolution() -> void:
+	if not (state.stack is MagicStack) or (state.stack as MagicStack).is_empty():
+		return
+	var done: bool = (state.stack as MagicStack).resolve_top(self)
+	if not done:
+		return
+	if sba != null and sba.check(self):
+		return
+	priority.give(state, state.active_player_id)
 
 
 func _submit_pass(action: GameAction) -> SubmitResult:
@@ -308,7 +330,9 @@ func _submit_play_land(action: GameAction) -> SubmitResult:
 		r.error = "cannot play a land"
 		return r
 	var obj: GameObject = state.objects.get(action.object_id)
-	if obj == null or obj.zone != EngineEnums.ZoneId.HAND or obj.controller_id != action.player_id:
+	var land_ok := obj != null and obj.controller_id == action.player_id and obj.zone == EngineEnums.ZoneId.HAND
+	var exile_land := obj != null and obj.zone == EngineEnums.ZoneId.EXILE and obj.may_play_controller == action.player_id
+	if not land_ok and not exile_land:
 		r.error = "land not in hand"
 		return r
 	if not _is_land(obj):
@@ -342,18 +366,18 @@ func _submit_activate_mana(action: GameAction) -> SubmitResult:
 	if obj.definition == null or not (obj.definition is CardDefinition):
 		r.error = "no definition"
 		return r
-	var def := obj.definition as CardDefinition
 	var ab: Ability = null
 	if action.ability_id != &"":
-		ab = def.find_ability(action.ability_id)
+		ab = _ability_on(obj, action.ability_id)
 	else:
-		var mas: Array = def.mana_abilities()
-		if not mas.is_empty():
-			ab = mas[0]
+		for candidate in _active_abilities(obj):
+			if candidate is Ability and (candidate as Ability).is_mana():
+				ab = candidate
+				break
 	if ab == null or not ab.is_mana():
 		r.error = "not a mana ability"
 		return r
-	if def.is_creature() and ab.has_tap_cost() and obj.summoned_this_turn:
+	if summoning_sickness_blocks(obj, ab):
 		r.error = "summoning sickness"
 		return r
 	if not costs.can_pay(obj, ab):
@@ -385,8 +409,12 @@ func _submit_cast_spell(action: GameAction) -> SubmitResult:
 	if obj == null or obj.controller_id != action.player_id:
 		r.error = "illegal spell"
 		return r
-	if obj.zone != EngineEnums.ZoneId.HAND and obj.zone != EngineEnums.ZoneId.COMMAND:
+	var from_exile := obj.zone == EngineEnums.ZoneId.EXILE and obj.may_play_controller == action.player_id
+	if obj.zone != EngineEnums.ZoneId.HAND and obj.zone != EngineEnums.ZoneId.COMMAND and not from_exile:
 		r.error = "not in hand or command"
+		return r
+	if from_exile and obj.controller_id != action.player_id and obj.may_play_controller != action.player_id:
+		r.error = "illegal spell"
 		return r
 	if _is_land(obj):
 		r.error = "use PLAY_LAND"
@@ -444,6 +472,8 @@ func _submit_confirm_pay(action: GameAction) -> SubmitResult:
 	if _payment == null or not _payment.is_zero():
 		r.error = "cost remaining"
 		return r
+	if _act_paying:
+		return _put_activated_on_stack()
 	return _put_spell_on_stack(action.player_id)
 
 
@@ -461,6 +491,8 @@ func _submit_cancel_cast(action: GameAction) -> SubmitResult:
 	_cast_from_command = false
 	_cast_queries = []
 	_cast_targets = []
+	_act_paying = false
+	_act_ability_id = &""
 	priority.give(state, action.player_id)
 	state.passed_since_action.clear()
 	r.ok = true
@@ -543,10 +575,11 @@ func _legal_mana_abilities(player_id: int) -> Array:
 			continue
 		if obj.definition == null or not (obj.definition is CardDefinition):
 			continue
-		var def := obj.definition as CardDefinition
-		for a in def.mana_abilities():
+		for a in _active_abilities(obj):
 			var ab := a as Ability
-			if def.is_creature() and ab.has_tap_cost() and obj.summoned_this_turn:
+			if ab == null or not ab.is_mana():
+				continue
+			if summoning_sickness_blocks(obj, ab):
 				continue
 			if not costs.can_pay(obj, ab):
 				continue
@@ -661,10 +694,14 @@ func _submit_choose_targets(action: GameAction) -> SubmitResult:
 		return r
 	var q: Dictionary = _cast_queries[0] if _cast_queries[0] is Dictionary else {}
 	var tid := int(action.targets[0])
-	if targeting == null or not targeting.is_legal(self, q, tid):
+	if targeting == null or not targeting.is_legal(self, q, tid, _cast_source):
 		r.error = "illegal target"
 		return r
 	_cast_targets = action.targets.duplicate()
+	if _act_ability_id != &"":
+		var src: GameObject = state.objects.get(_cast_source)
+		var ab: Ability = _ability_on(src, _act_ability_id)
+		return _begin_ability_payment(action.player_id, src, ab, action.extra)
 	var obj: GameObject = state.objects.get(_cast_source)
 	var def: CardDefinition = obj.definition as CardDefinition if obj != null and obj.definition is CardDefinition else null
 	return _begin_payment(action.player_id, def, action.extra)
@@ -677,7 +714,7 @@ func _legal_choose_targets(player_id: int) -> Array:
 	if _cast_queries.is_empty() or targeting == null:
 		return out
 	var q: Dictionary = _cast_queries[0] if _cast_queries[0] is Dictionary else {}
-	for tid in targeting.legal_ids(self, q):
+	for tid in targeting.legal_ids(self, q, _cast_source):
 		var a := GameAction.new()
 		a.kind = GameAction.Kind.CHOOSE_TARGETS
 		a.player_id = player_id
@@ -716,7 +753,10 @@ func apply_combat_damage() -> void:
 				to_player = defender,
 				amount = atk_dmg,
 				object_id = attacker.object_id,
+				combat = true,
 			})
+			if triggers != null:
+				triggers.on_combat_damage_to_player(self, attacker, defender, atk_dmg)
 			if attacker.is_commander:
 				var key := str(attacker.owner_id) + ":" + str((attacker.definition as CardDefinition).name if attacker.definition is CardDefinition else attacker.object_id)
 				var prev := int(state.players[defender].commander_damage_from.get(key, 0))
@@ -1031,7 +1071,7 @@ func _legal_attacker_ids(player_id: int) -> Array:
 			continue
 		if not (obj.definition is CardDefinition) or not (obj.definition as CardDefinition).is_creature():
 			continue
-		if obj.summoned_this_turn:
+		if obj.summoned_this_turn and not _has_haste(obj):
 			continue
 		out.append(obj.object_id)
 	return out
@@ -1050,41 +1090,26 @@ func _submit_activate_ability(action: GameAction) -> SubmitResult:
 	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD or obj.controller_id != action.player_id:
 		r.error = "illegal source"
 		return r
-	if obj.definition == null or not (obj.definition is CardDefinition):
-		r.error = "no definition"
-		return r
-	var def := obj.definition as CardDefinition
-	var ab: Ability = def.find_ability(action.ability_id)
+	var ab: Ability = _ability_on(obj, action.ability_id)
 	if ab == null or not ab.is_activated():
 		r.error = "not an activated ability"
 		return r
-	if def.is_creature() and ab.has_tap_cost() and obj.summoned_this_turn:
-		r.error = "summoning sickness"
+	var why := _activation_reason(obj, ab)
+	if why != "LEGAL":
+		r.error = why.to_lower().replace("_", " ")
 		return r
-	if not costs.can_pay(obj, ab):
-		r.error = "cannot pay"
+	_cast_targets = []
+	_cast_queries = []
+	_act_ability_id = ab.ability_id
+	_cast_source = obj.object_id
+	if not ab.targets.is_empty():
+		_cast_queries = ab.targets.duplicate()
+		state.mode = EngineEnums.EngineMode.CASTING
+		state.awaiting = {player_id = action.player_id, type = &"targets", source_id = obj.object_id}
+		state.passed_since_action.clear()
+		r.ok = true
 		return r
-	costs.pay(obj, ab)
-	var entry := StackEntry.new()
-	entry.stack_id = state.next_stack_id
-	state.next_stack_id += 1
-	entry.kind = StackEntry.Kind.ACTIVATED
-	entry.object_id = 0
-	entry.source_id = obj.object_id
-	entry.controller_id = action.player_id
-	entry.ability_id = ab.ability_id
-	entry.effects = ab.effects.duplicate()
-	(state.stack as MagicStack).push(entry)
-	state.log.append(EngineEnums.EventType.ABILITY_ACTIVATED, action.player_id, {
-		object_id = obj.object_id,
-		ability_id = str(ab.ability_id),
-		stack_id = entry.stack_id,
-	})
-	state.passed_since_action.clear()
-	state.priority_player_id = action.player_id
-	state.awaiting = {player_id = action.player_id, type = &"priority"}
-	r.ok = true
-	return r
+	return _begin_ability_payment(action.player_id, obj, ab, action.extra)
 
 
 func _legal_activated(player_id: int) -> Array:
@@ -1096,18 +1121,11 @@ func _legal_activated(player_id: int) -> Array:
 		var obj: GameObject = state.objects.get(oid)
 		if obj == null or obj.controller_id != player_id:
 			continue
-		if obj.definition == null or not (obj.definition is CardDefinition):
-			continue
-		var def := obj.definition as CardDefinition
-		for a in def.abilities:
-			if not (a is Ability):
-				continue
+		for a in _active_abilities(obj):
 			var ab := a as Ability
-			if not ab.is_activated():
+			if ab == null or not ab.is_activated():
 				continue
-			if def.is_creature() and ab.has_tap_cost() and obj.summoned_this_turn:
-				continue
-			if not costs.can_pay(obj, ab):
+			if _activation_reason(obj, ab) != "LEGAL":
 				continue
 			var act := GameAction.new()
 			act.kind = GameAction.Kind.ACTIVATE_ABILITY
@@ -1116,3 +1134,356 @@ func _legal_activated(player_id: int) -> Array:
 			act.ability_id = ab.ability_id
 			out.append(act)
 	return out
+
+
+## CR 302.6 and 602.5a: summoning sickness stops a tap or untap symbol in the cost.
+## It does not turn off the rest of a creature's activated abilities. Haste (702.10) removes it.
+func summoning_sickness_blocks(obj: GameObject, ab: Ability) -> bool:
+	if obj == null or ab == null:
+		return false
+	if not ab.uses_tap_symbol_cost():
+		return false
+	if not _is_creature_now(obj):
+		return false
+	if not obj.summoned_this_turn:
+		return false
+	if _has_haste(obj):
+		return false
+	return true
+
+
+func _has_haste(obj: GameObject) -> bool:
+	if obj == null:
+		return false
+	if layers != null:
+		return layers.has_keyword(state, obj, "Haste")
+	if obj.definition is CardDefinition:
+		for kw in (obj.definition as CardDefinition).keywords:
+			if str(kw).to_lower() == "haste":
+				return true
+	return false
+
+
+func _is_creature_now(obj: GameObject) -> bool:
+	if obj == null:
+		return false
+	if layers != null:
+		return str(layers.snapshot(state, obj).get("type_line", "")).contains("Creature")
+	return obj.definition is CardDefinition and (obj.definition as CardDefinition).is_creature()
+
+
+func _active_abilities(obj: GameObject) -> Array:
+	if obj == null:
+		return []
+	if layers != null:
+		return layers.abilities_for(state, obj)
+	if not (obj.definition is CardDefinition):
+		return []
+	var out: Array = []
+	for a in (obj.definition as CardDefinition).abilities:
+		if a is Ability and not (a as Ability).granted:
+			out.append(a)
+	return out
+
+
+func _ability_on(obj: GameObject, ability_id: StringName) -> Ability:
+	if obj == null or ability_id == &"":
+		return null
+	for a in _active_abilities(obj):
+		if a is Ability and (a as Ability).ability_id == ability_id:
+			return a
+	return null
+
+
+func _activation_reason(obj: GameObject, ab: Ability) -> String:
+	if obj == null or ab == null:
+		return "NO_ABILITY"
+	if obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return "NOT_BATTLEFIELD"
+	var actor := int(state.awaiting.get("player_id", -1))
+	if state.mode != EngineEnums.EngineMode.GIVING_PRIORITY:
+		return "NOT_YOUR_PRIORITY"
+	if actor != obj.controller_id:
+		return "NOT_CONTROLLER"
+	if ab.has_tap_cost() and obj.tapped:
+		return "TAPPED"
+	if ab.has_untap_cost() and not obj.tapped:
+		return "CANNOT_PAY"
+	if summoning_sickness_blocks(obj, ab):
+		return "SUMMONING_SICKNESS"
+	if costs != null and not costs.can_pay(obj, ab):
+		return "CANNOT_PAY"
+	return "LEGAL"
+
+
+func _begin_ability_payment(player_id: int, src: GameObject, ab: Ability, extra: Dictionary) -> SubmitResult:
+	var r := SubmitResult.new()
+	r.ok = false
+	if src == null or ab == null:
+		r.error = "illegal source"
+		return r
+	_payment = costs.mana_cost(ab)
+	_act_ability_id = ab.ability_id
+	_cast_source = src.object_id
+	if _payment == null or _payment.is_zero():
+		_act_paying = false
+		return _put_activated_on_stack()
+	_act_paying = true
+	state.mode = EngineEnums.EngineMode.PAYING_COSTS
+	state.awaiting = {player_id = player_id, type = &"pay", source_id = src.object_id}
+	state.passed_since_action.clear()
+	if bool(extra.get("auto_pay", false)):
+		if _auto_finish_payment(player_id):
+			return _put_activated_on_stack()
+		_act_paying = false
+		_act_ability_id = &""
+		_payment = null
+		_cast_source = 0
+		_cast_targets = []
+		_cast_queries = []
+		priority.give(state, player_id)
+		r.error = "cannot pay"
+		return r
+	r.ok = true
+	return r
+
+
+func _put_activated_on_stack() -> SubmitResult:
+	var r := SubmitResult.new()
+	r.ok = false
+	var obj: GameObject = state.objects.get(_cast_source)
+	var ab: Ability = _ability_on(obj, _act_ability_id)
+	if obj == null or ab == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		r.error = "source gone"
+		return r
+	if _payment != null and not _payment.is_zero():
+		r.error = "cost remaining"
+		return r
+	if summoning_sickness_blocks(obj, ab):
+		r.error = "summoning sickness"
+		return r
+	if not costs.can_pay(obj, ab):
+		r.error = "cannot pay"
+		return r
+	var player_id := obj.controller_id
+	costs.pay(obj, ab)
+	var entry := StackEntry.new()
+	entry.stack_id = state.next_stack_id
+	state.next_stack_id += 1
+	entry.kind = StackEntry.Kind.ACTIVATED
+	entry.object_id = 0
+	entry.source_id = obj.object_id
+	entry.controller_id = player_id
+	entry.ability_id = ab.ability_id
+	entry.effects = ab.effects.duplicate()
+	entry.targets = _cast_targets.duplicate()
+	(state.stack as MagicStack).push(entry)
+	state.log.append(EngineEnums.EventType.ABILITY_ACTIVATED, player_id, {
+		object_id = obj.object_id,
+		ability_id = str(ab.ability_id),
+		stack_id = entry.stack_id,
+	})
+	_cast_source = 0
+	_payment = null
+	_cast_targets = []
+	_cast_queries = []
+	_act_paying = false
+	_act_ability_id = &""
+	state.mode = EngineEnums.EngineMode.GIVING_PRIORITY
+	state.priority_player_id = player_id
+	state.awaiting = {player_id = player_id, type = &"priority"}
+	state.passed_since_action.clear()
+	r.ok = true
+	return r
+
+
+func _legal_decision(player_id: int) -> Array:
+	var out: Array = []
+	if state.mode != EngineEnums.EngineMode.AWAITING_DECISION:
+		return out
+	if int(state.awaiting.get("player_id", -1)) != player_id:
+		return out
+	if not (state.pending_decision is PlayerDecision):
+		return out
+	var dec := state.pending_decision as PlayerDecision
+	if dec.kind == &"OPTIONAL_YES_NO":
+		var yes := GameAction.new()
+		yes.kind = GameAction.Kind.SUBMIT_DECISION
+		yes.player_id = player_id
+		out.append(yes)
+		var no := GameAction.new()
+		no.kind = GameAction.Kind.DECLINE_DECISION
+		no.player_id = player_id
+		out.append(no)
+		return out
+	for cand in dec.candidates:
+		var pick := GameAction.new()
+		pick.kind = GameAction.Kind.SUBMIT_DECISION
+		pick.player_id = player_id
+		pick.extra = {choice = cand}
+		out.append(pick)
+	if dec.optional:
+		var decline := GameAction.new()
+		decline.kind = GameAction.Kind.DECLINE_DECISION
+		decline.player_id = player_id
+		out.append(decline)
+	return out
+
+
+func _submit_decision(action: GameAction, accept: bool) -> SubmitResult:
+	var r := SubmitResult.new()
+	r.ok = false
+	if state.mode != EngineEnums.EngineMode.AWAITING_DECISION:
+		r.error = "no decision"
+		return r
+	if action.player_id != int(state.awaiting.get("player_id", -1)):
+		r.error = "not your choice"
+		return r
+	if not (state.pending_decision is PlayerDecision):
+		r.error = "no decision"
+		return r
+	var dec := state.pending_decision as PlayerDecision
+	if not (state.stack is MagicStack):
+		r.error = "no stack"
+		return r
+	var stack := state.stack as MagicStack
+	var entry: StackEntry = stack.top()
+	if entry == null or entry.stack_id != dec.stack_id:
+		r.error = "decision expired"
+		return r
+	var link := dec.link if dec.link != "" else "choice"
+	if dec.kind == &"OPTIONAL_YES_NO":
+		entry.choices[link] = accept
+	elif not accept:
+		if not dec.optional:
+			r.error = "required choice"
+			return r
+		entry.choices[link] = false
+	else:
+		var chosen: Variant = action.extra.get("choice", null)
+		if not dec.candidates.is_empty() and not dec.candidates.has(chosen):
+			r.error = "illegal choice"
+			return r
+		if chosen == null:
+			r.error = "no choice"
+			return r
+		entry.choices[link] = chosen
+	state.pending_decision = null
+	finish_top_resolution()
+	r.ok = true
+	return r
+
+
+## Temporary selection report. Disable by ignoring the returned text.
+func activation_report(object_id: int) -> Dictionary:
+	var obj: GameObject = state.objects.get(object_id) if state != null else null
+	var source_name := "Unknown"
+	var sick := false
+	var tapped := false
+	var rows: Array = []
+	if obj != null:
+		sick = obj.summoned_this_turn
+		tapped = obj.tapped
+		if obj.definition is CardDefinition:
+			source_name = (obj.definition as CardDefinition).name
+		for a in _active_abilities(obj):
+			var ab := a as Ability
+			if ab == null or not ab.is_activated():
+				continue
+			var cond := _resolution_condition(obj, ab)
+			var reason := _activation_reason(obj, ab)
+			var mana_cost := costs.mana_cost(ab) if costs != null else ManaCost.new()
+			var pool: ManaPool = mana.pool(obj.controller_id) if mana != null else null
+			rows.append({
+				ability_id = str(ab.ability_id),
+				type = "ACTIVATED",
+				cost = _cost_text(ab),
+				requires_tap = ab.uses_tap_symbol_cost(),
+				mana_available = pool == null or pool.can_pay(mana_cost),
+				condition = str(cond.get("text", "—")),
+				condition_result = bool(cond.get("result", true)),
+				can_activate = reason == "LEGAL",
+				reason = reason,
+			})
+	var lines: PackedStringArray = PackedStringArray()
+	lines.append("=== ABILITY DEBUG ===")
+	lines.append("Source:")
+	lines.append(source_name)
+	lines.append("Summoning Sick:")
+	lines.append("TRUE" if sick else "FALSE")
+	lines.append("Tapped:")
+	lines.append("TRUE" if tapped else "FALSE")
+	lines.append("Abilities Found:")
+	lines.append(str(rows.size()))
+	var n := 1
+	for row in rows:
+		var info: Dictionary = row
+		if n > 1:
+			lines.append("")
+		lines.append("ABILITY %d" % n)
+		lines.append("Type:")
+		lines.append(str(info.get("type", "ACTIVATED")))
+		lines.append("Cost:")
+		lines.append(str(info.get("cost", "")))
+		lines.append("Requires Tap:")
+		lines.append("TRUE" if bool(info.get("requires_tap", false)) else "FALSE")
+		lines.append("Mana Available:")
+		lines.append("TRUE" if bool(info.get("mana_available", false)) else "FALSE")
+		lines.append("Condition:")
+		lines.append(str(info.get("condition", "—")))
+		lines.append("Condition Result:")
+		lines.append("TRUE" if bool(info.get("condition_result", false)) else "FALSE")
+		lines.append("Can Activate:")
+		lines.append("TRUE" if bool(info.get("can_activate", false)) else "FALSE")
+		lines.append("Reason:")
+		lines.append(str(info.get("reason", "")))
+		n += 1
+	lines.append("====================")
+	return {
+		text = "\n".join(lines),
+		source = source_name,
+		summoning_sick = sick,
+		tapped = tapped,
+		abilities = rows,
+	}
+
+
+## Oracle text uses the name before the comma for a legendary card.
+func _card_subject(card_name: String) -> String:
+	var comma := card_name.find(",")
+	if comma > 0:
+		return card_name.substr(0, comma)
+	return card_name
+
+
+func _cost_text(ab: Ability) -> String:
+	if ab == null:
+		return ""
+	var s := ""
+	if ab.has_tap_cost():
+		s += "{T}"
+	if ab.has_untap_cost():
+		s += "{Q}"
+	if costs != null:
+		s += costs.mana_cost(ab).to_text()
+	return s
+
+
+func _resolution_condition(obj: GameObject, ab: Ability) -> Dictionary:
+	var source_name := "It"
+	if obj != null and obj.definition is CardDefinition:
+		source_name = _card_subject((obj.definition as CardDefinition).name)
+	for raw in ab.effects:
+		if not (raw is AbilityEffect):
+			continue
+		var fx := raw as AbilityEffect
+		if str(fx.kind) != "SET_CHARACTERISTICS":
+			continue
+		var sub := str(fx.params.get("if_subtype", ""))
+		if sub == "":
+			continue
+		var result := false
+		if layers != null and obj != null:
+			result = layers.has_subtype(state, obj, sub)
+		return {text = "%s is a %s" % [source_name, sub], result = result}
+	return {text = "—", result = true}

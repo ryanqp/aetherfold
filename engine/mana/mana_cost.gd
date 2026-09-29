@@ -47,6 +47,37 @@ func is_zero() -> bool:
 	return cmc() == 0
 
 
+func absorb(other: ManaCost) -> void:
+	if other == null:
+		return
+	generic += other.generic
+	w += other.w
+	u += other.u
+	b += other.b
+	r += other.r
+	g += other.g
+	colorless += other.colorless
+
+
+func to_text() -> String:
+	var s := ""
+	if generic > 0:
+		s += "{%d}" % generic
+	for _i in w:
+		s += "{W}"
+	for _i in u:
+		s += "{U}"
+	for _i in b:
+		s += "{B}"
+	for _i in r:
+		s += "{R}"
+	for _i in g:
+		s += "{G}"
+	for _i in colorless:
+		s += "{C}"
+	return s
+
+
 func duplicate_cost() -> ManaCost:
 	var c := ManaCost.new()
 	c.generic = generic

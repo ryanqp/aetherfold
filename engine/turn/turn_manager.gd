@@ -43,10 +43,7 @@ func all_passed() -> void:
 		return
 	var st := eng.state
 	if st.stack != null and st.stack is MagicStack and not (st.stack as MagicStack).is_empty():
-		eng.resolve_top()
-		if eng.sba != null and eng.sba.check(eng):
-			return
-		eng.priority.give(st, st.active_player_id)
+		eng.finish_top_resolution()
 		return
 	_finish_step_and_enter_next()
 
@@ -131,6 +128,7 @@ func _start_tba(eng: RulesEngine, st: GameState) -> void:
 		EngineEnums.Step.COMBAT_DAMAGE:
 			eng.apply_combat_damage()
 		EngineEnums.Step.CLEANUP:
+			_clear_may_play(st)
 			if eng.layers != null:
 				eng.layers.clear_until_eot(st)
 			if st.combat is CombatState:
@@ -150,6 +148,13 @@ func _untap(st: GameState) -> void:
 		var obj: GameObject = st.objects.get(oid)
 		if obj != null and obj.controller_id == st.active_player_id:
 			obj.tapped = false
+
+
+func _clear_may_play(st: GameState) -> void:
+	for id in st.objects.keys():
+		var obj: GameObject = st.objects[id]
+		if obj != null:
+			obj.may_play_controller = -1
 
 
 func _clear_sickness(st: GameState, player_id: int) -> void:

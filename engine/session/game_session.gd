@@ -189,6 +189,12 @@ func prompt_text() -> String:
 		return "You lost."
 	if not can_play():
 		return "Keep or Mulligan first."
+	if engine.state.mode == EngineEnums.EngineMode.AWAITING_DECISION:
+		if engine.state.pending_decision is PlayerDecision:
+			var asked := (engine.state.pending_decision as PlayerDecision).prompt
+			if asked != "":
+				return asked
+		return "A choice is waiting."
 	if engine.state.stack != null and engine.state.stack is MagicStack and not (engine.state.stack as MagicStack).is_empty():
 		if _awaiting_id() == 0:
 			return "Something is on the stack. Pass to resolve, or cast an instant."
@@ -268,6 +274,45 @@ func cast_auto(player_id: int, object_id: int) -> SubmitResult:
 	return r
 
 
+func activate_ability(object_id: int, ability_id: StringName) -> SubmitResult:
+	if not can_play():
+		var bad := SubmitResult.new()
+		bad.ok = false
+		bad.error = "Keep or mulligan first."
+		last_error = bad.error
+		return bad
+	for act in engine.legal_actions(0):
+		var ga := act as GameAction
+		if ga.kind != GameAction.Kind.ACTIVATE_ABILITY or ga.object_id != object_id:
+			continue
+		if ga.ability_id != ability_id:
+			continue
+		ga.extra["auto_pay"] = true
+		var r: SubmitResult = submit(ga)
+		if not r.ok:
+			last_error = r.error
+			rebuild_view()
+			return r
+		if engine.state.mode == EngineEnums.EngineMode.PAYING_COSTS or engine.state.mode == EngineEnums.EngineMode.CASTING:
+			if _awaiting_id() == 0:
+				var cancel := GameAction.new()
+				cancel.kind = GameAction.Kind.CANCEL_CAST
+				cancel.player_id = 0
+				submit(cancel)
+				r.ok = false
+				r.error = "Can't pay that."
+				last_error = r.error
+				rebuild_view()
+				return r
+		resolve_stack_then_yield()
+		return r
+	var missing := SubmitResult.new()
+	missing.ok = false
+	missing.error = _no_activation_reason(object_id)
+	last_error = missing.error
+	return missing
+
+
 func activate_auto(object_id: int) -> SubmitResult:
 	if not can_play():
 		var bad := SubmitResult.new()
@@ -275,19 +320,40 @@ func activate_auto(object_id: int) -> SubmitResult:
 		bad.error = "Keep or mulligan first."
 		last_error = bad.error
 		return bad
-	var legal: Array = engine.legal_actions(0)
-	for act in legal:
+	var matches: Array = []
+	for act in engine.legal_actions(0):
 		var ga := act as GameAction
 		if ga.kind == GameAction.Kind.ACTIVATE_ABILITY and ga.object_id == object_id:
-			var r: SubmitResult = submit(ga)
-			if r.ok:
-				resolve_stack_then_yield()
-			return r
+			matches.append(ga)
+	if matches.size() > 1:
+		var choose := SubmitResult.new()
+		choose.ok = false
+		choose.error = "Choose an ability."
+		last_error = choose.error
+		return choose
+	if matches.size() == 1:
+		return activate_ability(object_id, (matches[0] as GameAction).ability_id)
 	var none := SubmitResult.new()
 	none.ok = false
-	none.error = "Nothing to activate (sick, tapped, or no ability)."
+	none.error = _no_activation_reason(object_id)
 	last_error = none.error
 	return none
+
+
+func _no_activation_reason(object_id: int) -> String:
+	if engine == null:
+		return "No activated ability."
+	var report: Dictionary = engine.activation_report(object_id)
+	var rows: Array = report.get("abilities", [])
+	if rows.is_empty():
+		return "No activated ability."
+	var parts: PackedStringArray = PackedStringArray()
+	for row in rows:
+		if row is Dictionary:
+			parts.append("%s: %s" % [str((row as Dictionary).get("cost", "")), str((row as Dictionary).get("reason", ""))])
+	if parts.is_empty():
+		return "No activated ability."
+	return "\n".join(parts)
 
 
 func attack_all() -> SubmitResult:
@@ -327,6 +393,9 @@ func pass_once() -> void:
 		n += 1
 		if _resolve_choice_if_needed():
 			continue
+		if _stop_for_human_decision():
+			rebuild_view()
+			return
 		if _awaiting_id() == 0:
 			rebuild_view()
 			return
@@ -342,6 +411,9 @@ func resolve_stack_then_yield() -> void:
 		n += 1
 		if _resolve_choice_if_needed():
 			continue
+		if _stop_for_human_decision():
+			rebuild_view()
+			return
 		if engine.state.mode == EngineEnums.EngineMode.PAYING_COSTS or engine.state.mode == EngineEnums.EngineMode.CASTING:
 			if _awaiting_id() == 0:
 				rebuild_view()
@@ -372,6 +444,9 @@ func _advance_to_attackers() -> void:
 		n += 1
 		if _resolve_choice_if_needed():
 			continue
+		if _stop_for_human_decision():
+			rebuild_view()
+			return
 		if engine.state.active_player_id != 0:
 			return
 		if engine.state.step == EngineEnums.Step.DECLARE_ATTACKERS:
@@ -388,6 +463,9 @@ func _pass_through_combat() -> void:
 		n += 1
 		if _resolve_choice_if_needed():
 			continue
+		if _stop_for_human_decision():
+			rebuild_view()
+			return
 		if engine.state.active_player_id != 0:
 			return
 		if engine.state.phase != EngineEnums.Phase.COMBAT:
@@ -467,8 +545,38 @@ func _awaiting_id() -> int:
 	return int(engine.state.awaiting.get("player_id", 0))
 
 
+func _stop_for_human_decision() -> bool:
+	if engine == null or engine.state == null:
+		return false
+	if engine.state.mode != EngineEnums.EngineMode.AWAITING_DECISION:
+		return false
+	return _awaiting_id() == 0
+
+
+func _ai_answer_decision() -> bool:
+	var dec: PlayerDecision = engine.state.pending_decision as PlayerDecision
+	var a := GameAction.new()
+	a.player_id = _awaiting_id()
+	if dec != null and dec.kind == &"OPTIONAL_YES_NO":
+		a.kind = GameAction.Kind.SUBMIT_DECISION
+		submit(a)
+		return true
+	if dec != null and not dec.candidates.is_empty():
+		a.kind = GameAction.Kind.SUBMIT_DECISION
+		a.extra = {choice = dec.candidates[0]}
+		submit(a)
+		return true
+	a.kind = GameAction.Kind.DECLINE_DECISION
+	submit(a)
+	return true
+
+
 func _resolve_choice_if_needed() -> bool:
 	var st := engine.state
+	if st.mode == EngineEnums.EngineMode.AWAITING_DECISION:
+		if _awaiting_id() == 0:
+			return false
+		return _ai_answer_decision()
 	if st.mode == EngineEnums.EngineMode.CHOOSING_REPLACEMENT:
 		var a := GameAction.new()
 		a.kind = GameAction.Kind.CHOOSE_REPLACEMENT
@@ -494,6 +602,8 @@ func pass_until_active(player_id: int, max_steps: int = 80) -> void:
 		n += 1
 		if _resolve_choice_if_needed():
 			continue
+		if _stop_for_human_decision():
+			return
 		if engine.state.active_player_id == player_id:
 			if engine.state.phase == EngineEnums.Phase.MAIN_1 or engine.state.phase == EngineEnums.Phase.MAIN_2:
 				if engine.state.stack == null or (engine.state.stack as MagicStack).is_empty():
@@ -529,6 +639,8 @@ func ai_take_turn(player_id: int) -> void:
 		n += 1
 		if _resolve_choice_if_needed():
 			continue
+		if _stop_for_human_decision():
+			return
 		var pid := _awaiting_id()
 		if pid != player_id:
 			pass_priority(pid)

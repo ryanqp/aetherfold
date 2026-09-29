@@ -95,7 +95,12 @@ Allowed keys: `kind`, `params`
 
 | `kind` | `params` | Notes |
 |---|---|---|
-| `DRAW` | `n` | Draw that many cards |
+| `DRAW` | `n`, `if_link` | Draw that many cards. `if_link` runs only after that decision was accepted |
+| `SET_CHARACTERISTICS` | `if_subtype`, `subtypes`, `power`, `toughness`, `keywords`, `gain_abilities`, `duration` | Continuous effect on the source. `if_subtype` is checked when the effect resolves. `duration` is `PERMANENT` or `END_OF_TURN`. Does not rewrite the printed card |
+| `EXILE_TOP` | `n`, `who`, `may_play` | Exile that many cards from the top of the effect controller's library. `may_play` `END_OF_TURN` lets that player play them until cleanup |
+| `MAY` | `link`, `prompt` | Pause for a yes/no. Does not pick an answer |
+| `CHOOSE` | `choice`, `link`, `options`, `optional`, `prompt` | Pause for one of `options`. Does not invent an option |
+| `PUT_COUNTER` | `name`, `n`, `target` | Add counters on the targeted object. A `+1/+1` counter is not a power change |
 | `CREATE_TOKEN` | `token`, `count` | `token` is a `TokenCatalog` id. `count` is an int **or** a `{ "query": { … } }` |
 | `COUNTER_SPELL` | `target` | Index into this ability’s `targets` array |
 | `MOVE_ZONE` | `target`, `to` | `to` is a zone name (`HAND`, `GRAVEYARD`, …) |

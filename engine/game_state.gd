@@ -27,6 +27,7 @@ var ended: bool = false
 var winners: Array[int] = []
 var log: GameLog
 var replacement = null
+var pending_decision = null
 
 
 func _init() -> void:

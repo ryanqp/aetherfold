@@ -46,6 +46,26 @@ func test_forgotten_cave_enters_tapped() -> void:
 	assert_true(on_bf.tapped)
 
 
+func test_turn_draw_is_exactly_one_card() -> void:
+	var session := GameSession.new()
+	session.start_table_demo(1)
+	session.keep_hand(0)
+	var lib_before := session.engine.library_size(0)
+	var hand_before := session.engine.hand_size(0)
+	session.end_you_turn()
+	assert_true(session.pending_draw_anim)
+	assert_eq(session.engine.library_size(0), lib_before - 1)
+	assert_eq(session.engine.hand_size(0), hand_before + 1)
+	var acked: Dictionary = session.ack_draw()
+	assert_false(acked.is_empty())
+	assert_false(session.pending_draw_anim)
+	assert_eq(session.engine.library_size(0), lib_before - 1)
+	assert_eq(session.engine.hand_size(0), hand_before + 1)
+	var again: Dictionary = session.ack_draw()
+	assert_true(again.is_empty())
+	assert_eq(session.engine.library_size(0), lib_before - 1)
+
+
 func test_second_land_after_end_turn() -> void:
 	var session := GameSession.new()
 	session.start_table_demo(1)

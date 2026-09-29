@@ -37,22 +37,28 @@ func remove_by_stack_id(stack_id: int) -> StackEntry:
 	return null
 
 
-func resolve_top(engine: RulesEngine) -> void:
-	var entry: StackEntry = pop()
+## False means a player decision paused the top object. It stays on the stack.
+func resolve_top(engine: RulesEngine) -> bool:
+	var entry: StackEntry = top()
 	if entry == null or engine == null:
-		return
+		return true
+	var done := true
 	if engine.executor != null:
-		engine.executor.resolve(engine, entry)
+		done = engine.executor.resolve(engine, entry)
+	if not done:
+		return false
+	pop()
 	if entry.kind != StackEntry.Kind.SPELL:
-		return
+		return true
 	var obj: GameObject = engine.state.objects.get(entry.object_id)
 	if obj == null or obj.zone != EngineEnums.ZoneId.STACK:
-		return
+		return true
 	var def: CardDefinition = obj.definition as CardDefinition if obj.definition is CardDefinition else null
 	if def != null and def.is_permanent_type():
 		engine.state.zones.move(obj.object_id, EngineEnums.ZoneId.BATTLEFIELD)
 	else:
 		engine.state.zones.move(obj.object_id, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
+	return true
 
 
 func push_spell(moved: GameObject, player_id: int, targets: Array, next_id: int, source_id: int = 0) -> StackEntry:

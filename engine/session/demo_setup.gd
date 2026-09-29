@@ -50,7 +50,9 @@ static func table_demo(seed: int = 1) -> DemoSetup:
 static func _scryfall() -> Object:
 	var loop := Engine.get_main_loop()
 	if loop is SceneTree:
-		return (loop as SceneTree).root.get_node_or_null("/root/ScryfallCatalog")
+		var root := (loop as SceneTree).root
+		if root != null:
+			return root.get_node_or_null("ScryfallCatalog")
 	return null
 
 

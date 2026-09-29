@@ -1,11 +1,11 @@
 class_name IrLoader
 extends RefCounted
 
-const ABILITY_KEYS := ["ability_id", "kind", "costs", "targets", "effects", "trigger", "replacement", "restrictions", "text", "unparsed"]
+const ABILITY_KEYS := ["ability_id", "kind", "costs", "targets", "effects", "trigger", "replacement", "restrictions", "text", "unparsed", "granted"]
 const COST_KEYS := ["kind", "mana", "from"]
 const EFFECT_KEYS := ["kind", "params"]
 const EFFECT_PARAM_KEYS := {
-	"DRAW": ["n"],
+	"DRAW": ["n", "if_link"],
 	"CREATE_TOKEN": ["token", "count"],
 	"COUNTER_SPELL": ["target"],
 	"MOVE_ZONE": ["target", "to"],
@@ -18,9 +18,14 @@ const EFFECT_PARAM_KEYS := {
 	"SCRY": ["n"],
 	"LOOK": ["n"],
 	"SHUFFLE": ["n"],
+	"SET_CHARACTERISTICS": ["if_subtype", "subtypes", "power", "toughness", "keywords", "gain_abilities", "duration"],
+	"EXILE_TOP": ["n", "who", "may_play"],
+	"MAY": ["link", "prompt"],
+	"CHOOSE": ["choice", "link", "options", "optional", "prompt"],
+	"PUT_COUNTER": ["name", "n", "target"],
 }
 const ABILITY_KINDS := ["SPELL", "ACTIVATED", "TRIGGERED", "STATIC", "REPLACEMENT", "MANA"]
-const COST_KINDS := ["MANA", "TAP", "ADDITIONAL_MANA"]
+const COST_KINDS := ["MANA", "TAP", "UNTAP", "ADDITIONAL_MANA"]
 
 var errors: PackedStringArray = PackedStringArray()
 
@@ -95,6 +100,7 @@ func _ability_from(d: Dictionary) -> Ability:
 	a.kind = StringName(kind)
 	a.text = str(d.get("text", ""))
 	a.unparsed = bool(d.get("unparsed", false))
+	a.granted = bool(d.get("granted", false))
 	var trigger: Variant = d.get("trigger", {})
 	a.trigger = trigger if trigger is Dictionary else {}
 	var replacement: Variant = d.get("replacement", {})

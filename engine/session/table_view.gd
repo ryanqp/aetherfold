@@ -212,9 +212,9 @@ static func _zone_cards(engine: RulesEngine, zone_id: int, player_id: int, cat: 
 
 static func _card_dict(engine: RulesEngine, obj: GameObject, cat: Object) -> Dictionary:
 	var def: CardDefinition = obj.definition as CardDefinition if obj.definition is CardDefinition else null
-	var type_line := def.type_line if def else ""
 	var is_land := def != null and def.is_land() and not def.is_creature()
 	var snap: Dictionary = engine.layers.snapshot(engine.state, obj) if engine.layers != null else {}
+	var type_line := str(snap.get("type_line", def.type_line if def else ""))
 	var d := {
 		id = str(obj.object_id),
 		instanceId = obj.instance_uuid if obj.instance_uuid != "" else str(obj.object_id),
@@ -232,6 +232,7 @@ static func _card_dict(engine: RulesEngine, obj: GameObject, cat: Object) -> Dic
 		zone = _zone_key(obj.zone),
 		power = str(snap.get("power", "")) if def != null and def.is_creature() else "",
 		toughness = str(snap.get("toughness", "")) if def != null and def.is_creature() else "",
+		is_token = obj.is_token,
 		scryfall_id = "",
 		imageUrl = "",
 		images = {},
@@ -372,5 +373,7 @@ static func _phase_label(phase: int) -> String:
 static func _catalog() -> Object:
 	var loop := Engine.get_main_loop()
 	if loop is SceneTree:
-		return (loop as SceneTree).root.get_node_or_null("/root/ScryfallCatalog")
+		var root := (loop as SceneTree).root
+		if root != null:
+			return root.get_node_or_null("ScryfallCatalog")
 	return null

@@ -18,8 +18,7 @@ func on_spell_cast(engine: RulesEngine, spell_obj: GameObject, caster_id: int) -
 		var src: GameObject = engine.state.objects.get(oid)
 		if src == null or src.definition == null or not (src.definition is CardDefinition):
 			continue
-		var sdef := src.definition as CardDefinition
-		for a in sdef.abilities:
+		for a in _abilities_of(engine, src):
 			if not (a is Ability):
 				continue
 			var ab := a as Ability
@@ -51,6 +50,41 @@ func _matches_spell_cast(ab: Ability, source: GameObject, caster_id: int, spell_
 		if not ok:
 			return false
 	return true
+
+
+func on_combat_damage_to_player(engine: RulesEngine, source: GameObject, _defender_id: int, amount: int) -> void:
+	if source == null or amount <= 0:
+		return
+	var bf: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return
+	for oid in bf.object_ids:
+		var watcher: GameObject = engine.state.objects.get(oid)
+		if watcher == null:
+			continue
+		for a in _abilities_of(engine, watcher):
+			if not (a is Ability):
+				continue
+			var ab := a as Ability
+			if ab.kind != &"TRIGGERED" or ab.unparsed:
+				continue
+			if str(ab.trigger.get("on", "")) != "COMBAT_DAMAGE_TO_PLAYER":
+				continue
+			if watcher.object_id != source.object_id:
+				continue
+			_put_trigger(engine, watcher, ab)
+
+
+func _abilities_of(engine: RulesEngine, src: GameObject) -> Array:
+	if engine.layers != null:
+		return engine.layers.abilities_for(engine.state, src)
+	if src == null or not (src.definition is CardDefinition):
+		return []
+	var out: Array = []
+	for a in (src.definition as CardDefinition).abilities:
+		if a is Ability and not (a as Ability).granted:
+			out.append(a)
+	return out
 
 
 func _put_trigger(engine: RulesEngine, source: GameObject, ab: Ability) -> void:

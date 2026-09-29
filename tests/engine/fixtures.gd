@@ -152,6 +152,19 @@ static func memory_catalog() -> CatalogSource:
 		colors = ["R"],
 		commander_legal = true,
 	})
+	cat.add({
+		name = "Kellan, Planar Trailblazer",
+		oracle_id = "kellan_planar_trailblazer",
+		mana_cost = "{R}",
+		cmc = 1,
+		type_line = "Legendary Creature — Human Faerie Scout",
+		oracle_text = "{1}{R}: If Kellan is a Scout, it becomes a Human Faerie Detective and gains \"Whenever Kellan deals combat damage to a player, exile the top card of your library. You may play that card this turn.\"\n{2}{R}: If Kellan is a Detective, it becomes a 3/2 Human Faerie Rogue and gains double strike.",
+		power = "2",
+		toughness = "1",
+		color_identity = ["R"],
+		colors = ["R"],
+		commander_legal = true,
+	})
 	return cat
 
 

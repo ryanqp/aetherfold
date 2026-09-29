@@ -11,3 +11,5 @@ var controller_id: int = 0
 var ability_id: StringName = &""
 var targets: Array = []
 var effects: Array = []
+var cursor: int = 0
+var choices: Dictionary = {}

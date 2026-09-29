@@ -64,6 +64,8 @@ static func commander_row(rec: Dictionary) -> Dictionary:
 
 
 static func vs_pair(player_id: String, rival_id: String) -> DemoSetup:
+	if _is_builtin(player_id) and _is_builtin(rival_id):
+		return _builtin_pair(player_id, rival_id)
 	var p: Dictionary = _side(player_id)
 	var r: Dictionary = _side(rival_id)
 	var mem := CatalogSource.Memory.new()
@@ -84,6 +86,34 @@ static func vs_pair(player_id: String, rival_id: String) -> DemoSetup:
 	d.rival_commanders = r.get("commanders", PackedStringArray([DemoSetup.TALRAND]))
 	d.rival_name = str(r.get("name", "Rival"))
 	return d
+
+
+static func _is_builtin(choice_id: String) -> bool:
+	return choice_id == "" or choice_id == BUILTIN_KRENKO or choice_id == BUILTIN_TALRAND
+
+
+## Starter decks. When the Scryfall catalog is loaded, table_demo fills the
+## 99 with real commander-legal cards. The in-memory "Goblin Volunteer"
+## names are only the offline pad, and they are still normal cards.
+static func _builtin_pair(player_id: String, rival_id: String) -> DemoSetup:
+	var seed := int(Time.get_unix_time_from_system())
+	if seed == 0:
+		seed = 1
+	var demo := DemoSetup.table_demo(seed)
+	if player_id == BUILTIN_TALRAND:
+		var swap: DeckList = demo.krenko_list
+		demo.krenko_list = demo.talrand_list
+		demo.talrand_list = swap
+		demo.human_commanders = PackedStringArray([DemoSetup.TALRAND])
+		demo.human_name = "Talrand, Sky Summoner"
+		demo.rival_commanders = PackedStringArray([DemoSetup.KRENKO])
+		demo.rival_name = "Krenko, Mob Boss"
+	else:
+		demo.human_commanders = PackedStringArray([DemoSetup.KRENKO])
+		demo.human_name = "Krenko, Mob Boss"
+		demo.rival_commanders = PackedStringArray([DemoSetup.TALRAND])
+		demo.rival_name = "Talrand, Sky Summoner"
+	return demo
 
 
 static func _side(choice_id: String) -> Dictionary:

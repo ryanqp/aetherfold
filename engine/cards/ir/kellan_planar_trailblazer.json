@@ -1,0 +1,48 @@
+{
+  "name": "Kellan, Planar Trailblazer",
+  "abilities": [
+    {
+      "ability_id": "kellan_scout",
+      "kind": "ACTIVATED",
+      "costs": [{ "kind": "MANA", "mana": "{1}{R}" }],
+      "text": "{1}{R}: If Kellan is a Scout, it becomes a Human Faerie Detective and gains \"Whenever Kellan deals combat damage to a player, exile the top card of your library. You may play that card this turn.\"",
+      "effects": [{
+        "kind": "SET_CHARACTERISTICS",
+        "params": {
+          "if_subtype": "Scout",
+          "subtypes": ["Human", "Faerie", "Detective"],
+          "gain_abilities": ["kellan_impulse"],
+          "duration": "PERMANENT"
+        }
+      }]
+    },
+    {
+      "ability_id": "kellan_detective",
+      "kind": "ACTIVATED",
+      "costs": [{ "kind": "MANA", "mana": "{2}{R}" }],
+      "text": "{2}{R}: If Kellan is a Detective, it becomes a 3/2 Human Faerie Rogue and gains double strike.",
+      "effects": [{
+        "kind": "SET_CHARACTERISTICS",
+        "params": {
+          "if_subtype": "Detective",
+          "subtypes": ["Human", "Faerie", "Rogue"],
+          "power": 3,
+          "toughness": 2,
+          "keywords": ["Double strike"],
+          "duration": "PERMANENT"
+        }
+      }]
+    },
+    {
+      "ability_id": "kellan_impulse",
+      "kind": "TRIGGERED",
+      "granted": true,
+      "trigger": { "on": "COMBAT_DAMAGE_TO_PLAYER" },
+      "text": "Whenever Kellan deals combat damage to a player, exile the top card of your library. You may play that card this turn.",
+      "effects": [{
+        "kind": "EXILE_TOP",
+        "params": { "n": 1, "who": "CONTROLLER", "may_play": "END_OF_TURN" }
+      }]
+    }
+  ]
+}
