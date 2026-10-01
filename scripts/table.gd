@@ -1,7 +1,7 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 32
+const BUILD := 33
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
 const RivalAI := preload("res://scripts/rival_ai.gd")
@@ -73,6 +73,8 @@ var phase_chips: Dictionary = {}
 var turn_owner_label: Label
 var hint_label: Label
 var next_turn_btn: Button
+var declare_btn: Button
+var _rival_target: PanelContainer
 var _hint_hold := 0.0
 var you_cmd_row: HBoxContainer
 var rival_cmd_row: HBoxContainer
@@ -464,6 +466,12 @@ func _build_sidebar() -> Control:
 	play_btn.custom_minimum_size = Vector2(0, 34)
 	play_btn.pressed.connect(_on_activate)
 	col.add_child(play_btn)
+	declare_btn = Button.new()
+	declare_btn.text = "Attack with this"
+	declare_btn.custom_minimum_size = Vector2(0, 34)
+	declare_btn.visible = false
+	declare_btn.pressed.connect(_on_declare_attack)
+	col.add_child(declare_btn)
 
 	log_label = Label.new()
 	log_label.add_theme_color_override("font_color", GOLD)
@@ -505,7 +513,69 @@ func _life_block(who: String, subtitle: String, is_you: bool) -> Control:
 	if not is_you:
 		rival_title_label = title_label
 	box.add_child(title_label)
-	return box
+	if is_you:
+		return box
+	## The rival's life box is also the target of your attack: click it to send your attackers.
+	_rival_target = PanelContainer.new()
+	_rival_target.size_flags_horizontal = SIZE_EXPAND_FILL
+	_rival_target.mouse_filter = Control.MOUSE_FILTER_STOP
+	_rival_target.tooltip_text = "While you are attacking, click here to send your attackers at the rival."
+	_rival_target.add_theme_stylebox_override("panel", _target_style(0.0, false))
+	_rival_target.gui_input.connect(_on_rival_target_input)
+	_rival_target.add_child(box)
+	return _rival_target
+
+
+func _target_style(pulse: float, active: bool) -> StyleBoxFlat:
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.5, 0.08, 0.06, 0.25 + 0.2 * pulse) if active else Color(0, 0, 0, 0)
+	st.border_color = ATTACK_RED.lerp(Color(1, 1, 1), pulse * 0.6) if active else Color(0, 0, 0, 0)
+	st.set_border_width_all(4 if active else 2)
+	st.set_corner_radius_all(8)
+	return st
+
+
+func _on_rival_target_input(ev: InputEvent) -> void:
+	if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+		_on_rival_target_click()
+
+
+## Attack target. In a two-player game the rival player is the only legal target: creatures can't
+## be attacked (CR 506.2) and there are no planeswalkers or battles in the engine yet.
+func _on_rival_target_click() -> void:
+	if not _in_attack_mode():
+		_set_status("Pick a creature and press Attack with this first.")
+		return
+	if _pending_attackers.is_empty():
+		_set_status("Click one of your creatures first, then click the rival to attack.")
+		return
+	_confirm_attack()
+
+
+## Sidebar button: attack with the selected creature.
+func _on_declare_attack() -> void:
+	if not USE_ENGINE or session == null or session.view == null:
+		return
+	var sid := str(session.selected_id)
+	if sid == "":
+		return
+	if not _in_attack_mode():
+		if not session.can_play():
+			_set_status("Keep or Mulligan first.")
+			return
+		_pending_attackers.clear()
+		var r: SubmitResult = session.begin_attack()
+		if not r.ok:
+			_refresh()
+			_set_status(r.error)
+			return
+	if not _pending_attackers.has(sid):
+		_on_attack_click(sid)
+	else:
+		_refresh()
+	if _in_attack_mode() and not _pending_attackers.is_empty():
+		_set_status("Now click the rival (top right) to attack. Click more creatures first to send them too.")
+
 
 func _chip_style(bg: Color, border: Color) -> StyleBoxFlat:
 	var st := StyleBoxFlat.new()
@@ -848,7 +918,9 @@ func _paint_flash() -> void:
 		var sb := pst as StyleBoxFlat
 		sb.border_color = PLAYABLE_GOLD.lerp(Color(1, 1, 1), pulse * 0.7)
 		sb.shadow_color = Color(1.0, 0.84, 0.18, 0.3 + 0.5 * pulse)
-		sb.shadow_size = 4 + int(9.0 * pulse)
+		sb.shadow_size = 8 + int(14.0 * pulse)
+	if _rival_target:
+		_rival_target.add_theme_stylebox_override("panel", _target_style(pulse, _in_attack_mode() and not _pending_attackers.is_empty()))
 	if deck_btn:
 		if wait:
 			var dst := StyleBoxFlat.new()
@@ -1008,9 +1080,10 @@ func _card_chip(card: Dictionary, compact: bool = false, from_hand: bool = false
 	if from_hand and bool(card.get("playable", false)):
 		## Gold border: the rules let you play this right now and you have the mana for it.
 		st.border_color = PLAYABLE_GOLD
-		st.set_border_width_all(4)
+		st.set_border_width_all(8)
+		st.set_corner_radius_all(8)
 		st.shadow_color = Color(1.0, 0.84, 0.18, 0.55)
-		st.shadow_size = 7
+		st.shadow_size = 12
 		_playable_styles.append(st)
 		b.tooltip_text = "You can play this now."
 	var combat_color: Variant = _combat_border(card)
@@ -1214,7 +1287,7 @@ func _on_attack_click(card_id: String) -> void:
 			_set_status("%s can't attack." % nm)
 		return
 	_pending_attackers.append(card_id)
-	_set_status("%s will attack. %d attacking — press Attack to confirm." % [nm, _pending_attackers.size()])
+	_set_status("%s will attack. Click the rival (top right) to send %d attacker(s), or pick more creatures." % [nm, _pending_attackers.size()])
 	_refresh()
 
 
@@ -1498,6 +1571,14 @@ func _paint_match_buttons() -> void:
 			attack_btn.tooltip_text = "Go to combat and choose which creatures attack."
 		if pass_btn:
 			pass_btn.disabled = not session.can_play()
+	if declare_btn:
+		var dsel: Dictionary = v.find_card(str(v.selected_id))
+		var mine_creature := not dsel.is_empty() and _card_in(v.you.get("creatures", []), str(dsel.get("id", "")))
+		declare_btn.visible = mine_creature and bool(v.active_is_you) and not _in_blocking_mode()
+		if declare_btn.visible:
+			var ready := bool(dsel.get("ready_to_attack", false)) and session.can_play() and not session.draw_waiting()
+			declare_btn.disabled = not ready
+			declare_btn.text = "Attack with this ⚔" if ready else ("Summoning sick" if bool(dsel.get("summoning_sick", false)) else "Can't attack now")
 	if play_btn:
 		var sel: Dictionary = v.find_card(str(v.selected_id))
 		var zone := str(sel.get("zone", ""))
