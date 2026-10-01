@@ -1,6 +1,8 @@
 class_name GameSession
 extends RefCounted
 
+const AiBlocks := preload("res://engine/session/ai_blocks.gd")
+
 enum MatchStart {
 	PRE_GAME,
 	SHUFFLING,
@@ -26,6 +28,8 @@ var debug_lines: PackedStringArray = PackedStringArray()
 var last_seed: int = 1
 var skip_ai: bool = false
 var you_seat: int = 0
+## True while the bot's attack is paused for you to declare blockers.
+var awaiting_blocks: bool = false
 
 
 func dbg(msg: String) -> void:
@@ -189,6 +193,8 @@ func prompt_text() -> String:
 		return "You lost."
 	if not can_play():
 		return "Keep or Mulligan first."
+	if awaiting_blocks:
+		return "Blocking — click one of your creatures, then the attacker it should block. Confirm blocks when done."
 	if engine.state.mode == EngineEnums.EngineMode.AWAITING_DECISION:
 		if engine.state.pending_decision is PlayerDecision:
 			var asked := (engine.state.pending_decision as PlayerDecision).prompt
@@ -481,6 +487,17 @@ func _ai_respond() -> void:
 	if pid != 1:
 		pass_priority(pid)
 		return
+	if not skip_ai and blocks_needed(pid):
+		var blocks := GameAction.new()
+		blocks.kind = GameAction.Kind.DECLARE_BLOCKERS
+		blocks.player_id = pid
+		blocks.extra = {blockers = AiBlocks.choose(engine, pid)}
+		var br: SubmitResult = submit(blocks)
+		if not br.ok:
+			dbg("Bot block rejected: %s" % br.error)
+			blocks.extra = {blockers = {}}
+			submit(blocks)
+		return
 	if engine.state.mode == EngineEnums.EngineMode.PAYING_COSTS or engine.state.mode == EngineEnums.EngineMode.CASTING:
 		var cancel := GameAction.new()
 		cancel.kind = GameAction.Kind.CANCEL_CAST
@@ -643,6 +660,10 @@ func ai_take_turn(player_id: int) -> void:
 			return
 		var pid := _awaiting_id()
 		if pid != player_id:
+			if pid == you_seat and blocks_needed(you_seat):
+				awaiting_blocks = true
+				rebuild_view()
+				return
 			pass_priority(pid)
 			continue
 		if engine.state.mode == EngineEnums.EngineMode.PAYING_COSTS or engine.state.mode == EngineEnums.EngineMode.CASTING:
@@ -699,7 +720,7 @@ func _ai_has_creature_target(_player_id: int) -> bool:
 
 
 func end_you_turn() -> void:
-	if not can_play():
+	if not can_play() or awaiting_blocks:
 		return
 	var other := 1 if you_seat == 0 else 0
 	pass_until_active(other)
@@ -707,6 +728,62 @@ func end_you_turn() -> void:
 		return
 	if skip_ai:
 		return
-	ai_take_turn(other)
+	_finish_bot_turn(other)
+
+
+## Runs the bot's turn to the end, unless it stops for your blockers.
+func _finish_bot_turn(bot_id: int) -> void:
+	ai_take_turn(bot_id)
+	if awaiting_blocks or engine.is_over():
+		return
 	pass_until_active(you_seat)
+
+
+## True when player_id is being attacked, hasn't declared blockers yet this combat,
+## and has at least one creature that could legally block (CR 509.1).
+func blocks_needed(player_id: int) -> bool:
+	if engine == null or engine.state == null:
+		return false
+	if engine.state.step != EngineEnums.Step.DECLARE_BLOCKERS:
+		return false
+	if not (engine.state.combat is CombatState):
+		return false
+	var cs := engine.state.combat as CombatState
+	if cs.blocks_declared:
+		return false
+	var bf: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return false
+	for aid in cs.attacker_ids:
+		if engine.defender_of(int(aid)) != player_id:
+			continue
+		for oid in bf.object_ids:
+			var obj: GameObject = engine.state.objects.get(oid)
+			if obj != null and obj.controller_id == player_id and engine.can_block_attacker(obj.object_id, int(aid)):
+				return true
+	return false
+
+
+## Your blockers while the bot attacks: {attacker_id: [blocker ids]}. Empty = no blocks.
+## On success the bot's turn carries on.
+func declare_blocks(blocks: Dictionary) -> SubmitResult:
+	var r := SubmitResult.new()
+	r.ok = false
+	if not awaiting_blocks:
+		r.error = "Nothing to block right now."
+		last_error = r.error
+		return r
+	var a := GameAction.new()
+	a.kind = GameAction.Kind.DECLARE_BLOCKERS
+	a.player_id = you_seat
+	a.extra = {blockers = blocks}
+	r = submit(a)
+	if not r.ok:
+		last_error = r.error
+		rebuild_view()
+		return r
+	awaiting_blocks = false
+	_finish_bot_turn(1 if you_seat == 0 else 0)
+	rebuild_view()
+	return r
 

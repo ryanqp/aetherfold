@@ -916,6 +916,7 @@ func _submit_declare_attackers(action: GameAction) -> SubmitResult:
 	cs.attacker_ids.clear()
 	cs.blockers.clear()
 	cs.defenders.clear()
+	cs.blocks_declared = false
 	for raw in ids:
 		var oid := int(raw)
 		cs.attacker_ids.append(oid)
@@ -999,8 +1000,29 @@ func _submit_declare_blockers(action: GameAction) -> SubmitResult:
 			r.error = "menace needs two blockers"
 			return r
 	cs.blockers = next_blocks
+	cs.blocks_declared = true
 	r.ok = true
 	return r
+
+
+## The player an attacker is attacking, or -1.
+func defender_of(attacker_id: int) -> int:
+	if not (state.combat is CombatState):
+		return -1
+	return _attacker_defender(state.combat as CombatState, attacker_id)
+
+
+## Whether blocker_id could legally block attacker_id right now (untapped creature of the
+## defending player, flying/reach). Menace is checked on the whole declaration, not here.
+func can_block_attacker(blocker_id: int, attacker_id: int) -> bool:
+	var defender := defender_of(attacker_id)
+	if defender < 0:
+		return false
+	return _can_block(blocker_id, defender, attacker_id)
+
+
+func power_of(obj: GameObject) -> int:
+	return _power_of(obj)
 
 
 func _player_is_defender(cs: CombatState, player_id: int) -> bool:

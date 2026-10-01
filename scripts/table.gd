@@ -19,6 +19,8 @@ const BOARD_CHIP := Vector2(48, 68)
 const SIDE_W := 228
 const TURN_GREEN := Color(0.18, 0.78, 0.32)
 const TURN_RED := Color(0.86, 0.16, 0.14)
+const ATTACK_RED := Color(0.92, 0.22, 0.16)
+const BLOCK_BLUE := Color(0.30, 0.62, 0.98)
 const DIFFICULTY_HINTS := [
 	"Misses draws, rarely attacks.",
 	"Plays a land and one spell.",
@@ -62,6 +64,10 @@ var pass_btn: Button
 var attack_btn: Button
 var _flash_t := 0.0
 var _was_tapped: Dictionary = {}
+## Blocks you are lining up while the opponent attacks: attacker id -> Array of your creature ids.
+var _pending_blocks: Dictionary = {}
+## Your creature picked to block, waiting for you to click an attacker.
+var _block_pick: String = ""
 var dice_overlay: ColorRect
 var _dice_busy: Dictionary = {}
 var mulligan_overlay: ColorRect
@@ -781,6 +787,10 @@ func _card_chip(card: Dictionary, compact: bool = false, from_hand: bool = false
 	st.set_corner_radius_all(6)
 	st.set_border_width_all(2)
 	st.border_color = GOLD if selected else Color(0, 0, 0, 0.55)
+	var combat_color: Variant = _combat_border(card)
+	if combat_color is Color:
+		st.border_color = combat_color
+		st.set_border_width_all(3)
 	st.content_margin_left = 0
 	st.content_margin_right = 0
 	st.content_margin_top = 0
@@ -928,8 +938,123 @@ func _set_selected(card_id: String) -> void:
 
 
 func _on_select(card_id: String) -> void:
+	if _in_blocking_mode():
+		_on_block_click(card_id)
+		return
 	_set_selected(card_id)
 	_refresh()
+
+
+func _in_blocking_mode() -> bool:
+	return USE_ENGINE and session != null and session.awaiting_blocks
+
+
+## Border for a creature in combat, or null when it should use the normal border.
+func _combat_border(card: Dictionary) -> Variant:
+	var cid := str(card.get("id", ""))
+	if cid == "":
+		return null
+	if cid == _block_pick:
+		return GOLD
+	for group in _pending_blocks.values():
+		if (group as Array).has(cid):
+			return BLOCK_BLUE
+	if str(card.get("blocking", "")) != "":
+		return BLOCK_BLUE
+	if bool(card.get("attacking", false)):
+		return ATTACK_RED
+	return null
+
+
+## Blocking mode: click your creature, then the attacker it blocks. Click an assigned
+## blocker again to take it back.
+func _on_block_click(card_id: String) -> void:
+	var v = session.view
+	var card: Dictionary = v.find_card(card_id)
+	if card.is_empty():
+		return
+	var nm := str(card.get("name", "That creature"))
+	if _card_in(v.you.get("creatures", []), card_id):
+		if bool(card.get("tapped", false)):
+			_set_status("%s is tapped and can't block." % nm)
+			return
+		if _unassign_blocker(card_id):
+			_block_pick = ""
+			_set_status("%s won't block." % nm)
+		elif _block_pick == card_id:
+			_block_pick = ""
+			_set_status(str(v.prompt))
+		else:
+			_block_pick = card_id
+			_set_status("Now click the attacker %s should block." % nm)
+		_refresh()
+		return
+	if _card_in(v.rival.get("creatures", []), card_id) and bool(card.get("attacking", false)):
+		if _block_pick == "":
+			_set_status("Click one of your untapped creatures first, then %s." % nm)
+			return
+		var blocker: Dictionary = v.find_card(_block_pick)
+		var blocker_name := str(blocker.get("name", "Your creature"))
+		if not session.engine.can_block_attacker(int(_block_pick), int(card_id)):
+			_set_status("%s can't block %s (it may need flying or reach)." % [blocker_name, nm])
+			return
+		_unassign_blocker(_block_pick)
+		var group: Array = _pending_blocks.get(card_id, [])
+		group.append(_block_pick)
+		_pending_blocks[card_id] = group
+		_block_pick = ""
+		_set_status("%s blocks %s. Pick another, or Confirm blocks." % [blocker_name, nm])
+		_refresh()
+		return
+	_set_status("Blocking: click one of your creatures, then an attacking creature.")
+
+
+func _card_in(pile: Array, card_id: String) -> bool:
+	for c in pile:
+		if str(c.get("id", "")) == card_id:
+			return true
+	return false
+
+
+## Removes card_id from any pending block. Returns true if it was assigned.
+func _unassign_blocker(card_id: String) -> bool:
+	for aid in _pending_blocks.keys():
+		var group: Array = _pending_blocks[aid]
+		if group.has(card_id):
+			group.erase(card_id)
+			if group.is_empty():
+				_pending_blocks.erase(aid)
+			return true
+	return false
+
+
+func _confirm_blocks() -> void:
+	var life_you := int(session.view.you.get("life", 40))
+	var payload := {}
+	for aid in _pending_blocks.keys():
+		var ids: Array = []
+		for bid in _pending_blocks[aid]:
+			ids.append(int(bid))
+		payload[int(aid)] = ids
+	var r: SubmitResult = session.declare_blocks(payload)
+	if not r.ok:
+		if r.error == "menace needs two blockers":
+			_set_status("An attacker has menace — block it with two or more creatures, or not at all.")
+		else:
+			_set_status("Can't block like that: %s" % r.error)
+		_refresh()
+		return
+	_pending_blocks.clear()
+	_block_pick = ""
+	_tap_sfx("hit")
+	_refresh()
+	var lost := life_you - int(session.view.you.get("life", 40))
+	var msg := str(session.view.prompt)
+	if session.pending_draw_anim:
+		msg = "Your turn — click Draw."
+	if lost > 0:
+		msg = "You lost %d life. " % lost + msg
+	_set_status(msg)
 
 func _zone_anchor(zone: String) -> Vector2:
 	if not you_zones.has(zone):
@@ -1058,11 +1183,20 @@ func _paint_match_buttons() -> void:
 	if not USE_ENGINE or session == null or session.view == null:
 		return
 	var v = session.view
-	if attack_btn:
-		attack_btn.disabled = not bool(v.can_attack) or not session.can_play()
-		attack_btn.tooltip_text = "Attack with every creature that can."
-	if pass_btn:
-		pass_btn.disabled = not session.can_play()
+	if _in_blocking_mode():
+		if attack_btn:
+			attack_btn.disabled = false
+			attack_btn.text = "Confirm blocks" if not _pending_blocks.is_empty() else "No blocks"
+			attack_btn.tooltip_text = "Lock in your blockers. Click your creature, then the attacker, to assign one."
+		if pass_btn:
+			pass_btn.disabled = true
+	else:
+		if attack_btn:
+			attack_btn.text = "Attack"
+			attack_btn.disabled = not bool(v.can_attack) or not session.can_play()
+			attack_btn.tooltip_text = "Attack with every creature that can."
+		if pass_btn:
+			pass_btn.disabled = not session.can_play()
 	if play_btn:
 		var sel: Dictionary = v.find_card(str(v.selected_id))
 		var zone := str(sel.get("zone", ""))
@@ -1083,6 +1217,9 @@ func _on_attack() -> void:
 		return
 	if not USE_ENGINE or session == null:
 		return
+	if _in_blocking_mode():
+		_confirm_blocks()
+		return
 	if not session.can_play():
 		_set_status("Keep or Mulligan first.")
 		return
@@ -1099,6 +1236,9 @@ func _on_next_stage() -> void:
 	if _client_net("pass"):
 		return
 	if USE_ENGINE:
+		if _in_blocking_mode():
+			_set_status("Choose your blockers, then Confirm blocks (or No blocks).")
+			return
 		if session == null or not session.can_play():
 			_set_status("Keep or Mulligan first.")
 			return
@@ -1133,10 +1273,19 @@ func _on_end_turn() -> void:
 		if not session.can_play():
 			_set_status("Keep or Mulligan first.")
 			return
+		if _in_blocking_mode():
+			_set_status("Choose your blockers, then Confirm blocks (or No blocks).")
+			return
 		var life_you := int(session.view.you.get("life", 40))
 		var life_bot := int(session.view.rival.get("life", 40))
 		session.end_you_turn()
 		_tap_sfx("mug")
+		if session.awaiting_blocks:
+			_pending_blocks.clear()
+			_block_pick = ""
+			_refresh()
+			_set_status("You're being attacked! " + str(session.view.prompt))
+			return
 		_refresh()
 		var you_lost: int = life_you - int(session.view.you.get("life", 40))
 		var bot_lost: int = life_bot - int(session.view.rival.get("life", 40))

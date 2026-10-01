@@ -22,6 +22,8 @@ var game_over: bool = false
 var winners: Array = []
 var prompt: String = ""
 var match_start: int = 0
+## You are choosing blockers against the opponent's attack.
+var blocking_mode: bool = false
 
 
 func header_text() -> String:
@@ -84,6 +86,7 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 		v.you_drew_this_turn = not session.pending_draw_anim
 		v.prompt = session.prompt_text()
 		v.match_start = session.match_start
+		v.blocking_mode = session.awaiting_blocks
 	var cat := _catalog()
 	var other := 1 if seat == 0 else 0
 	v.you = _player_dict(engine, seat, cat)
@@ -111,6 +114,7 @@ func to_plain() -> Dictionary:
 		winners = winners,
 		prompt = prompt,
 		match_start = match_start,
+		blocking_mode = blocking_mode,
 	}
 
 
@@ -159,6 +163,7 @@ static func from_plain(d: Dictionary) -> TableView:
 	v.winners = d.get("winners", [])
 	v.prompt = str(d.get("prompt", ""))
 	v.match_start = int(d.get("match_start", 0))
+	v.blocking_mode = bool(d.get("blocking_mode", false))
 	return v
 
 
@@ -233,6 +238,8 @@ static func _card_dict(engine: RulesEngine, obj: GameObject, cat: Object) -> Dic
 		power = str(snap.get("power", "")) if def != null and def.is_creature() else "",
 		toughness = str(snap.get("toughness", "")) if def != null and def.is_creature() else "",
 		is_token = obj.is_token,
+		attacking = _is_attacking(engine, obj),
+		blocking = _blocking_target(engine, obj),
 		scryfall_id = "",
 		imageUrl = "",
 		images = {},
@@ -250,6 +257,24 @@ static func _card_dict(engine: RulesEngine, obj: GameObject, cat: Object) -> Dic
 			if str(d.get("mana_cost", "")) == "" and row.has("mana_cost"):
 				d["mana_cost"] = str(row.get("mana_cost", ""))
 	return d
+
+
+static func _is_attacking(engine: RulesEngine, obj: GameObject) -> bool:
+	if engine.state.phase != EngineEnums.Phase.COMBAT or not (engine.state.combat is CombatState):
+		return false
+	return (engine.state.combat as CombatState).attacker_ids.has(obj.object_id)
+
+
+## Id (as a string) of the attacker this creature blocks, or "".
+static func _blocking_target(engine: RulesEngine, obj: GameObject) -> String:
+	if engine.state.phase != EngineEnums.Phase.COMBAT or not (engine.state.combat is CombatState):
+		return ""
+	var blocks: Dictionary = (engine.state.combat as CombatState).blockers
+	for aid in blocks.keys():
+		var group: Variant = blocks[aid]
+		if group is Array and (group as Array).has(obj.object_id):
+			return str(aid)
+	return ""
 
 
 static func _color(def: CardDefinition) -> Color:

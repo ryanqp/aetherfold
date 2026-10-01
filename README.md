@@ -45,7 +45,8 @@ At the table:
 
 - **Keep** or **Mulligan** your opening 7.
 - Click a card in hand to play a land or cast it.
-- **Attack** sends every creature that can attack.
+- **Attack** sends every creature that can attack. The bot then decides its blocks.
+- When the bot attacks you, the game pauses for blocks: click one of your untapped creatures, then the attacker it should block (repeat for more), then **Confirm blocks** — or **No blocks**. Click an assigned blocker again to take it back. Attackers have a red border, blockers blue.
 - **Pass** advances a step / resolves the stack.
 - **End turn** — Talrand takes his turn, then you draw.
 - **Menu** → difficulty (how hard the bot plays) or **New game**.

@@ -7,3 +7,5 @@ var defending_player_id: int = -1
 var defenders: Dictionary = {}
 ## attacker object id -> Array of blocker object ids, in damage assignment order.
 var blockers: Dictionary = {}
+## True once the defending player has declared blockers this combat (even "no blocks").
+var blocks_declared: bool = false

@@ -56,7 +56,7 @@ Scryfall catalog (optional, for real cards/art): `python tools/fetch_scryfall.py
 ## Known gaps (as of 2026-10)
 
 - Only ~29 cards have IR; everything else plays as a vanilla body plus its keywords.
-- The table UI and the bot never declare blockers, so combat is always unblocked in practice.
+- Blocking works against the bot (you block via the table; the bot blocks with `engine/session/ai_blocks.gd`). LAN multiplayer doesn't prompt the defender to block yet.
 - Combat damage assignment is automatic (no player-chosen order or split).
 - Multiplayer is LAN-only; internet play by code needs a relay/matchmaking service.
 - No photo-to-card scanning yet.

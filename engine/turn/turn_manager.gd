@@ -149,6 +149,7 @@ func _start_tba(eng: RulesEngine, st: GameState) -> void:
 				cs.attacker_ids.clear()
 				cs.blockers.clear()
 				cs.defenders.clear()
+				cs.blocks_declared = false
 		_:
 			pass
 
