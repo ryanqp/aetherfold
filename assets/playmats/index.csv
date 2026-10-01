@@ -1,33 +1,33 @@
-filename,colors,wubrg,nickname,count
-Colorless.jpg,Colorless,C,Colorless,0
-White.jpg,White,W,Mono White,1
-Blue.jpg,Blue,U,Mono Blue,1
-Black.jpg,Black,B,Mono Black,1
-Red.jpg,Red,R,Mono Red,1
-Green.jpg,Green,G,Mono Green,1
-White-Blue.jpg,White-Blue,WU,Azorius,2
-White-Black.jpg,White-Black,WB,Orzhov,2
-White-Red.jpg,White-Red,WR,Boros,2
-White-Green.jpg,White-Green,WG,Selesnya,2
-Blue-Black.jpg,Blue-Black,UB,Dimir,2
-Blue-Red.jpg,Blue-Red,UR,Izzet,2
-Blue-Green.jpg,Blue-Green,UG,Simic,2
-Black-Red.jpg,Black-Red,BR,Rakdos,2
-Black-Green.jpg,Black-Green,BG,Golgari,2
-Red-Green.jpg,Red-Green,RG,Gruul,2
-White-Blue-Black.jpg,White-Blue-Black,WUB,Esper,3
-White-Blue-Red.jpg,White-Blue-Red,WUR,Jeskai,3
-White-Blue-Green.jpg,White-Blue-Green,WUG,Bant,3
-White-Black-Red.jpg,White-Black-Red,WBR,Mardu,3
-White-Black-Green.jpg,White-Black-Green,WBG,Abzan,3
-White-Red-Green.jpg,White-Red-Green,WRG,Naya,3
-Blue-Black-Red.jpg,Blue-Black-Red,UBR,Grixis,3
-Blue-Black-Green.jpg,Blue-Black-Green,UBG,Sultai,3
-Blue-Red-Green.jpg,Blue-Red-Green,URG,Temur,3
-Black-Red-Green.jpg,Black-Red-Green,BRG,Jund,3
-White-Blue-Black-Red.jpg,White-Blue-Black-Red,WUBR,Yore (no Green),4
-White-Blue-Black-Green.jpg,White-Blue-Black-Green,WUBG,Witch (no Red),4
-White-Blue-Red-Green.jpg,White-Blue-Red-Green,WURG,Ink (no Black),4
-White-Black-Red-Green.jpg,White-Black-Red-Green,WBRG,Dune (no Blue),4
-Blue-Black-Red-Green.jpg,Blue-Black-Red-Green,UBRG,Glint (no White),4
-White-Blue-Black-Red-Green.jpg,White-Blue-Black-Red-Green,WUBRG,Five Color,5
+filename,colors,wubrg,nickname,scene
+Colorless.jpg,Colorless,C,Colorless,ash wastes and buried hedrons
+White.jpg,White,W,Mono White,sunlit plains and marble temple ruins
+Blue.jpg,Blue,U,Mono Blue,island coast and tide pools
+Black.jpg,Black,B,Mono Black,cypress swamp and mudflat
+Red.jpg,Red,R,Mono Red,lava canyon and basalt shelf
+Green.jpg,Green,G,Mono Green,forest clearing and roots
+White-Blue.jpg,White-Blue,WU,Azorius,marble plaza and canal
+White-Black.jpg,White-Black,WB,Orzhov,basilica crypt court
+White-Red.jpg,White-Red,WR,Boros,fortress parade yard
+White-Green.jpg,White-Green,WG,Selesnya,temple grove
+Blue-Black.jpg,Blue-Black,UB,Dimir,undercity canal quay
+Blue-Red.jpg,Blue-Red,UR,Izzet,steam workshop yard
+Blue-Green.jpg,Blue-Green,UG,Simic,tidal mangrove wetland
+Black-Red.jpg,Black-Red,BR,Rakdos,volcanic pit
+Black-Green.jpg,Black-Green,BG,Golgari,fungal rot garden
+Red-Green.jpg,Red-Green,RG,Gruul,smashed canyon wilds
+White-Blue-Black.jpg,White-Blue-Black,WUB,Esper,filigree reflecting court
+White-Blue-Red.jpg,White-Blue-Red,WUR,Jeskai,snow monastery court
+White-Blue-Green.jpg,White-Blue-Green,WUG,Bant,coastal castle lawn
+White-Black-Red.jpg,White-Black-Red,WBR,Mardu,steppe war camp
+White-Black-Green.jpg,White-Black-Green,WBG,Abzan,fortified kin-tree grove
+White-Red-Green.jpg,White-Red-Green,WRG,Naya,jungle canyon altar
+Blue-Black-Red.jpg,Blue-Black-Red,UBR,Grixis,ash beach and lava coast
+Blue-Black-Green.jpg,Blue-Black-Green,UBG,Sultai,jungle river terrace
+Blue-Red-Green.jpg,Blue-Red-Green,URG,Temur,frontier stream clearing
+Black-Red-Green.jpg,Black-Red-Green,BRG,Jund,volcanic jungle basin
+White-Blue-Black-Red.jpg,White-Blue-Black-Red,WUBR,Yore (no Green),citadel between storm sea and volcano
+White-Blue-Black-Green.jpg,White-Blue-Black-Green,WUBG,Witch (no Red),misty lakeside cloister
+White-Blue-Red-Green.jpg,White-Blue-Red-Green,WURG,Ink (no Black),highland lake terrace
+White-Black-Red-Green.jpg,White-Black-Red-Green,WBRG,Dune (no Blue),dry clan valley
+Blue-Black-Red-Green.jpg,Blue-Black-Red-Green,UBRG,Glint (no White),wild river gorge
+White-Blue-Black-Red-Green.jpg,White-Blue-Black-Red-Green,WUBRG,Five Color,confluence amphitheater
