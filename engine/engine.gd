@@ -63,6 +63,7 @@ func setup(rules: FormatRules, seed: int = 1) -> void:
 	state.zones = ZoneManager.new()
 	state.zones.bind(state)
 	state.zones.setup(rules.player_count)
+	state.zones.lki_fn = Callable(self, "_lki")
 	state.stack = MagicStack.new()
 	mana = ManaManager.new()
 	mana.bind(state)
@@ -312,6 +313,47 @@ func put_library_bottom(object_id: int, player_id: int) -> GameObject:
 	return moved
 
 
+## Last known power and toughness, recorded as a permanent leaves the battlefield.
+## "Dinosaur spells you cast cost {1} less to cast": how much generic mana the player's permanents
+## take off the cost of this spell (CR 601.2f).
+func cost_reduction(player_id: int, spell: GameObject) -> int:
+	if spell == null:
+		return 0
+	var total := 0
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return 0
+	for oid in bf.object_ids:
+		var src: GameObject = state.objects.get(oid)
+		if src == null or src.controller_id != player_id or not (src.definition is CardDefinition):
+			continue
+		for a in (src.definition as CardDefinition).abilities:
+			var ab := a as Ability
+			if ab == null or ab.kind != &"STATIC" or not ab.static_spec.has("cost_reduction"):
+				continue
+			var spec: Dictionary = ab.static_spec["cost_reduction"]
+			var f: Variant = spec.get("filter", {})
+			if f is Dictionary and Query._matches(spell, src, f):
+				total += int(spec.get("amount", 1))
+	return total
+
+
+## The generic-and-colored cost to cast `spell` right now (commander tax and reductions included).
+func effective_cost(player_id: int, spell: GameObject, extra_generic: int = 0) -> ManaCost:
+	var def: CardDefinition = spell.definition as CardDefinition if spell != null and spell.definition is CardDefinition else null
+	var cost := ManaCost.parse(def.mana_cost if def else "")
+	## Hybrid, X and similar symbols aren't parsed; the printed total beyond the parsed symbols counts as generic.
+	if def != null:
+		cost.generic += maxi(0, def.cmc - cost.cmc())
+	cost.generic += extra_generic
+	cost.generic = maxi(0, cost.generic - cost_reduction(player_id, spell))
+	return cost
+
+
+func _lki(obj: GameObject) -> Dictionary:
+	return {power = power_of(obj), toughness = toughness_of(obj)}
+
+
 func resolve_top() -> void:
 	finish_top_resolution()
 
@@ -323,7 +365,9 @@ func finish_top_resolution() -> void:
 	if not done:
 		return
 	process_zone_events()
-	if sba != null and sba.check(self):
+	var sba_pending: bool = sba != null and sba.check(self)
+	process_zone_events()
+	if sba_pending:
 		return
 	priority.give(state, state.active_player_id)
 
@@ -343,13 +387,14 @@ func process_zone_events() -> void:
 		_zone_seq = state.log.seq()
 		for ev in events:
 			var e := ev as GameEvent
-			if e == null or e.type != EngineEnums.EventType.ZONE_CHANGE:
+			if e == null:
 				continue
-			var p: Dictionary = e.payload
-			if int(p.get("from_zone", -1)) == EngineEnums.ZoneId.BATTLEFIELD:
-				_release_exiled_with(int(p.get("from_id", 0)))
-			if int(p.get("to_zone", -1)) == EngineEnums.ZoneId.BATTLEFIELD and triggers != null:
-				triggers.on_enter_battlefield(self, state.objects.get(int(p.get("to_id", 0))))
+			if e.type == EngineEnums.EventType.ZONE_CHANGE:
+				var p: Dictionary = e.payload
+				if int(p.get("from_zone", -1)) == EngineEnums.ZoneId.BATTLEFIELD:
+					_release_exiled_with(int(p.get("from_id", 0)))
+			if triggers != null:
+				triggers.on_event(self, e)
 
 
 ## Cards a permanent exiled until it leaves the battlefield come back under their owner's control.
@@ -435,6 +480,7 @@ func _submit_activate_mana(action: GameAction) -> SubmitResult:
 		r.error = "cannot pay"
 		return r
 	costs.pay(obj, ab)
+	var sacrificed := ab.has_sacrifice_cost()
 	for fx in ab.effects:
 		if fx is AbilityEffect and (fx as AbilityEffect).kind == &"ADD_MANA":
 			var produced := resolve_mana(action.player_id, ManaCost.parse(str((fx as AbilityEffect).params.get("mana", ""))))
@@ -443,6 +489,8 @@ func _submit_activate_mana(action: GameAction) -> SubmitResult:
 		object_id = obj.object_id,
 		ability_id = str(ab.ability_id),
 	})
+	if sacrificed:
+		state.zones.move(obj.object_id, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
 	r.ok = true
 	return r
 
@@ -730,6 +778,8 @@ func _begin_payment(player_id: int, def: CardDefinition, extra: Dictionary) -> S
 		var key := def.oracle_id if def != null and def.oracle_id != "" else (def.name if def else "")
 		var n := int(state.players[player_id].commander_cast_count.get(key, 0))
 		_payment.generic += n * state.rules.commander_tax_step
+	var spell_obj: GameObject = state.objects.get(_cast_source)
+	_payment.generic = maxi(0, _payment.generic - cost_reduction(player_id, spell_obj))
 	state.mode = EngineEnums.EngineMode.PAYING_COSTS
 	state.awaiting = {player_id = player_id, type = &"pay", source_id = _cast_source}
 	state.passed_since_action.clear()
@@ -751,12 +801,23 @@ func _submit_choose_targets(action: GameAction) -> SubmitResult:
 	if _cast_queries.is_empty() or action.targets.is_empty():
 		r.error = "no target"
 		return r
-	var q: Dictionary = _cast_queries[0] if _cast_queries[0] is Dictionary else {}
-	var tid := int(action.targets[0])
-	if targeting == null or not targeting.is_legal(self, q, tid, _cast_source):
-		r.error = "illegal target"
+	## Targets are chosen one slot at a time; a choice that doesn't fill the last slot waits for the next.
+	var chosen: Array = _cast_targets.duplicate()
+	for raw in action.targets:
+		var slot := chosen.size()
+		if slot >= _cast_queries.size():
+			break
+		var q: Dictionary = _cast_queries[slot] if _cast_queries[slot] is Dictionary else {}
+		var tid := int(raw)
+		if chosen.has(tid) or targeting == null or not targeting.is_legal(self, q, tid, _cast_source):
+			r.error = "illegal target"
+			return r
+		chosen.append(tid)
+	_cast_targets = chosen
+	if _cast_targets.size() < _cast_queries.size():
+		state.passed_since_action.clear()
+		r.ok = true
 		return r
-	_cast_targets = action.targets.duplicate()
 	if _act_ability_id != &"":
 		var src: GameObject = state.objects.get(_cast_source)
 		var ab: Ability = _ability_on(src, _act_ability_id)
@@ -772,8 +833,13 @@ func _legal_choose_targets(player_id: int) -> Array:
 		return out
 	if _cast_queries.is_empty() or targeting == null:
 		return out
-	var q: Dictionary = _cast_queries[0] if _cast_queries[0] is Dictionary else {}
+	var slot := _cast_targets.size()
+	if slot >= _cast_queries.size():
+		return out
+	var q: Dictionary = _cast_queries[slot] if _cast_queries[slot] is Dictionary else {}
 	for tid in targeting.legal_ids(self, q, _cast_source):
+		if _cast_targets.has(tid):
+			continue
 		var a := GameAction.new()
 		a.kind = GameAction.Kind.CHOOSE_TARGETS
 		a.player_id = player_id
@@ -887,6 +953,22 @@ func _lethal_for(source: GameObject, target: GameObject) -> int:
 	if has_keyword(source, "Deathtouch"):
 		return 0 if target.deathtouch_damage else 1
 	return maxi(0, _toughness_of(target) - target.damage_marked)
+
+
+## Damage from a spell or ability, or a fight (CR 120.3). Deathtouch and lifelink still count.
+func damage_object(source: GameObject, target: GameObject, amount: int) -> void:
+	if amount <= 0 or target == null or target.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
+	target.damage_marked += amount
+	if source != null and has_keyword(source, "Deathtouch"):
+		target.deathtouch_damage = true
+	state.log.append(EngineEnums.EventType.DAMAGE, source.controller_id if source != null else 0, {
+		to_object = target.object_id,
+		amount = amount,
+		object_id = source.object_id if source != null else 0,
+	})
+	if source != null:
+		_apply_lifelink(source, amount)
 
 
 func _combat_damage_to_object(source: GameObject, target: GameObject, amount: int) -> void:
@@ -1134,6 +1216,8 @@ func _can_block(object_id: int, defender_id: int, attacker_id: int = -1) -> bool
 	if obj.controller_id != defender_id or obj.tapped:
 		return false
 	if not _is_creature_now(obj):
+		return false
+	if layers != null and layers.combat_restricted(state, obj):
 		return false
 	var attacker: GameObject = state.objects.get(attacker_id) if attacker_id >= 0 else null
 	if attacker == null:
@@ -1414,6 +1498,8 @@ func _legal_attacker_ids(player_id: int) -> Array:
 			continue
 		if has_keyword(obj, "Defender"):
 			continue
+		if layers != null and layers.combat_restricted(state, obj):
+			continue
 		out.append(obj.object_id)
 	return out
 
@@ -1560,6 +1646,9 @@ func _activation_reason(obj: GameObject, ab: Ability) -> String:
 		return "NOT_YOUR_PRIORITY"
 	if actor != obj.controller_id:
 		return "NOT_CONTROLLER"
+	if ab.restrictions.has("SORCERY_SPEED"):
+		if actor != state.active_player_id or not _is_main_phase() or not _stack_empty():
+			return "NOT_SORCERY_SPEED"
 	if ab.has_tap_cost() and obj.tapped:
 		return "TAPPED"
 	if ab.has_untap_cost() and not obj.tapped:
@@ -1638,6 +1727,8 @@ func _put_activated_on_stack() -> SubmitResult:
 		ability_id = str(ab.ability_id),
 		stack_id = entry.stack_id,
 	})
+	if ab.has_sacrifice_cost():
+		state.zones.move(obj.object_id, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
 	_cast_source = 0
 	_payment = null
 	_cast_targets = []

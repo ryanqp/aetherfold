@@ -21,5 +21,9 @@ var damage_marked: int = 0
 var deathtouch_damage: bool = false
 var counters: Dictionary = {}
 var attachments: Array[int] = []
+## Equipment: the creature this is attached to (0 = unattached). Checked for validity when read.
+var attached_to: int = 0
+## "As ~ enters, choose a creature type" (Icon of Ancestry, Herald's Horn, ...).
+var chosen_type: String = ""
 ## CR 601.3 / "you may play that card this turn". -1 means no permission.
 var may_play_controller: int = -1

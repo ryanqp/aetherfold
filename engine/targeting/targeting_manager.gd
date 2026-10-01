@@ -10,10 +10,12 @@ static func encode_player(player_id: int) -> int:
 
 ## Picks a target for a trigger or ability when no player chooses: harmful effects go at `me`'s
 ## opponents (their player first, then their biggest creature), helpful ones at `me`. -1 if none.
-func auto_pick(engine: RulesEngine, slot: Dictionary, source_id: int, me: int, hostile: bool) -> int:
+func auto_pick(engine: RulesEngine, slot: Dictionary, source_id: int, me: int, hostile: bool, exclude: Array = []) -> int:
 	var best := -1
 	var best_score := -1000000
 	for tid in legal_ids(engine, slot, source_id):
+		if exclude.has(int(tid)):
+			continue
 		var sc := auto_score(engine, int(tid), me, hostile)
 		if sc > best_score:
 			best_score = sc
@@ -33,8 +35,24 @@ static func auto_score(engine: RulesEngine, tid: int, me: int, hostile: bool) ->
 	var obj: GameObject = engine.state.objects.get(tid)
 	if obj == null:
 		return -1000
+	if obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		## A card in a graveyard: the most expensive one is the best to get back.
+		return 10 + (obj.definition as CardDefinition).cmc if obj.definition is CardDefinition else 10
 	var power := engine.power_of(obj)
 	return (30 + power * 2) if (obj.controller_id != me) == hostile else (-30 + power)
+
+
+## Whether a target slot is aimed at an opponent's things. A slot that names "you control" or
+## "you don't control" decides for itself; otherwise `fallback` (what the effects suggest) applies.
+static func slot_hostile(slot: Dictionary, fallback: bool) -> bool:
+	var q: Variant = slot.get("query", {})
+	if q is Dictionary:
+		var ctrl := str((q as Dictionary).get("controller", ""))
+		if ctrl == "OPPONENT":
+			return true
+		if ctrl == "SOURCE_CONTROLLER":
+			return false
+	return fallback
 
 
 ## False when any effect is clearly helpful to its target (gain life, a pump that doesn't shrink).
@@ -43,7 +61,7 @@ static func effects_hostile(effects: Array) -> bool:
 		var f := fx as AbilityEffect
 		if f == null:
 			continue
-		if f.kind == &"GAIN_LIFE" or f.kind == &"UNTAP" or f.kind == &"PUT_COUNTER":
+		if f.kind == &"GAIN_LIFE" or f.kind == &"UNTAP" or f.kind == &"PUT_COUNTER" or f.kind == &"ATTACH" or f.kind == &"RETURN_FROM_GRAVEYARD":
 			return false
 		if f.kind == &"PUMP" and int(f.params.get("power", 0)) >= 0 and int(f.params.get("toughness", 0)) >= 0:
 			return false
@@ -105,6 +123,21 @@ func legal_ids(engine: RulesEngine, query: Dictionary, source_id: int = -1) -> A
 			var obj: GameObject = engine.state.objects.get(oid)
 			if obj != null and Query._matches(obj, src_obj, q) and not _cant_be_targeted(engine, obj, src):
 				out.append(obj.object_id)
+	elif kind == "CARD_IN_ZONE":
+		## A card in a graveyard (or other non-shared zone), e.g. "target creature card from your graveyard".
+		var cq: Dictionary = query.get("query", {})
+		if not (cq is Dictionary):
+			cq = {}
+		var zid := Query._zone_id(str(cq.get("zone", "GRAVEYARD")))
+		var src_card: GameObject = engine.state.objects.get(src) if src > 0 else null
+		for pid in engine.state.players.size():
+			var zone: Zone = engine.state.zones.get_zone(zid, pid)
+			if zone == null:
+				continue
+			for coid in zone.object_ids:
+				var card: GameObject = engine.state.objects.get(coid)
+				if card != null and Query._matches(card, src_card, cq):
+					out.append(card.object_id)
 	elif kind == "ANY_TARGET":
 		var bf2: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
 		if bf2 != null:

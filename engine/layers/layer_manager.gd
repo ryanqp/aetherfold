@@ -37,6 +37,12 @@ func snapshot(state: GameState, obj: GameObject) -> Dictionary:
 			mod_t += fx.toughness
 			for kw in fx.add_keywords:
 				keywords.append(kw)
+	## Static abilities of permanents ("creatures you control get +1/+1", equipment). CR 613.4c, 613.1f.
+	var statics := _static_mods(state, obj)
+	mod_p += int(statics["power"])
+	mod_t += int(statics["toughness"])
+	for kw in statics["keywords"]:
+		keywords.append(str(kw))
 	if not subtype_sets.is_empty():
 		subtype_sets.sort_custom(func(a, b) -> bool:
 			return (a as ContinuousEffect).timestamp < (b as ContinuousEffect).timestamp
@@ -116,6 +122,88 @@ func abilities_for(state: GameState, obj: GameObject) -> Array:
 		else:
 			out.append(ab)
 	return out
+
+
+## Total +P/+T and granted keywords from static abilities on the battlefield that apply to `obj`.
+func _static_mods(state: GameState, obj: GameObject) -> Dictionary:
+	var mods := {"power": 0, "toughness": 0, "keywords": []}
+	if state == null or obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD or state.zones == null:
+		return mods
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return mods
+	for oid in bf.object_ids:
+		var src: GameObject = state.objects.get(oid)
+		if src == null or not (src.definition is CardDefinition):
+			continue
+		for a in (src.definition as CardDefinition).abilities:
+			var ab := a as Ability
+			if ab == null or ab.kind != &"STATIC" or ab.unparsed or ab.static_spec.is_empty():
+				continue
+			var spec: Dictionary = ab.static_spec
+			if not (spec.has("power") or spec.has("toughness") or spec.has("keywords")):
+				continue
+			if not static_applies(state, src, spec, obj):
+				continue
+			mods["power"] = int(mods["power"]) + int(spec.get("power", 0))
+			mods["toughness"] = int(mods["toughness"]) + int(spec.get("toughness", 0))
+			var kws: Variant = spec.get("keywords", [])
+			if kws is Array:
+				for kw in kws:
+					(mods["keywords"] as Array).append(str(kw))
+	return mods
+
+
+## Does the static ability `spec` of permanent `src` apply to `obj`?
+func static_applies(state: GameState, src: GameObject, spec: Dictionary, obj: GameObject) -> bool:
+	var cond: Variant = spec.get("condition", {})
+	if cond is Dictionary and (cond as Dictionary).has("controls"):
+		var need := int((cond as Dictionary).get("min", 1))
+		if Query.count_objects(state, src, (cond as Dictionary)["controls"]) < need:
+			return false
+	var scope := str(spec.get("scope", "SELF"))
+	match scope:
+		"SELF":
+			return src.object_id == obj.object_id
+		"EQUIPPED":
+			if src.attached_to != obj.object_id:
+				return false
+			return obj.zone == EngineEnums.ZoneId.BATTLEFIELD and _is_creature_line(_type_line_of(obj))
+		"OTHERS":
+			if src.object_id == obj.object_id:
+				return false
+		"ALL":
+			pass
+		_:
+			return false
+	var q: Variant = spec.get("query", {})
+	if q is Dictionary and not (q as Dictionary).is_empty():
+		return Query._matches(obj, src, q)
+	return true
+
+
+## "This creature can't attack or block unless you control seven or more lands."
+func combat_restricted(state: GameState, obj: GameObject) -> bool:
+	if obj == null or not (obj.definition is CardDefinition):
+		return false
+	for a in (obj.definition as CardDefinition).abilities:
+		var ab := a as Ability
+		if ab == null or ab.kind != &"STATIC" or not ab.static_spec.has("cant_attack_block_unless"):
+			continue
+		var need: Dictionary = ab.static_spec["cant_attack_block_unless"]
+		if need.has("lands"):
+			var lands := Query.count_objects(state, obj, {"controller": "SOURCE_CONTROLLER", "type": "land"})
+			if lands < int(need["lands"]):
+				return true
+		if need.has("permanents"):
+			var perms := Query.count_objects(state, obj, {"controller": "SOURCE_CONTROLLER"})
+			if perms < int(need["permanents"]):
+				return true
+	return false
+
+
+func _type_line_of(obj: GameObject) -> String:
+	return (obj.definition as CardDefinition).type_line if obj.definition is CardDefinition else ""
 
 
 func clear_until_eot(state: GameState) -> void:

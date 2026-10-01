@@ -6,6 +6,8 @@ extends RefCounted
 var _state_ref: WeakRef
 var _shared: Dictionary = {}
 var _player_zones: Array = []
+## Optional: Callable(obj) -> {power, toughness} read just before a permanent leaves (last known information).
+var lki_fn: Callable = Callable()
 
 
 static func is_shared(zone_id: int) -> bool:
@@ -105,6 +107,7 @@ func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip
 	src.object_ids.erase(object_id)
 	_detach_from_hosts(object_id)
 	_drop_commander_id(old)
+	var last_known := _last_known(old)
 	if old.is_token and dest_zone != EngineEnums.ZoneId.BATTLEFIELD:
 		gs.objects.erase(object_id)
 		var ceased := gs.log.append(EngineEnums.EventType.ZONE_CHANGE, old.owner_id, {
@@ -113,6 +116,10 @@ func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip
 			from_zone = old.zone,
 			to_zone = dest_zone,
 			linked_from = old.object_id,
+			definition = old.definition,
+			from_controller = old.controller_id,
+			was_token = true,
+			lki = last_known,
 		})
 		ceased.object_ids.append(old.object_id)
 		return null
@@ -146,10 +153,21 @@ func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip
 		from_zone = old.zone,
 		to_zone = dest_zone,
 		linked_from = old.object_id,
+		definition = old.definition,
+		from_controller = old.controller_id,
+		was_token = old.is_token,
+		lki = last_known,
 	})
 	ev.object_ids.append(old.object_id)
 	ev.object_ids.append(new_obj.object_id)
 	return new_obj
+
+
+func _last_known(old: GameObject) -> Dictionary:
+	if old.zone != EngineEnums.ZoneId.BATTLEFIELD or not lki_fn.is_valid():
+		return {}
+	var out: Variant = lki_fn.call(old)
+	return out if out is Dictionary else {}
 
 
 func _etb_tapped(definition) -> bool:

@@ -41,7 +41,7 @@ func test_unknown_text_stays_unimplemented() -> void:
 
 
 func test_half_understood_card_is_left_alone() -> void:
-	## "Scry 2." is not understood, so the damage sentence must not run alone.
+	## "Proliferate." is not understood, so the damage sentence must not run alone.
 	assert_true(db.definition_for("Test Unsure").abilities.is_empty())
 
 

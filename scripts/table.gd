@@ -1,7 +1,8 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 36
+const BUILD := 37
+const Mats := preload("res://engine/session/playmat_catalog.gd")
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
 const RivalAI := preload("res://scripts/rival_ai.gd")
@@ -385,7 +386,7 @@ func _make_field(parent: Control, tint: Color, zone_order: Array) -> Dictionary:
 	## Felt playmat behind the zones; the picture is chosen from the commander's colors in _apply_mats.
 	var mat := TextureRect.new()
 	mat.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	mat.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	mat.stretch_mode = TextureRect.STRETCH_SCALE  ## whole mat visible, every color of it
 	mat.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mat.modulate = Color(0.92, 0.92, 0.92)
 	field.add_child(mat)
@@ -1281,11 +1282,11 @@ func _set_mat(zones: Dictionary, seat: int) -> void:
 	var mat := zones.get("__mat") as TextureRect
 	if mat == null:
 		return
-	var file := PlaymatCatalog.file_for(session.engine.commander_identity(seat))
+	var file := Mats.file_for(session.engine.commander_identity(seat))
 	if str(mat.get_meta("file", "")) == file:
 		return
 	mat.set_meta("file", file)
-	mat.texture = PlaymatCatalog.texture(file)
+	mat.texture = Mats.texture(file)
 
 func _refresh() -> void:
 	var b = _board()

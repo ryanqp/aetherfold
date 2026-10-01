@@ -175,7 +175,16 @@ static func memory_catalog() -> CatalogSource:
 	cat.add(_spell_row("Test Study", "{R}", 1, "Sorcery", "Draw two cards. (Reminder text.)", ["R"]))
 	cat.add(_spell_row("Test Shrink", "{R}", 1, "Instant", "Target creature gets -9/-9 until end of turn.", ["R"]))
 	cat.add(_spell_row("Test Mystery", "{R}", 1, "Instant", "Test Mystery does something strange.", ["R"]))
-	cat.add(_spell_row("Test Unsure", "{R}", 1, "Instant", "Test Unsure deals 2 damage to any target.\nScry 2.", ["R"]))
+	cat.add(_spell_row("Test Unsure", "{R}", 1, "Instant", "Test Unsure deals 2 damage to any target.\nProliferate.", ["R"]))
+	## Permanents read from Oracle text: triggers, statics, equipment, tokens.
+	cat.add(_creature_row("Test Raptor Lord", "{2}{R}", 3, "Creature — Dinosaur", "Other Dinosaurs you control get +1/+1.", ["R"]))
+	cat.add(_creature_row("Test Egg Layer", "{1}{G}", 2, "Creature — Dinosaur", "When this creature enters, create a 1/1 green Dinosaur creature token.", ["G"]))
+	cat.add(_creature_row("Test Gorger", "{2}{G}", 3, "Creature — Dinosaur", "Whenever this creature attacks, put a +1/+1 counter on it.", ["G"]))
+	cat.add(_creature_row("Test Treasurer", "{2}{R}", 3, "Creature — Goblin", "At the beginning of your upkeep, create a Treasure token.", ["R"]))
+	cat.add(_creature_row("Test Mourner", "{1}{W}", 2, "Creature — Human", "When this creature dies, you gain 3 life.", ["W"]))
+	cat.add(_spell_row("Test Blade", "{1}", 1, "Artifact — Equipment", "Equipped creature gets +2/+2 and has menace.\nEquip {2}", []))
+	cat.add(_spell_row("Test Fetch", "{1}{G}", 2, "Sorcery", "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.", ["G"]))
+	cat.add(_spell_row("Test Rend", "{1}{G}", 2, "Sorcery", "Target creature you control fights target creature you don't control.", ["G"]))
 	## Vanilla keyword bodies for combat rules tests.
 	cat.add(_keyword_creature("Test Flyer", "2", "2", ["Flying"]))
 	cat.add(_keyword_creature("Test Reacher", "1", "4", ["Reach"]))

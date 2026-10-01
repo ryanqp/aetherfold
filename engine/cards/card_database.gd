@@ -55,15 +55,14 @@ func unread_lines(d: CardDefinition) -> Array:
 	var out: Array = []
 	if d == null or d.is_basic_land() or not _ir_for(d).is_empty():
 		return out
-	var text := d.oracle_text.replace("\r", "").replace("’", "'")
-	text = RegEx.create_from_string("\\([^)]*\\)").sub(text, "", true)
+	var text := OracleIr.normalize(d)
 	var covered: Array = []
 	for a in d.abilities:
 		if (a as Ability).kind == &"SPELL":
 			return out  ## instants and sorceries are read whole or not at all
 		covered.append(str((a as Ability).text).strip_edges())
-	for raw in text.replace(d.name, "~").split("\n"):
-		var line := str(raw).strip_edges()
+	for raw in text.split("\n"):
+		var line := OracleIr.strip_ability_word(str(raw).strip_edges())
 		if line == "" or covered.has(line) or _keyword_line(line):
 			continue
 		if d.enters_tapped() and line.to_lower().begins_with("~ enters"):
@@ -71,6 +70,9 @@ func unread_lines(d: CardDefinition) -> Array:
 		out.append(line)
 	return out
 
+
+## Keywords with nothing for the engine to do (or read by OracleIr), so they are not "unread".
+const HARMLESS_KEYWORDS := ["devoid", "partner", "ascend", "prowess", "changeling", "banding"]
 
 const ENFORCED_KEYWORDS := [
 	"haste", "defender", "vigilance", "flying", "reach", "menace", "first strike", "double strike",
@@ -82,7 +84,8 @@ const ENFORCED_KEYWORDS := [
 
 func _keyword_line(line: String) -> bool:
 	for part in line.to_lower().split(","):
-		if not str(part).strip_edges() in ENFORCED_KEYWORDS:
+		var w := str(part).strip_edges()
+		if not (w in ENFORCED_KEYWORDS or w in HARMLESS_KEYWORDS):
 			return false
 	return true
 

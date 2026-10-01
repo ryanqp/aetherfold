@@ -163,20 +163,32 @@ Target `query` accepts `type`, `not_type`, `subtype`, and `controller`: `SOURCE_
 
 ## 6b. Cards you don't have to write
 
-`engine/cards/oracle_ir.gd` (`OracleIr`) reads plain Oracle text into IR for **instants and sorceries** that have no `ir/*.json`. Hand-written IR always wins. It is all-or-nothing: every sentence must match, or the card stays unimplemented. Sentences it understands:
+`engine/cards/oracle_ir.gd` (`OracleIr`) reads plain Oracle text into IR when a card has no `ir/*.json`. Hand-written IR always wins. Cards from any source (Moxfield, Archidekt, Scryfall) work this way: the engine finds the wording and responds.
 
-| Oracle sentence | Becomes |
+**Instants and sorceries** are all-or-nothing: every sentence must match or the card stays unimplemented. **Permanents** are read line by line; a line that isn't understood is skipped and listed under "not coded" in History, and the card keeps its other abilities. Reminder text is ignored, the card's name / "this creature" becomes `~`, and ability words ("Landfall —") are stripped.
+
+| Oracle wording | Becomes |
 | --- | --- |
-| `~ deals N damage to any target / target creature / target player.` | `DEAL_DAMAGE` |
-| `Destroy target <creature, artifact, enchantment, land, permanent, nonland permanent> [you don't control].` | `DESTROY` |
-| `Exile target <…> [you don't control].` | `MOVE_ZONE` to `EXILE` |
-| `Return target <…> to its owner's hand.` | `MOVE_ZONE` to `HAND` |
-| `Draw a / two / … cards.` | `DRAW` |
-| `You gain N life.` / `Target player gains N life.` | `GAIN_LIFE` |
-| `Target creature gets +X/+Y [and gains <keywords>] until end of turn.` / `Target creature gains <keywords> until end of turn.` | `PUMP` |
-| `Counter target spell.` | `COUNTER_SPELL` |
+| `{T}: Add {G}.` / `{R} or {G}` / `one mana of any color` | mana ability |
+| `Equip {N}` + `Equipped creature gets +X/+Y and has <keywords>` | `ATTACH` (sorcery speed) + static boost |
+| `Other Dinosaurs you control get +1/+1`, `... of the chosen type` | static `STATIC` |
+| `Dinosaur spells you cast cost {1} less` | static cost reduction |
+| `When ~ enters / dies / attacks / deals combat damage to a player / is dealt damage` | trigger |
+| `Whenever another Dinosaur you control enters / dies / attacks`, `you cast a <type> spell`, `you gain life` | trigger with a filter |
+| `At the beginning of your upkeep / end step / combat` | step trigger |
+| `deals N damage to <target / each opponent / each other creature>` | `DEAL_DAMAGE` / `DEAL_DAMAGE_EACH` |
+| `Destroy target …`, `Destroy all creatures` | `DESTROY` / `DESTROY_ALL` |
+| `Exile target …`, `Return target … to its owner's hand` | `MOVE_ZONE` |
+| `Return target <type> card from your graveyard to your hand / the battlefield` | `RETURN_FROM_GRAVEYARD` |
+| `Draw N cards`, `You gain / lose N life`, `Each opponent loses N life` | `DRAW`, `GAIN_LIFE`, `LOSE_LIFE` |
+| `Create a Treasure / Food / Clue`, `Create a 3/3 green Dinosaur creature token [with trample]` | `CREATE_TOKEN` |
+| `Put N +1/+1 counters on <~ / target / each creature you control>` | `PUT_COUNTER` |
+| `<target> gets +X/+Y [and gains <keywords>] until end of turn` | `PUMP` |
+| `Search your library for a basic land card, put it onto the battlefield tapped` | `SEARCH_LIBRARY` |
+| `Scry N`, `Untap …`, `Counter target spell`, `~ fights target …` | `SCRY`, `UNTAP`, `COUNTER_SPELL`, `FIGHT` |
+| `Prowess`, `As ~ enters, choose a creature type`, `~ enters with N +1/+1 counters` | built in |
 
-Reminder text in parentheses is ignored. Only one target per card. To teach it a new sentence, add the pattern to `OracleIr._sentence` and a row to `tests/engine/fixtures.gd`; to cover a card it can't read, write IR as below.
+Up to three targets per card; each is chosen one at a time. Targets are picked automatically (see CLAUDE.md). Not read yet: Auras, kicker, cycling, flashback, crew, ward, convoke, X costs, modal "choose one", conditional ("if ...") triggers, discover / explore / monarch. To teach it a new wording, add the pattern to `OracleIr._sentence` (or `_header` for triggers) and a row to `tests/engine/fixtures.gd`; to cover a card it can't read, write IR as below.
 
 ## 7. Triggers
 

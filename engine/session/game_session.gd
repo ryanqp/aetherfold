@@ -366,20 +366,33 @@ func cast_auto(player_id: int, object_id: int) -> SubmitResult:
 ## Returns null when there is no legal target.
 func _choose_target_auto(player_id: int) -> SubmitResult:
 	var hostile := _pending_is_hostile()
-	var best: GameAction = null
-	var best_score := -1000000
-	for act in engine.legal_actions(player_id):
-		var ga := act as GameAction
-		if ga == null or ga.kind != GameAction.Kind.CHOOSE_TARGETS or ga.targets.is_empty():
-			continue
-		var sc := _target_score(int(ga.targets[0]), player_id, hostile)
-		if sc > best_score:
-			best_score = sc
-			best = ga
-	if best == null:
-		return null
-	best.extra = {auto_pay = true}
-	return submit(best)
+	var last: SubmitResult = null
+	## One slot per pass: a spell with two targets ("fights another target creature") asks again.
+	var guard := 0
+	while engine.state.mode == EngineEnums.EngineMode.CASTING and guard < 4:
+		guard += 1
+		var slot := engine._cast_targets.size()
+		var slot_dict: Dictionary = {}
+		if slot < engine._cast_queries.size() and engine._cast_queries[slot] is Dictionary:
+			slot_dict = engine._cast_queries[slot]
+		var slot_hostile := TargetingManager.slot_hostile(slot_dict, hostile)
+		var best: GameAction = null
+		var best_score := -1000000
+		for act in engine.legal_actions(player_id):
+			var ga := act as GameAction
+			if ga == null or ga.kind != GameAction.Kind.CHOOSE_TARGETS or ga.targets.is_empty():
+				continue
+			var sc := _target_score(int(ga.targets[0]), player_id, slot_hostile)
+			if sc > best_score:
+				best_score = sc
+				best = ga
+		if best == null:
+			return null
+		best.extra = {auto_pay = true}
+		last = submit(best)
+		if last == null or not last.ok:
+			return last
+	return last
 
 
 func _pending_is_hostile() -> bool:

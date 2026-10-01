@@ -1,19 +1,19 @@
 class_name IrLoader
 extends RefCounted
 
-const ABILITY_KEYS := ["ability_id", "kind", "costs", "targets", "effects", "trigger", "replacement", "restrictions", "text", "unparsed", "granted"]
+const ABILITY_KEYS := ["ability_id", "kind", "costs", "targets", "effects", "trigger", "replacement", "restrictions", "text", "unparsed", "granted", "static"]
 const COST_KEYS := ["kind", "mana", "from"]
 const EFFECT_KEYS := ["kind", "params"]
 const EFFECT_PARAM_KEYS := {
-	"DRAW": ["n", "if_link"],
-	"CREATE_TOKEN": ["token", "count"],
+	"DRAW": ["n", "if_link", "who"],
+	"CREATE_TOKEN": ["token", "count", "spec", "tapped"],
 	"COUNTER_SPELL": ["target"],
 	"MOVE_ZONE": ["target", "to"],
 	"ADD_MANA": ["mana"],
 	"TAP": ["target"],
 	"UNTAP": ["target"],
-	"DEAL_DAMAGE": ["n", "target"],
-	"LOSE_LIFE": ["n", "target"],
+	"DEAL_DAMAGE": ["n", "target", "who"],
+	"LOSE_LIFE": ["n", "target", "who"],
 	"CREATE_CONTINUOUS_EFFECT": ["layer", "mod", "duration", "query"],
 	"SCRY": ["n"],
 	"LOOK": ["n"],
@@ -22,14 +22,22 @@ const EFFECT_PARAM_KEYS := {
 	"EXILE_TOP": ["n", "who", "may_play"],
 	"MAY": ["link", "prompt"],
 	"CHOOSE": ["choice", "link", "options", "optional", "prompt"],
-	"PUT_COUNTER": ["name", "n", "target"],
-	"GAIN_LIFE": ["n", "target"],
+	"PUT_COUNTER": ["name", "n", "target", "self", "each"],
+	"GAIN_LIFE": ["n", "target", "who"],
 	"DESTROY": ["target"],
-	"PUMP": ["target", "power", "toughness", "keywords", "duration"],
+	"PUMP": ["target", "power", "toughness", "keywords", "duration", "self", "each"],
+	"DEAL_DAMAGE_EACH": ["n", "query"],
+	"SEARCH_LIBRARY": ["filter", "n", "to", "tapped"],
+	"UNTAP_EACH": ["query"],
+	"DESTROY_ALL": ["query"],
+	"FIGHT": ["a", "b", "one_sided"],
+	"ATTACH": ["target"],
+	"CHOOSE_TYPE": ["auto"],
+	"RETURN_FROM_GRAVEYARD": ["target", "to"],
 	"EXILE_UNTIL_LEAVES": ["target"],
 }
 const ABILITY_KINDS := ["SPELL", "ACTIVATED", "TRIGGERED", "STATIC", "REPLACEMENT", "MANA"]
-const COST_KINDS := ["MANA", "TAP", "UNTAP", "ADDITIONAL_MANA"]
+const COST_KINDS := ["MANA", "TAP", "UNTAP", "ADDITIONAL_MANA", "SACRIFICE_SELF"]
 
 var errors: PackedStringArray = PackedStringArray()
 
@@ -111,6 +119,8 @@ func _ability_from(d: Dictionary) -> Ability:
 	a.replacement = replacement if replacement is Dictionary else {}
 	var targets: Variant = d.get("targets", [])
 	a.targets = targets if targets is Array else []
+	var static_raw: Variant = d.get("static", {})
+	a.static_spec = static_raw if static_raw is Dictionary else {}
 	var restrictions: Variant = d.get("restrictions", [])
 	a.restrictions = restrictions if restrictions is Array else []
 	var costs: Variant = d.get("costs", [])
