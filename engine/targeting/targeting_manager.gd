@@ -41,6 +41,7 @@ func legal_ids(engine: RulesEngine, query: Dictionary, source_id: int = -1) -> A
 						continue
 				out.append(entry.stack_id)
 	elif kind == "PERMANENT":
+		var src_obj: GameObject = engine.state.objects.get(src) if src > 0 else null
 		var q: Dictionary = query.get("query", {})
 		if not (q is Dictionary):
 			q = {}
@@ -49,7 +50,7 @@ func legal_ids(engine: RulesEngine, query: Dictionary, source_id: int = -1) -> A
 			return out
 		for oid in bf.object_ids:
 			var obj: GameObject = engine.state.objects.get(oid)
-			if obj != null and Query._matches(obj, null, q) and not _cant_be_targeted(engine, obj, src):
+			if obj != null and Query._matches(obj, src_obj, q) and not _cant_be_targeted(engine, obj, src):
 				out.append(obj.object_id)
 	elif kind == "ANY_TARGET":
 		var bf2: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)

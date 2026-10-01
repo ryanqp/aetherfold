@@ -109,6 +109,9 @@ Allowed keys: `kind`, `params`
 | `UNTAP` | `target` | |
 | `DEAL_DAMAGE` | `n`, `target` | |
 | `LOSE_LIFE` | `n`, `target` | That object's controller loses `n` life. Not damage. |
+| `GAIN_LIFE` | `n`, `target` | Omit `target` and the effect's controller gains `n` life. With `target`, that player (or that object's controller) does |
+| `DESTROY` | `target` | CR 701.7. Goes to the owner's graveyard unless indestructible. Not a regenerate or "can't be destroyed" check beyond that |
+| `PUMP` | `target`, `power`, `toughness`, `keywords`, `duration` | Temporary +X/+Y and keywords on one creature. `duration` defaults to `END_OF_TURN` |
 | `CREATE_CONTINUOUS_EFFECT` | `layer`, `mod`, `duration`, `query` | |
 | `SCRY` | `n` | Loader accepts it; Opt still marks Scry `unparsed` |
 | `LOOK` | `n` | |
@@ -155,6 +158,25 @@ Known `kind` values in the authored cards:
 
 - `SPELL_ON_STACK` — Counterspell / Cancel
 - `PERMANENT` — Unsummon (`query.type = "creature"`)
+
+Target `query` accepts `type`, `not_type`, `subtype`, and `controller`: `SOURCE_CONTROLLER`, `OPPONENT` ("you don't control"), or `ANY`.
+
+## 6b. Cards you don't have to write
+
+`engine/cards/oracle_ir.gd` (`OracleIr`) reads plain Oracle text into IR for **instants and sorceries** that have no `ir/*.json`. Hand-written IR always wins. It is all-or-nothing: every sentence must match, or the card stays unimplemented. Sentences it understands:
+
+| Oracle sentence | Becomes |
+| --- | --- |
+| `~ deals N damage to any target / target creature / target player.` | `DEAL_DAMAGE` |
+| `Destroy target <creature, artifact, enchantment, land, permanent, nonland permanent> [you don't control].` | `DESTROY` |
+| `Exile target <…> [you don't control].` | `MOVE_ZONE` to `EXILE` |
+| `Return target <…> to its owner's hand.` | `MOVE_ZONE` to `HAND` |
+| `Draw a / two / … cards.` | `DRAW` |
+| `You gain N life.` / `Target player gains N life.` | `GAIN_LIFE` |
+| `Target creature gets +X/+Y [and gains <keywords>] until end of turn.` / `Target creature gains <keywords> until end of turn.` | `PUMP` |
+| `Counter target spell.` | `COUNTER_SPELL` |
+
+Reminder text in parentheses is ignored. Only one target per card. To teach it a new sentence, add the pattern to `OracleIr._sentence` and a row to `tests/engine/fixtures.gd`; to cover a card it can't read, write IR as below.
 
 ## 7. Triggers
 

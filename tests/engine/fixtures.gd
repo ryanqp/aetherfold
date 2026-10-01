@@ -165,6 +165,17 @@ static func memory_catalog() -> CatalogSource:
 		colors = ["R"],
 		commander_legal = true,
 	})
+	## Spells with no hand-written IR: OracleIr reads these straight from Oracle text.
+	cat.add(_spell_row("Test Smite", "{R}", 1, "Instant", "Test Smite deals 4 damage to target creature.", ["R"]))
+	cat.add(_spell_row("Test Doom", "{R}", 1, "Instant", "Destroy target creature.", ["R"]))
+	cat.add(_spell_row("Test Banish", "{R}", 1, "Instant", "Exile target creature.", ["R"]))
+	cat.add(_spell_row("Test Growth", "{R}", 1, "Instant", "Target creature gets +3/+3 until end of turn.", ["R"]))
+	cat.add(_spell_row("Test Bundle", "{R}", 1, "Instant", "Target creature gets +2/+0 and gains first strike until end of turn.", ["R"]))
+	cat.add(_spell_row("Test Mend", "{R}", 1, "Instant", "You gain 4 life.", ["R"]))
+	cat.add(_spell_row("Test Study", "{R}", 1, "Sorcery", "Draw two cards. (Reminder text.)", ["R"]))
+	cat.add(_spell_row("Test Shrink", "{R}", 1, "Instant", "Target creature gets -9/-9 until end of turn.", ["R"]))
+	cat.add(_spell_row("Test Mystery", "{R}", 1, "Instant", "Test Mystery does something strange.", ["R"]))
+	cat.add(_spell_row("Test Unsure", "{R}", 1, "Instant", "Test Unsure deals 2 damage to any target.\nScry 2.", ["R"]))
 	## Vanilla keyword bodies for combat rules tests.
 	cat.add(_keyword_creature("Test Flyer", "2", "2", ["Flying"]))
 	cat.add(_keyword_creature("Test Reacher", "1", "4", ["Reach"]))

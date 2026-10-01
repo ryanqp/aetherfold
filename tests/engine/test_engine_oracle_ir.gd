@@ -1,0 +1,152 @@
+@tool
+extends McpTestSuite
+
+## Spells with no hand-written IR, read straight from Oracle text by OracleIr.
+
+const Fixtures := preload("res://tests/engine/fixtures.gd")
+
+var db: CardDatabase
+
+
+func suite_name() -> String:
+	return "engine_oracle_ir"
+
+
+func suite_setup(_ctx: Dictionary) -> void:
+	db = Fixtures.memory_db()
+
+
+# --- Reading -------------------------------------------------------------------
+
+func test_reads_damage_spell() -> void:
+	var abilities := db.definition_for("Test Smite").abilities
+	assert_eq(abilities.size(), 1)
+	var ab := abilities[0] as Ability
+	assert_eq(str(ab.kind), "SPELL")
+	assert_eq(str(ab.ability_id), "test_smite_spell")
+	assert_eq(ab.targets.size(), 1)
+	assert_eq(str(ab.targets[0].get("kind")), "PERMANENT")
+	assert_eq(str(ab.effects[0].kind), "DEAL_DAMAGE")
+	assert_eq(int(ab.effects[0].params.get("n")), 4)
+
+
+func test_reminder_text_is_ignored() -> void:
+	var ab := db.definition_for("Test Study").abilities[0] as Ability
+	assert_eq(str(ab.effects[0].kind), "DRAW")
+	assert_eq(int(ab.effects[0].params.get("n")), 2)
+
+
+func test_unknown_text_stays_unimplemented() -> void:
+	assert_true(db.definition_for("Test Mystery").abilities.is_empty())
+
+
+func test_half_understood_card_is_left_alone() -> void:
+	## "Scry 2." is not understood, so the damage sentence must not run alone.
+	assert_true(db.definition_for("Test Unsure").abilities.is_empty())
+
+
+func test_hand_written_ir_wins() -> void:
+	var ab := db.definition_for("Lightning Bolt").abilities[0] as Ability
+	assert_eq(str(ab.ability_id), "lightning_bolt")
+
+
+func test_creatures_are_not_read() -> void:
+	assert_true(db.definition_for("Test Bear").abilities.is_empty())
+
+
+# --- Playing them ------------------------------------------------------------------
+
+func test_smite_kills_ogre_but_not_wall() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var ogre := Fixtures.spawn_named(engine, db, 1, EngineEnums.ZoneId.BATTLEFIELD, "Test Ogre")
+	var wall := Fixtures.spawn_named(engine, db, 1, EngineEnums.ZoneId.BATTLEFIELD, "Test Wall")
+	_cast(engine, "Test Smite", ogre.object_id)
+	assert_ne(engine.state.objects[ogre.object_id].zone, EngineEnums.ZoneId.BATTLEFIELD)
+	_cast(engine, "Test Smite", wall.object_id)
+	assert_eq(engine.state.objects[wall.object_id].zone, EngineEnums.ZoneId.BATTLEFIELD)
+
+
+func test_destroy_kills_but_indestructible_survives() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var bear := Fixtures.spawn_named(engine, db, 1, EngineEnums.ZoneId.BATTLEFIELD, "Test Bear")
+	var rock := Fixtures.spawn_named(engine, db, 1, EngineEnums.ZoneId.BATTLEFIELD, "Test Stalwart")
+	_cast(engine, "Test Doom", bear.object_id)
+	_cast(engine, "Test Doom", rock.object_id)
+	assert_eq(engine.state.zones.get_zone(EngineEnums.ZoneId.GRAVEYARD, 1).size(), 1)
+	assert_eq(engine.state.objects[rock.object_id].zone, EngineEnums.ZoneId.BATTLEFIELD)
+
+
+func test_exile_ignores_indestructible() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var rock := Fixtures.spawn_named(engine, db, 1, EngineEnums.ZoneId.BATTLEFIELD, "Test Stalwart")
+	_cast(engine, "Test Banish", rock.object_id)
+	assert_eq(engine.state.zones.get_zone(EngineEnums.ZoneId.EXILE, 1).size(), 1)
+
+
+func test_pump_changes_power_and_toughness() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var bear := Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Bear")
+	_cast(engine, "Test Growth", bear.object_id)
+	assert_eq(engine.power_of(bear), 5)
+	assert_eq(engine.toughness_of(bear), 5)
+
+
+func test_pump_grants_keyword() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var bear := Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Bear")
+	assert_false(engine.has_keyword(bear, "First strike"))
+	_cast(engine, "Test Bundle", bear.object_id)
+	assert_true(engine.has_keyword(bear, "First strike"))
+	assert_eq(engine.power_of(bear), 4)
+
+
+func test_shrink_kills_through_state_based_actions() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var ogre := Fixtures.spawn_named(engine, db, 1, EngineEnums.ZoneId.BATTLEFIELD, "Test Ogre")
+	_cast(engine, "Test Shrink", ogre.object_id)
+	assert_ne(engine.state.objects[ogre.object_id].zone, EngineEnums.ZoneId.BATTLEFIELD)
+
+
+func test_pump_wears_off_at_end_of_turn() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var bear := Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Bear")
+	_cast(engine, "Test Growth", bear.object_id)
+	engine.layers.clear_until_eot(engine.state)
+	assert_eq(engine.power_of(bear), 2)
+
+
+func test_gain_life() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var life := engine.state.players[0].life
+	_cast(engine, "Test Mend", -1)
+	assert_eq(engine.state.players[0].life, life + 4)
+
+
+func test_draw_two() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	for _i in 3:
+		Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.LIBRARY, "Island")
+	var hand_before := engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, 0).size()
+	_cast(engine, "Test Study", -1)
+	## The spell leaves the hand when cast, then two cards arrive.
+	assert_eq(engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, 0).size(), hand_before + 2)
+
+
+# --- Helpers -------------------------------------------------------------------------
+
+## Casts `card_name` for player 0 with a Mountain to pay, choosing `target_id` when it needs one.
+func _cast(engine: RulesEngine, card_name: String, target_id: int) -> void:
+	var mtn := Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.BATTLEFIELD, "Mountain")
+	mtn.summoned_this_turn = false
+	var spell := Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.HAND, card_name)
+	var a := GameAction.new()
+	a.kind = GameAction.Kind.CAST_SPELL
+	a.player_id = 0
+	a.object_id = spell.object_id
+	a.extra = {auto_pay = true}
+	assert_true(engine.submit(a).ok, "cast " + card_name)
+	if target_id >= 0:
+		var t := Fixtures.choose_targets(0, [target_id])
+		t.extra = {auto_pay = true}
+		assert_true(engine.submit(t).ok, "target for " + card_name)
+	Fixtures.both_pass(engine)

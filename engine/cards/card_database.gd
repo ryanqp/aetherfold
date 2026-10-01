@@ -31,6 +31,9 @@ func definition_for(name_or_id: String) -> CardDefinition:
 func _from_row(row: Dictionary) -> CardDefinition:
 	var d := CardDefinition.from_catalog_row(row)
 	var abs: Array = _ir_for(d)
+	if abs.is_empty():
+		## No hand-written IR: read the simple instants and sorceries straight from Oracle text.
+		abs = OracleIr.translate(d)
 	if not abs.is_empty():
 		d.abilities = abs
 	else:

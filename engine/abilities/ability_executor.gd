@@ -77,6 +77,12 @@ func _apply(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: Abil
 			_exile_top(engine, entry, fx)
 		"PUT_COUNTER":
 			_put_counter(engine, entry, fx)
+		"GAIN_LIFE":
+			_gain_life(engine, entry, fx)
+		"DESTROY":
+			_destroy(engine, entry, fx)
+		"PUMP":
+			_pump(engine, entry, fx)
 		_:
 			pass
 
@@ -160,6 +166,76 @@ func _deal_damage(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> 
 		amount = n,
 	})
 	## Lethal damage is a state-based action (CR 704.5g), so indestructible is respected.
+	if engine.sba != null:
+		engine.sba.check(engine)
+
+
+## CR 119.3: gaining life. With no `target` the effect's controller gains it.
+func _gain_life(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
+	var n := int(fx.params.get("n", 0))
+	if n <= 0:
+		return
+	var pid := entry.controller_id
+	if fx.params.has("target"):
+		var idx := int(fx.params.get("target", 0))
+		if idx < 0 or idx >= entry.targets.size():
+			return
+		var tid := int(entry.targets[idx])
+		var tp := TargetingManager.decode_player(tid)
+		if tp >= 0:
+			pid = tp
+		else:
+			var obj: GameObject = engine.state.objects.get(tid)
+			if obj == null:
+				return
+			pid = obj.controller_id
+	if pid < 0 or pid >= engine.state.players.size():
+		return
+	engine.state.players[pid].life += n
+	engine.state.log.append(EngineEnums.EventType.LIFE_CHANGE, pid, {
+		to_player = pid,
+		amount = n,
+		gain = true,
+	})
+
+
+## CR 701.7: destroy puts the permanent into its owner's graveyard unless it has indestructible (CR 702.12b).
+func _destroy(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
+	var idx := int(fx.params.get("target", 0))
+	if idx < 0 or idx >= entry.targets.size():
+		return
+	var obj: GameObject = engine.state.objects.get(int(entry.targets[idx]))
+	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
+	if engine.has_keyword(obj, "Indestructible"):
+		return
+	engine.state.zones.move(obj.object_id, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
+
+
+## A temporary +X/+Y (layer 7c) and keywords (layer 6) on one object (CR 611.2).
+## The effect follows that object only; a new object id after a zone change is not affected (CR 400.7).
+func _pump(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
+	var idx := int(fx.params.get("target", 0))
+	if idx < 0 or idx >= entry.targets.size():
+		return
+	var obj: GameObject = engine.state.objects.get(int(entry.targets[idx]))
+	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
+	var effect := ContinuousEffect.new()
+	effect.object_ids = [obj.object_id]
+	effect.source_id = entry.source_id
+	effect.controller_id = entry.controller_id
+	effect.timestamp = engine.state.next_timestamp
+	engine.state.next_timestamp += 1
+	effect.power = int(fx.params.get("power", 0))
+	effect.toughness = int(fx.params.get("toughness", 0))
+	effect.until_eot = str(fx.params.get("duration", "END_OF_TURN")) == "END_OF_TURN"
+	var kws: Variant = fx.params.get("keywords", [])
+	if kws is Array:
+		for kw in kws:
+			effect.add_keywords.append(str(kw))
+	engine.state.effects.append(effect)
+	## A negative toughness can kill it (CR 704.5f).
 	if engine.sba != null:
 		engine.sba.check(engine)
 

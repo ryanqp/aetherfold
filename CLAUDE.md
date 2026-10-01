@@ -55,7 +55,7 @@ Scryfall catalog (optional, for real cards/art): `python tools/fetch_scryfall.py
 
 ## Known gaps (as of 2026-10)
 
-- Only ~29 cards have IR; everything else plays as a vanilla body plus its keywords.
+- ~29 cards have hand-written IR. Simple instants/sorceries are read from Oracle text by `engine/cards/oracle_ir.gd` (see `docs/adding-a-card.md` §6b). Everything else plays as a vanilla body plus its keywords: no ETB/death triggers, no static abilities, no activated abilities yet.
 - Blocking works against the bot (you block via the table; the bot blocks with `engine/session/ai_blocks.gd`). LAN multiplayer doesn't prompt the defender to block yet.
 - Combat damage assignment is automatic (no player-chosen order or split).
 - Multiplayer is LAN-only; internet play by code needs a relay/matchmaking service.

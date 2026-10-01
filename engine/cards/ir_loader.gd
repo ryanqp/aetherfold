@@ -23,6 +23,9 @@ const EFFECT_PARAM_KEYS := {
 	"MAY": ["link", "prompt"],
 	"CHOOSE": ["choice", "link", "options", "optional", "prompt"],
 	"PUT_COUNTER": ["name", "n", "target"],
+	"GAIN_LIFE": ["n", "target"],
+	"DESTROY": ["target"],
+	"PUMP": ["target", "power", "toughness", "keywords", "duration"],
 }
 const ABILITY_KINDS := ["SPELL", "ACTIVATED", "TRIGGERED", "STATIC", "REPLACEMENT", "MANA"]
 const COST_KINDS := ["MANA", "TAP", "UNTAP", "ADDITIONAL_MANA"]

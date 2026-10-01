@@ -23,6 +23,8 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 	var ctrl := str(spec.get("controller", "ANY"))
 	if ctrl == "SOURCE_CONTROLLER" and source != null and obj.controller_id != source.controller_id:
 		return false
+	if ctrl == "OPPONENT" and source != null and obj.controller_id == source.controller_id:
+		return false
 	if ctrl == "SOURCE_OWNER" and source != null and obj.owner_id != source.owner_id:
 		return false
 	var def: CardDefinition = obj.definition as CardDefinition if obj.definition is CardDefinition else null
