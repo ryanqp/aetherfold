@@ -35,6 +35,9 @@ const EFFECT_PARAM_KEYS := {
 	"CHOOSE_TYPE": ["auto"],
 	"RETURN_FROM_GRAVEYARD": ["target", "to"],
 	"EXILE_UNTIL_LEAVES": ["target"],
+	"DISCOVER": ["n"],
+	"BECOME_MONARCH": [],
+	"CHOOSE_COLOR": ["not"],
 }
 const ABILITY_KINDS := ["SPELL", "ACTIVATED", "TRIGGERED", "STATIC", "REPLACEMENT", "MANA"]
 const COST_KINDS := ["MANA", "TAP", "UNTAP", "ADDITIONAL_MANA", "SACRIFICE_SELF"]

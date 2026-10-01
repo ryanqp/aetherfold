@@ -1,7 +1,7 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 38
+const BUILD := 39
 const Mats := preload("res://engine/session/playmat_catalog.gd")
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")

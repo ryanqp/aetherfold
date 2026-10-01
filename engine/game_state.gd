@@ -8,6 +8,8 @@ var next_object_id: int = 1
 var next_stack_id: int = 1
 var next_timestamp: int = 1
 var turn_number: int = 1
+## CR 724: the player who is the monarch (draws at their end step), -1 for none.
+var monarch_id: int = -1
 var active_player_id: int = 0
 var priority_player_id: int = 0
 var passed_since_action: Array[int] = []

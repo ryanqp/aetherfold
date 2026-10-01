@@ -116,3 +116,31 @@ func test_keyword_db_knows_unimplemented_keywords() -> void:
 	assert_eq(str(KeywordDb.lookup("Ward {2}").get("status")), "MISSING")
 	assert_true(KeywordDb.line_is_handled("Flying, vigilance"))
 	assert_false(KeywordDb.line_is_handled("Ward {1}"))
+
+
+func test_thriving_land_reads_chosen_color() -> void:
+	var def := db.definition_for("Test Thriving")
+	var kinds: Array = []
+	var chosen_mana := false
+	for a in def.abilities:
+		var ab := a as Ability
+		kinds.append(str(ab.kind))
+		if ab.is_mana() and str(ab.effects[0].params.get("mana")) == "{CHOSEN}":
+			chosen_mana = true
+	assert_true(chosen_mana, "mana of the chosen color is read")
+	assert_true(kinds.has("TRIGGERED"), "the color choice is read")
+
+
+func test_discover_trigger_is_once_per_turn() -> void:
+	var ab := _first("Test Discoverer", &"TRIGGERED")
+	assert_true(ab != null, "discover trigger read")
+	assert_eq(str(ab.trigger.get("scope")), "ANY")
+	assert_true(bool(ab.trigger.get("once_per_turn", false)))
+	assert_eq(str(ab.effects[0].kind), "DISCOVER")
+
+
+func test_monarch_and_destroy_either_type() -> void:
+	assert_eq(str(_first("Test Monarch", &"TRIGGERED").effects[0].kind), "BECOME_MONARCH")
+	var br := _first("Test Breaker", &"ACTIVATED")
+	assert_true(br != null, "sacrifice ability read")
+	assert_true((br.targets[0].get("query") as Dictionary).has("type_any"))

@@ -189,6 +189,10 @@ static func memory_catalog() -> CatalogSource:
 	cat.add(_land_row("Test Fastland", "Land", "Test Fastland enters tapped unless you control two or fewer other lands.\n{T}: Add {R} or {G}.", ["R", "G"]))
 	cat.add(_land_row("Test Checkland", "Land", "Test Checkland enters tapped unless you control a Mountain or an Island.\n{T}: Add {U} or {R}.", ["U", "R"]))
 	cat.add(_spell_row("Test Stomp", "{2}{G}", 3, "Sorcery", "Test Stomp costs {2} less to cast if it targets a Dinosaur you control.\nPut a +1/+1 counter on target creature you control. Then that creature fights target creature you don't control.", ["G"]))
+	cat.add(_land_row("Test Thriving", "Land", "This land enters tapped.\nAs this land enters, choose a color other than green.\n{T}: Add {G}.\n{T}: Add one mana of the chosen color.", ["G"]))
+	cat.add(_creature_row("Test Discoverer", "{3}{G}", 4, "Creature — Dinosaur", "Whenever this creature or another Dinosaur you control enters, you may discover X, where X is that creature's toughness. Do this only once each turn.", ["G"]))
+	cat.add(_creature_row("Test Monarch", "{3}{W}", 4, "Creature — Human", "When this creature enters, you become the monarch.", ["W"]))
+	cat.add(_creature_row("Test Breaker", "{1}{G}", 2, "Creature — Beast", "{1}, Sacrifice this creature: Destroy target artifact or enchantment.", ["G"]))
 	## Vanilla keyword bodies for combat rules tests.
 	cat.add(_keyword_creature("Test Flyer", "2", "2", ["Flying"]))
 	cat.add(_keyword_creature("Test Reacher", "1", "4", ["Reach"]))

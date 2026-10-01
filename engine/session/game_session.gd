@@ -64,7 +64,7 @@ func start_imported(deck: NormalizedDeck, rows: Dictionary, seed: int = -1) -> v
 	start_with_demo(DemoSetup.imported_vs_talrand(deck, rows), seed)
 
 
-## Lists, in History, the cards in your deck that have rules text the engine doesn't act on yet.
+## Prints (to the Godot Output panel, not History) the cards in your deck that have rules text the engine doesn't act on yet.
 func _note_unread_cards() -> void:
 	if db == null or engine == null:
 		return
@@ -87,9 +87,10 @@ func _note_unread_cards() -> void:
 	lines.sort()
 	if lines.is_empty():
 		return
-	history.add_note("%d of your cards have effects not coded yet (they play as their body only):" % lines.size(), "info")
+	## Not shown in History any more (it buried the game log); the Godot Output panel has the list.
+	print("[Aetherfold] %d cards have lines the engine doesn't read yet:" % lines.size())
 	for l in lines:
-		history.add_note("  " + str(l), "info")
+		print("  " + str(l))
 
 
 func start_with_demo(demo: DemoSetup, seed: int = -1) -> void:

@@ -75,6 +75,7 @@ static func translate(def: CardDefinition) -> Array:
 
 
 ## Abilities on permanents. Each line is read on its own; a line that isn't understood is skipped.
+## A line of several sentences that doesn't read whole is read one sentence at a time.
 static func translate_permanent(def: CardDefinition) -> Array:
 	if def == null or _applies(def):
 		return []
@@ -84,7 +85,8 @@ static func translate_permanent(def: CardDefinition) -> Array:
 		var line := strip_ability_word(str(raw).strip_edges())
 		if line == "":
 			continue
-		for item in OracleIr.new()._read_line(def, line):
+		var found: Array = _read_whole_or_by_sentence(def, line)
+		for item in found:
 			var d: Dictionary = item
 			n += 1
 			d["ability_id"] = "%s_%s%d" % [_snake(def.name), str(d.get("kind", "x")).to_lower(), n]
@@ -93,6 +95,45 @@ static func translate_permanent(def: CardDefinition) -> Array:
 			var parsed := loader.from_dict({"abilities": [d]})
 			if loader.errors.is_empty():
 				out.append_array(parsed)
+	return out
+
+
+static func _read_whole_or_by_sentence(def: CardDefinition, line: String) -> Array:
+	var found := _read_clean(def, line)
+	if not found.is_empty() or not line.contains(". "):
+		return found
+	for part in line.split(". "):
+		found.append_array(_read_clean(def, str(part)))
+	return found
+
+
+## Drops the sentences that only add a condition or a discount we handle apart, trims the final period, reads the line.
+static func _read_clean(def: CardDefinition, line: String) -> Array:
+	var text := line.strip_edges()
+	var restrictions: Array = []
+	var once := false
+	var re_cost := RegEx.create_from_string("(?i)\\.?\\s*this ability costs \\{[^}]+\\} less to activate[^.]*\\.?")
+	text = re_cost.sub(text, "", true)
+	var re_city := RegEx.create_from_string("(?i)\\.?\\s*activate only if you have the city's blessing\\.?")
+	if re_city.search(text) != null:
+		restrictions.append("CITYS_BLESSING")
+		text = re_city.sub(text, "", true)
+	var re_once := RegEx.create_from_string("(?i)\\.?\\s*do this only once each turn\\.?")
+	if re_once.search(text) != null:
+		once = true
+		text = re_once.sub(text, "", true)
+	text = text.strip_edges().trim_suffix(".").strip_edges()
+	if text == "":
+		return []
+	var out: Array = OracleIr.new()._read_line(def, text)
+	for item in out:
+		var d: Dictionary = item
+		if not restrictions.is_empty():
+			var r: Array = d.get("restrictions", [])
+			r.append_array(restrictions)
+			d["restrictions"] = r
+		if once and d.has("trigger"):
+			(d["trigger"] as Dictionary)["once_per_turn"] = true
 	return out
 
 
@@ -162,6 +203,19 @@ func _read_line(def: CardDefinition, line: String) -> Array:
 	var st := _static_line(line)
 	if not st.is_empty():
 		return [st]
+
+	# Thriving lands: "As ~ enters, choose a color other than green." / "{T}: Add one mana of the chosen color."
+	m = _match("^as ~ enters, choose a color other than (white|blue|black|red|green)$", line)
+	if m != null:
+		return [{
+			"kind": "TRIGGERED", "trigger": {"on": "ENTERS_BATTLEFIELD"}, "costs": [], "targets": [],
+			"effects": [{"kind": "CHOOSE_COLOR", "params": {"not": COLOR_LETTERS[m.get_string(1).to_lower()]}}], "restrictions": [],
+		}]
+	if _match("^\\{T\\}: add one mana of the chosen color$", line) != null:
+		return [{
+			"kind": "MANA", "costs": [{"kind": "TAP"}], "targets": [],
+			"effects": [{"kind": "ADD_MANA", "params": {"mana": "{CHOSEN}"}}], "restrictions": [],
+		}]
 
 	# "As ~ enters, choose a creature type."
 	m = _match("^as ~ enters, choose a creature type$", line)
@@ -332,6 +386,8 @@ func _header(h: String) -> Dictionary:
 		return {"on": "DAMAGED"}
 	if _match("^you gain life$", h) != null:
 		return {"on": "LIFE_GAINED", "scope": "YOU"}
+	if _match("^you cast a creature spell of the chosen type$", h) != null:
+		return {"on": "SPELL_CAST", "filter": {"controller": "SOURCE_CONTROLLER", "query": {"type": "creature", "subtype": "$chosen"}}}
 	if _match("^you cast a spell$", h) != null:
 		return {"on": "SPELL_CAST", "filter": {"controller": "SOURCE_CONTROLLER"}}
 	m = _match("^you cast (?:an? )?(.+?) spell$", h)
@@ -595,6 +651,11 @@ func _sentence(s: String) -> bool:
 	if m != null:
 		_effects.append({"kind": "CREATE_TOKEN", "params": {"token": m.get_string(3).to_lower(), "count": _num(m.get_string(1)), "tapped": m.get_string(2) != ""}})
 		return true
+	var x_count: Variant = null
+	var xm := _match("^(create x .+?), where x is (?:its|that creature's|~'s) (power|toughness)$", s)
+	if xm != null:
+		s = xm.get_string(1).replace("create x ", "create one ", 1).replace("create X ", "create one ", 1)
+		x_count = {"expr": "TRIGGER_POWER" if xm.get_string(2).to_lower() == "power" else "TRIGGER_TOUGHNESS"}
 	m = _match("^create (a|an|one|two|three|four|five|\\d+) (tapped )?(\\d+)/(\\d+) ((?:white|blue|black|red|green|colorless)(?:(?:,| and|, and) (?:white|blue|black|red|green))*) ([a-z' -]+?) (artifact )?creature tokens?(?: with ([a-z ,]+))?$", s)
 	if m != null:
 		var colors: Array = []
@@ -610,7 +671,7 @@ func _sentence(s: String) -> bool:
 			if kws.is_empty():
 				return false
 		var spec := {"p": m.get_string(3), "t": m.get_string(4), "colors": colors, "subtypes": subs, "keywords": kws, "artifact": m.get_string(7) != ""}
-		_effects.append({"kind": "CREATE_TOKEN", "params": {"spec": spec, "count": _num(m.get_string(1)), "tapped": m.get_string(2) != ""}})
+		_effects.append({"kind": "CREATE_TOKEN", "params": {"spec": spec, "count": x_count if x_count != null else _num(m.get_string(1)), "tapped": m.get_string(2) != ""}})
 		return true
 
 	# Counters.
@@ -758,6 +819,22 @@ func _sentence(s: String) -> bool:
 		_effects.append({"kind": "COUNTER_SPELL", "params": {"target": cs}})
 		return true
 
+	# CR 724: the monarch.
+	if _match("^you become the monarch$", s) != null:
+		_effects.append({"kind": "BECOME_MONARCH", "params": {}})
+		return true
+
+	# CR 701.57: discover.
+	m = _match("^(?:you may )?discover (\\d+|x)(?:, where x is (?:that creature's|its|~'s) (toughness|power))?$", s)
+	if m != null:
+		var dn: Variant = int(m.get_string(1)) if m.get_string(1).is_valid_int() else 0
+		if not m.get_string(1).is_valid_int():
+			if m.get_string(2) == "":
+				return false
+			dn = {"expr": "TRIGGER_TOUGHNESS" if m.get_string(2).to_lower() == "toughness" else "TRIGGER_POWER"}
+		_effects.append({"kind": "DISCOVER", "params": {"n": dn}})
+		return true
+
 	# Choose a creature type (the "As ~ enters" line wraps this).
 	if _match("^choose a creature type$", s) != null:
 		_effects.append({"kind": "CHOOSE_TYPE", "params": {"auto": true}})
@@ -862,6 +939,17 @@ func _target(phrase: String) -> int:
 		idx = _add_target("PLAYER", {})
 	elif low == "target opponent":
 		idx = _add_target("PLAYER", {"opponent": true})
+	elif _match("^target (artifact|creature|enchantment|land) or (artifact|creature|enchantment|land)( you control| you don't control| an opponent controls)?$", s) != null:
+		var m2 := _match("^target (artifact|creature|enchantment|land) or (artifact|creature|enchantment|land)( you control| you don't control| an opponent controls)?$", s)
+		var q2 := {"type_any": [m2.get_string(1).to_lower(), m2.get_string(2).to_lower()]}
+		var who2 := m2.get_string(3).strip_edges().to_lower()
+		if who2 == "you control":
+			q2["controller"] = "SOURCE_CONTROLLER"
+		elif who2 != "":
+			q2["controller"] = "OPPONENT"
+		if other:
+			q2["other"] = true
+		idx = _add_target("PERMANENT", q2)
 	else:
 		var m := _match("^target (nonland permanent|permanent|creature|artifact|enchantment|land|[a-z]+)( you control| you don't control| an opponent controls)?$", s)
 		if m == null:

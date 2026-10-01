@@ -64,9 +64,12 @@ func on_enter_battlefield(engine: RulesEngine, obj: GameObject) -> void:
 	_fire(engine, "ENTERS_BATTLEFIELD", obj, obj, _ctx_for(engine, obj))
 
 
-func on_combat_damage_to_player(engine: RulesEngine, source: GameObject, _defender_id: int, amount: int) -> void:
+func on_combat_damage_to_player(engine: RulesEngine, source: GameObject, defender_id: int, amount: int) -> void:
 	if source == null or amount <= 0:
 		return
+	## CR 724.2: combat damage to the monarch makes the attacker's controller the monarch.
+	if defender_id == engine.state.monarch_id and source.controller_id != defender_id:
+		engine.state.monarch_id = source.controller_id
 	var ctx := _ctx_for(engine, source)
 	ctx["amount"] = amount
 	_fire(engine, "COMBAT_DAMAGE_TO_PLAYER", source, source, ctx)
@@ -153,6 +156,9 @@ func _on_step_begin(engine: RulesEngine, step: int, active: int) -> void:
 			step_name = "END"
 		_:
 			return
+	## CR 724.3: the monarch draws a card at the beginning of their end step.
+	if step_name == "END" and engine.state.monarch_id == active:
+		engine.draw_card(active)
 	for src in _battlefield(engine):
 		for ab in _triggered(engine, src, "BEGIN_STEP"):
 			if str(ab.trigger.get("step", "")) != step_name:
@@ -270,6 +276,10 @@ func _put_trigger(engine: RulesEngine, source: GameObject, ab: Ability, ctx: Dic
 			entry.targets.append(tid)
 		elif not bool((slot as Dictionary).get("optional", false)):
 			return
+	if bool(ab.trigger.get("once_per_turn", false)):
+		if int(source.trigger_turns.get(str(ab.ability_id), -1)) == engine.state.turn_number:
+			return
+		source.trigger_turns[str(ab.ability_id)] = engine.state.turn_number
 	engine.state.next_stack_id += 1
 	(engine.state.stack as MagicStack).push(entry)
 	engine.state.log.append(EngineEnums.EventType.ABILITY_ACTIVATED, source.controller_id, {

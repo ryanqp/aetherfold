@@ -97,6 +97,12 @@ func _apply(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: Abil
 			_choose_type(engine, entry, source)
 		"RETURN_FROM_GRAVEYARD":
 			_return_from_graveyard(engine, entry, fx)
+		"DISCOVER":
+			_discover(engine, entry, source, fx)
+		"BECOME_MONARCH":
+			engine.state.monarch_id = entry.controller_id
+		"CHOOSE_COLOR":
+			_choose_color(engine, entry, source, fx)
 		_:
 			pass
 
@@ -675,6 +681,58 @@ func _choose_type(engine: RulesEngine, entry: StackEntry, source: GameObject) ->
 			best_n = int(counts[t])
 			best = str(t)
 	source.chosen_type = best
+
+
+## Discover X (CR 701.57): exile cards from the top of your library until a nonland card with mana
+## value X or less; permanents go onto the battlefield, other spells to your hand (there is no free-cast
+## yet), and the rest go to the bottom of the library.
+func _discover(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var pid := entry.controller_id
+	var x := _value(engine, entry, source, fx.params.get("n", 0))
+	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
+	if lib == null:
+		return
+	var skipped: Array = []
+	var found: GameObject = null
+	var guard := 0
+	while not lib.object_ids.is_empty() and guard < 200:
+		guard += 1
+		var top: GameObject = engine.state.objects.get(lib.object_ids[0])
+		if top == null:
+			lib.object_ids.remove_at(0)
+			continue
+		var moved: GameObject = engine.state.zones.move(top.object_id, EngineEnums.ZoneId.EXILE, pid)
+		if moved == null:
+			break
+		var def := moved.definition as CardDefinition if moved.definition is CardDefinition else null
+		if def != null and not def.is_land() and def.cmc <= x:
+			found = moved
+			break
+		skipped.append(moved.object_id)
+	if found != null:
+		var fdef := found.definition as CardDefinition
+		var dest := EngineEnums.ZoneId.BATTLEFIELD if fdef.is_permanent_type() else EngineEnums.ZoneId.HAND
+		engine.state.zones.move(found.object_id, dest, pid)
+	for oid in skipped:
+		var back: GameObject = engine.state.zones.move(int(oid), EngineEnums.ZoneId.LIBRARY, pid)
+		if back != null:
+			lib.object_ids.erase(back.object_id)
+			lib.object_ids.append(back.object_id)
+
+
+## "As ~ enters, choose a color other than green": the first color of your commander's identity that fits.
+func _choose_color(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	if source == null:
+		return
+	var avoid := str(fx.params.get("not", ""))
+	for c in engine.commander_identity(entry.controller_id):
+		if str(c) != avoid:
+			source.chosen_color = str(c)
+			return
+	for c2 in ["W", "U", "B", "R", "G"]:
+		if c2 != avoid:
+			source.chosen_color = c2
+			return
 
 
 func _return_from_graveyard(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:

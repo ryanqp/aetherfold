@@ -1362,7 +1362,10 @@ func _produced_mana(object_id: int, ability_id: StringName, resolve: bool = true
 		return null
 	for fx in ab.effects:
 		if fx is AbilityEffect and (fx as AbilityEffect).kind == &"ADD_MANA":
-			var raw := ManaCost.parse(str((fx as AbilityEffect).params.get("mana", "")))
+			var mana_text := str((fx as AbilityEffect).params.get("mana", ""))
+			if mana_text.contains("{CHOSEN}"):
+				mana_text = mana_text.replace("{CHOSEN}", "{%s}" % obj.chosen_color if obj.chosen_color != "" else "")
+			var raw := ManaCost.parse(mana_text)
 			return resolve_mana(obj.controller_id, raw) if resolve else raw
 	return null
 
@@ -1680,6 +1683,8 @@ func _activation_reason(obj: GameObject, ab: Ability) -> String:
 	if ab.restrictions.has("SORCERY_SPEED"):
 		if actor != state.active_player_id or not _is_main_phase() or not _stack_empty():
 			return "NOT_SORCERY_SPEED"
+	if ab.restrictions.has("CITYS_BLESSING") and Query.count_objects(state, obj, {"controller": "SOURCE_CONTROLLER"}) < 10:
+		return "NO_CITYS_BLESSING"
 	if ab.has_tap_cost() and obj.tapped:
 		return "TAPPED"
 	if ab.has_untap_cost() and not obj.tapped:

@@ -25,5 +25,9 @@ var attachments: Array[int] = []
 var attached_to: int = 0
 ## "As ~ enters, choose a creature type" (Icon of Ancestry, Herald's Horn, ...).
 var chosen_type: String = ""
+## "As ~ enters, choose a color other than green" (Thriving lands): the color its second mana ability makes.
+var chosen_color: String = ""
+## Triggers limited to once each turn: ability id -> turn number it last fired.
+var trigger_turns: Dictionary = {}
 ## CR 601.3 / "you may play that card this turn". -1 means no permission.
 var may_play_controller: int = -1
