@@ -277,3 +277,15 @@ godot --headless --path . -s res://tools/run_tests.gd -- --suite=engine_ir
 ```
 
 A load error from `IrLoader` (unknown key / unknown effect kind) means the JSON does not match the tables above — fix the file, don’t special-case the loader.
+
+### Hideaway, mill, discard, surveil (BF-42)
+
+| Oracle wording | Effect kind |
+| --- | --- |
+| `Hideaway N` | trigger on enter: `HIDEAWAY {n}` (exiles the best of the top N, rest to the bottom) |
+| `play the exiled card without paying its mana cost [if creatures you control have total power N or greater]` | `PLAY_HIDDEN {min_total_power}` |
+| `each opponent mills N cards` / `you mill N cards` | `MILL {n, who}` |
+| `each opponent discards N cards` / `you discard N cards` | `DISCARD {n, who}` (auto-picks the cheapest) |
+| `surveil N` | `SURVEIL {n}` (spare lands go to the graveyard) |
+
+Fear, intimidate and skulk are enforced when blocking. Unread lines print as `UNIMPLEMENTED_MECHANIC: <Card> — <line>` in the Godot Output panel.

@@ -83,7 +83,7 @@ func _note_unread_cards() -> void:
 			var first := str(unread[0])
 			if first.length() > 70:
 				first = first.substr(0, 67) + "..."
-			lines.append("%s: %s%s" % [def.name, first, " (+%d more)" % (unread.size() - 1) if unread.size() > 1 else ""])
+			lines.append("UNIMPLEMENTED_MECHANIC: %s — %s%s" % [def.name, first, " (+%d more)" % (unread.size() - 1) if unread.size() > 1 else ""])
 	lines.sort()
 	if lines.is_empty():
 		return

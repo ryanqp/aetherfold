@@ -217,6 +217,14 @@ func _read_line(def: CardDefinition, line: String) -> Array:
 			"effects": [{"kind": "ADD_MANA", "params": {"mana": "{CHOSEN}"}}], "restrictions": [],
 		}]
 
+	# CR 702.75: Hideaway N.
+	m = _match("^hideaway (\\d+)$", line)
+	if m != null:
+		return [{
+			"kind": "TRIGGERED", "trigger": {"on": "ENTERS_BATTLEFIELD"}, "costs": [], "targets": [],
+			"effects": [{"kind": "HIDEAWAY", "params": {"n": int(m.get_string(1))}}], "restrictions": [],
+		}]
+
 	# "As ~ enters, choose a creature type."
 	m = _match("^as ~ enters, choose a creature type$", line)
 	if m != null:
@@ -817,6 +825,29 @@ func _sentence(s: String) -> bool:
 		if cs < 0:
 			return false
 		_effects.append({"kind": "COUNTER_SPELL", "params": {"target": cs}})
+		return true
+
+	# Hideaway payoff: "play the exiled card without paying its mana cost [if creatures you control have total power N or greater]".
+	m = _match("^play the exiled card without paying its mana cost(?: if creatures you control have total power (\\d+) or greater)?$", s)
+	if m != null:
+		var hp := {}
+		if m.get_string(1) != "":
+			hp["min_total_power"] = int(m.get_string(1))
+		_effects.append({"kind": "PLAY_HIDDEN", "params": hp})
+		return true
+
+	# Mill, discard, surveil.
+	m = _match("^(?:you )?surveil (\\d+)$", s)
+	if m != null:
+		_effects.append({"kind": "SURVEIL", "params": {"n": int(m.get_string(1))}})
+		return true
+	m = _match("^(each opponent|you) mills? (a|an|one|two|three|four|five|six|seven|eight|nine|ten|\\d+) cards?$", s)
+	if m != null:
+		_effects.append({"kind": "MILL", "params": {"n": _num(m.get_string(2)), "who": "EACH_OPPONENT" if m.get_string(1).to_lower() == "each opponent" else "CONTROLLER"}})
+		return true
+	m = _match("^(each opponent|you) discards? (a|an|one|two|three|four|five|\\d+) cards?$", s)
+	if m != null:
+		_effects.append({"kind": "DISCARD", "params": {"n": _num(m.get_string(2)), "who": "EACH_OPPONENT" if m.get_string(1).to_lower() == "each opponent" else "CONTROLLER"}})
 		return true
 
 	# CR 724: the monarch.

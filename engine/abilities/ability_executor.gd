@@ -99,6 +99,16 @@ func _apply(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: Abil
 			_return_from_graveyard(engine, entry, fx)
 		"DISCOVER":
 			_discover(engine, entry, source, fx)
+		"HIDEAWAY":
+			_hideaway(engine, entry, source, fx)
+		"PLAY_HIDDEN":
+			_play_hidden(engine, entry, source, fx)
+		"MILL":
+			_mill(engine, entry, fx)
+		"DISCARD":
+			_discard(engine, entry, fx)
+		"SURVEIL":
+			_surveil(engine, entry, fx)
 		"BECOME_MONARCH":
 			engine.state.monarch_id = entry.controller_id
 		"CHOOSE_COLOR":
@@ -733,6 +743,118 @@ func _choose_color(engine: RulesEngine, entry: StackEntry, source: GameObject, f
 		if c2 != avoid:
 			source.chosen_color = c2
 			return
+
+
+## Hideaway N (CR 702.75): look at the top N cards, exile one face down (the best nonland, else a land),
+## put the rest on the bottom in a random order. The permanent remembers which card (hideaway_card).
+func _hideaway(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	if source == null:
+		return
+	var pid := entry.controller_id
+	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
+	if lib == null or lib.is_empty():
+		return
+	var ids: Array = []
+	for i in mini(int(fx.params.get("n", 1)), lib.object_ids.size()):
+		ids.append(int(lib.object_ids[i]))
+	var best_id := -1
+	var best_score := -1
+	for oid in ids:
+		var c: GameObject = engine.state.objects.get(oid)
+		if c == null or not (c.definition is CardDefinition):
+			continue
+		var def := c.definition as CardDefinition
+		var sc := 1 if def.is_land() else 2 + def.cmc
+		if sc > best_score:
+			best_score = sc
+			best_id = int(oid)
+	if best_id < 0:
+		return
+	var hidden: GameObject = engine.state.zones.move(best_id, EngineEnums.ZoneId.EXILE, pid)
+	if hidden != null:
+		source.hideaway_card = hidden.object_id
+	ids.erase(best_id)
+	engine.state.rng.shuffle(ids)
+	for oid in ids:
+		engine.put_library_bottom(int(oid), pid)
+
+
+## "You may play the exiled card without paying its mana cost [if creatures you control have total power N
+## or greater]": checked as the ability resolves. Lands are played (if a land drop is left), spells are cast.
+func _play_hidden(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	if source == null or source.hideaway_card == 0:
+		return
+	var pid := entry.controller_id
+	var need := int(fx.params.get("min_total_power", 0))
+	if need > 0:
+		var total := 0
+		for o in _each(engine, entry, source, {"controller": "SOURCE_CONTROLLER", "type": "creature"}):
+			total += engine.power_of(o)
+		if total < need:
+			return
+	var card: GameObject = engine.state.objects.get(source.hideaway_card)
+	if card == null or card.zone != EngineEnums.ZoneId.EXILE or not (card.definition is CardDefinition):
+		return
+	var def := card.definition as CardDefinition
+	if def.is_land():
+		if bool(engine.state.land_played.get(pid, false)):
+			return
+		engine.state.zones.move(card.object_id, EngineEnums.ZoneId.BATTLEFIELD, pid)
+		engine.state.land_played[pid] = true
+		source.hideaway_card = 0
+		return
+	if engine.cast_free(pid, card.object_id):
+		source.hideaway_card = 0
+
+
+func _mill(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
+	var n := int(fx.params.get("n", 1))
+	for pid in _players_for(engine, entry, str(fx.params.get("who", "CONTROLLER"))):
+		var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
+		for _i in n:
+			if lib == null or lib.is_empty():
+				break
+			engine.state.zones.move(int(lib.object_ids[0]), EngineEnums.ZoneId.GRAVEYARD, pid)
+
+
+## Discard N (CR 701.8): without a choice screen the player discards the cheapest cards (extra lands first).
+func _discard(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
+	var n := int(fx.params.get("n", 1))
+	for pid in _players_for(engine, entry, str(fx.params.get("who", "CONTROLLER"))):
+		for _i in n:
+			var hand: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, pid)
+			if hand == null or hand.is_empty():
+				break
+			var lands := _controlled_of_type(engine, pid, "Land")
+			var worst := -1
+			var worst_score := 1000000
+			for oid in hand.object_ids:
+				var c: GameObject = engine.state.objects.get(oid)
+				if c == null or not (c.definition is CardDefinition):
+					continue
+				var def := c.definition as CardDefinition
+				var sc := def.cmc * 2 + (-3 if def.is_land() and lands >= 5 else (4 if def.is_land() else 0))
+				if sc < worst_score:
+					worst_score = sc
+					worst = int(oid)
+			if worst >= 0:
+				engine.state.zones.move(worst, EngineEnums.ZoneId.GRAVEYARD, pid)
+
+
+## Surveil N (CR 701.46): lands beyond what you need go to the graveyard, the rest stay on top.
+func _surveil(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
+	var pid := entry.controller_id
+	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
+	if lib == null:
+		return
+	var lands := _controlled_of_type(engine, pid, "Land")
+	var top_ids: Array = []
+	for i in mini(int(fx.params.get("n", 1)), lib.object_ids.size()):
+		top_ids.append(int(lib.object_ids[i]))
+	for oid in top_ids:
+		var c: GameObject = engine.state.objects.get(oid)
+		if c != null and c.definition is CardDefinition and (c.definition as CardDefinition).is_land() and lands >= 6:
+			engine.state.zones.move(oid, EngineEnums.ZoneId.GRAVEYARD, pid)
 
 
 func _return_from_graveyard(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:

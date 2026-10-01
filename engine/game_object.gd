@@ -27,6 +27,8 @@ var attached_to: int = 0
 var chosen_type: String = ""
 ## "As ~ enters, choose a color other than green" (Thriving lands): the color its second mana ability makes.
 var chosen_color: String = ""
+## Hideaway (CR 702.75): the object id of the card this permanent exiled face down (0 = none).
+var hideaway_card: int = 0
 ## Triggers limited to once each turn: ability id -> turn number it last fired.
 var trigger_turns: Dictionary = {}
 ## CR 601.3 / "you may play that card this turn". -1 means no permission.

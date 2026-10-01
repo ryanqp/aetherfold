@@ -670,6 +670,34 @@ func _put_spell_on_stack(player_id: int) -> SubmitResult:
 	return r
 
 
+## Casts a card without paying its mana cost ("play the exiled card without paying its mana cost"): picks
+## targets automatically, moves it to the stack and runs cast triggers. False if it has no legal target.
+func cast_free(player_id: int, object_id: int) -> bool:
+	var obj: GameObject = state.objects.get(object_id)
+	if obj == null or not (obj.definition is CardDefinition):
+		return false
+	var def := obj.definition as CardDefinition
+	var chosen: Array = []
+	var sp: Ability = def.spell_ability()
+	if sp != null and not sp.targets.is_empty() and targeting != null:
+		var hostile := TargetingManager.effects_hostile(sp.effects)
+		for slot in sp.targets:
+			var tid := targeting.auto_pick(self, slot, object_id, player_id, TargetingManager.slot_hostile(slot, hostile), chosen)
+			if tid < 0:
+				return false
+			chosen.append(tid)
+	var moved: GameObject = state.zones.move(object_id, EngineEnums.ZoneId.STACK)
+	if moved == null:
+		return false
+	var entry: StackEntry = (state.stack as MagicStack).push_spell(moved, player_id, chosen, state.next_stack_id, object_id)
+	state.next_stack_id += 1
+	state.log.append(EngineEnums.EventType.SPELL_CAST, player_id, {object_id = moved.object_id, stack_id = entry.stack_id})
+	state.passed_since_action.clear()
+	if triggers != null:
+		triggers.on_spell_cast(self, moved, player_id)
+	return true
+
+
 func _legal_paying(player_id: int) -> Array:
 	var out: Array = []
 	if int(state.awaiting.get("player_id", -1)) != player_id:
@@ -1255,6 +1283,24 @@ func _can_block(object_id: int, defender_id: int, attacker_id: int = -1) -> bool
 		return true
 	## Flying (CR 702.9b): only creatures with flying or reach can block it.
 	if has_keyword(attacker, "Flying") and not (has_keyword(obj, "Flying") or has_keyword(obj, "Reach")):
+		return false
+	var bdef: CardDefinition = obj.definition as CardDefinition if obj.definition is CardDefinition else null
+	var adef: CardDefinition = attacker.definition as CardDefinition if attacker.definition is CardDefinition else null
+	if bdef != null and adef != null:
+		var blocker_artifact := bdef.type_line.contains("Artifact")
+		## Fear (CR 702.36): only artifact and/or black creatures can block it.
+		if has_keyword(attacker, "Fear") and not (blocker_artifact or bdef.colors.has("B")):
+			return false
+		## Intimidate (CR 702.13): only artifact creatures and creatures sharing a color can block it.
+		if has_keyword(attacker, "Intimidate") and not blocker_artifact:
+			var shares := false
+			for c in adef.colors:
+				if bdef.colors.has(c):
+					shares = true
+			if not shares:
+				return false
+	## Skulk (CR 702.118): can't be blocked by creatures with greater power.
+	if has_keyword(attacker, "Skulk") and power_of(obj) > power_of(attacker):
 		return false
 	return true
 

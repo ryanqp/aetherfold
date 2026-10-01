@@ -144,3 +144,33 @@ func test_monarch_and_destroy_either_type() -> void:
 	var br := _first("Test Breaker", &"ACTIVATED")
 	assert_true(br != null, "sacrifice ability read")
 	assert_true((br.targets[0].get("query") as Dictionary).has("type_any"))
+
+
+func test_hideaway_land_reads_trigger_and_payoff() -> void:
+	var def := db.definition_for("Test Bridge")
+	var kinds: Array = []
+	var payoff := false
+	for a in def.abilities:
+		var ab := a as Ability
+		for fx in ab.effects:
+			kinds.append(str(fx.kind))
+			if fx.kind == "PLAY_HIDDEN" and int(fx.params.get("min_total_power", 0)) == 10:
+				payoff = true
+	assert_true(kinds.has("HIDEAWAY"), "hideaway trigger read")
+	assert_true(payoff, "payoff with total power 10 read")
+
+
+func test_mill_and_surveil_sentences_are_read() -> void:
+	var tr := _first("Test Miller", &"TRIGGERED")
+	assert_true(tr != null, "trigger read")
+	var kinds: Array = []
+	for fx in tr.effects:
+		kinds.append(str(fx.kind))
+	assert_true(kinds.has("MILL"), "mill read")
+	assert_true(kinds.has("SURVEIL"), "surveil read")
+
+
+func test_fear_and_skulk_keywords_are_enforced() -> void:
+	assert_eq(str(KeywordDb.lookup("Fear").get("status")), "ENFORCED")
+	assert_eq(str(KeywordDb.lookup("Skulk").get("status")), "ENFORCED")
+	assert_eq(str(KeywordDb.lookup("Hideaway 4").get("status")), "READ")

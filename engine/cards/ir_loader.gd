@@ -36,6 +36,11 @@ const EFFECT_PARAM_KEYS := {
 	"RETURN_FROM_GRAVEYARD": ["target", "to"],
 	"EXILE_UNTIL_LEAVES": ["target"],
 	"DISCOVER": ["n"],
+	"HIDEAWAY": ["n"],
+	"PLAY_HIDDEN": ["min_total_power"],
+	"MILL": ["n", "who", "target"],
+	"DISCARD": ["n", "who", "target"],
+	"SURVEIL": ["n"],
 	"BECOME_MONARCH": [],
 	"CHOOSE_COLOR": ["not"],
 }

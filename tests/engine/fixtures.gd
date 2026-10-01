@@ -193,6 +193,10 @@ static func memory_catalog() -> CatalogSource:
 	cat.add(_creature_row("Test Discoverer", "{3}{G}", 4, "Creature — Dinosaur", "Whenever this creature or another Dinosaur you control enters, you may discover X, where X is that creature's toughness. Do this only once each turn.", ["G"]))
 	cat.add(_creature_row("Test Monarch", "{3}{W}", 4, "Creature — Human", "When this creature enters, you become the monarch.", ["W"]))
 	cat.add(_creature_row("Test Breaker", "{1}{G}", 2, "Creature — Beast", "{1}, Sacrifice this creature: Destroy target artifact or enchantment.", ["G"]))
+	cat.add(_land_row("Test Bridge", "Land", "Hideaway 4\nThis land enters tapped.\n{T}: Add {G}.\n{G}, {T}: You may play the exiled card without paying its mana cost if creatures you control have total power 10 or greater.", ["G"]))
+	cat.add(_creature_row("Test Miller", "{2}{U}", 3, "Creature — Merfolk", "When this creature enters, each opponent mills three cards, then you surveil 2.", ["U"]))
+	cat.add(_keyword_creature("Test Fearful", "2", "2", ["Fear"]))
+	cat.add(_keyword_creature("Test Skulker", "2", "2", ["Skulk"]))
 	## Vanilla keyword bodies for combat rules tests.
 	cat.add(_keyword_creature("Test Flyer", "2", "2", ["Flying"]))
 	cat.add(_keyword_creature("Test Reacher", "1", "4", ["Reach"]))
