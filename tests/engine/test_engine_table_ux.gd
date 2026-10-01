@@ -65,6 +65,20 @@ func test_drawing_moves_straight_to_main_one() -> void:
 	assert_eq(session.view.turn_track, "main1")
 
 
+func test_coin_flip_decides_who_goes_first() -> void:
+	var session := GameSession.new()
+	session.coin_flip = true
+	session.start_with_demo(DemoSetup.krenko_vs_talrand(DemoSetup.memory_db()), 7)
+	assert_eq(session.match_start, GameSession.MatchStart.COIN_FLIP)
+	assert_eq(session.engine.hand_size(0), 0, "no cards are dealt before the flip")
+	session.call_coin(true)
+	assert_true(session.flip_called)
+	session.finish_coin_flip()
+	assert_eq(session.match_start, GameSession.MatchStart.MULLIGAN_DECISION)
+	assert_eq(session.engine.hand_size(0), 7)
+	assert_eq(session.engine.state.active_player_id, session.first_player)
+
+
 func test_draw_is_automatic_unless_manual_draw_is_on() -> void:
 	var session := _session(false)
 	var hand_before := session.engine.hand_size(0)

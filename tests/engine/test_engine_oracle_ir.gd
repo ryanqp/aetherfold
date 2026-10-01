@@ -76,6 +76,38 @@ func test_ping_can_only_target_the_opponent() -> void:
 	assert_eq(TargetingManager.decode_player(int(ids[0])), 1)
 
 
+# --- Enters-the-battlefield triggers ---------------------------------------------------
+
+func test_reads_enters_trigger() -> void:
+	var ab := db.definition_for("Test Greeter").abilities[0] as Ability
+	assert_eq(str(ab.kind), "TRIGGERED")
+	assert_eq(str(ab.trigger.get("on")), "ENTERS_BATTLEFIELD")
+	assert_eq(str(ab.effects[0].kind), "GAIN_LIFE")
+
+
+func test_enters_trigger_resolves() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var life := engine.state.players[0].life
+	Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Greeter")
+	engine.process_zone_events()
+	assert_eq((engine.state.stack as MagicStack).size(), 1)
+	engine.resolve_top()
+	assert_eq(engine.state.players[0].life, life + 3)
+
+
+func test_exile_until_leaves_returns_the_card() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var ogre := Fixtures.spawn_named(engine, db, 1, EngineEnums.ZoneId.BATTLEFIELD, "Test Ogre")
+	var warden := Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Warden")
+	engine.process_zone_events()
+	engine.resolve_top()
+	assert_eq(engine.state.zones.get_zone(EngineEnums.ZoneId.EXILE, 1).size(), 1)
+	engine.state.zones.move(warden.object_id, EngineEnums.ZoneId.GRAVEYARD, 0)
+	engine.process_zone_events()
+	assert_eq(engine.state.zones.get_zone(EngineEnums.ZoneId.EXILE, 1).size(), 0)
+	assert_false(ogre == null)
+
+
 # --- Playing them ------------------------------------------------------------------
 
 func test_smite_kills_ogre_but_not_wall() -> void:

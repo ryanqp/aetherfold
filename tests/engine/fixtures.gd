@@ -193,6 +193,12 @@ static func memory_catalog() -> CatalogSource:
 	var pinger := _keyword_creature("Test Pinger", "1", "3", ["Reach"])
 	pinger["oracle_text"] = "Reach\n{1}, {T}: Test Pinger deals 1 damage to target opponent."
 	cat.add(pinger)
+	var greeter := _keyword_creature("Test Greeter", "1", "1", [])
+	greeter["oracle_text"] = "When Test Greeter enters, you gain 3 life."
+	cat.add(greeter)
+	var warden := _keyword_creature("Test Warden", "2", "2", [])
+	warden["oracle_text"] = "When Test Warden enters, for each opponent, exile up to one target nonland permanent that player controls until Test Warden leaves the battlefield."
+	cat.add(warden)
 	cat.add(_keyword_creature("Test Ogre", "3", "3", []))
 	cat.add(_keyword_creature("Test Shapeless", "*", "*", []))
 	return cat
