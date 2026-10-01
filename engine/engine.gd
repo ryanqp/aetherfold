@@ -1021,6 +1021,11 @@ func can_block_attacker(blocker_id: int, attacker_id: int) -> bool:
 	return _can_block(blocker_id, defender, attacker_id)
 
 
+## Like can_block_attacker, for an attacker that hasn't been declared yet.
+func can_block_as(blocker_id: int, defender_id: int, attacker_id: int) -> bool:
+	return _can_block(blocker_id, defender_id, attacker_id)
+
+
 func power_of(obj: GameObject) -> int:
 	return _power_of(obj)
 

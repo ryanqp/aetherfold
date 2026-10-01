@@ -30,7 +30,7 @@ Summoning sickness, tapping to attack, and lethal damage are engine rules. They 
 | Indestructible | survives lethal damage and deathtouch (not 0 toughness) |
 | Hexproof / Shroud / Protection from a color | targeting (`TargetingManager`) |
 
-Combat damage is assigned automatically: lethal to each blocker in the order they were declared, the rest to the last blocker, or to the player with trample. Any other keyword on a catalog row (ward, flash, prowess, …) is shown but not run yet.
+Turn structure follows CR 500–514; with no attackers declared, the declare blockers and combat damage steps are skipped (CR 508.8). Combat damage is assigned automatically: lethal to each blocker in the order they were declared, the rest to the last blocker, or to the player with trample. Any other keyword on a catalog row (ward, flash, prowess, …) is shown but not run yet.
 
 ## An IR file is required
 

@@ -68,6 +68,8 @@ var _was_tapped: Dictionary = {}
 var _pending_blocks: Dictionary = {}
 ## Your creature picked to block, waiting for you to click an attacker.
 var _block_pick: String = ""
+## Creatures you have clicked to attack with, while picking attackers.
+var _pending_attackers: Array = []
 var dice_overlay: ColorRect
 var _dice_busy: Dictionary = {}
 var mulligan_overlay: ColorRect
@@ -791,6 +793,10 @@ func _card_chip(card: Dictionary, compact: bool = false, from_hand: bool = false
 	if combat_color is Color:
 		st.border_color = combat_color
 		st.set_border_width_all(3)
+	if compact and bool(card.get("summoning_sick", false)):
+		## CR 302.6: shown dimmed until it can attack.
+		b.modulate = Color(1, 1, 1, 0.62)
+		b.tooltip_text = "Summoning sick — can attack (and use {T} abilities) on your next turn."
 	st.content_margin_left = 0
 	st.content_margin_right = 0
 	st.content_margin_top = 0
@@ -853,10 +859,10 @@ func _refresh() -> void:
 	_paint_life(rival_life, int(b.rival["life"]))
 	if rival_title_label:
 		rival_title_label.text = "Talrand · %s" % RivalAI.label(b.difficulty)
-	_fill_zone(you_zones["Creatures"], b.you["creatures"])
+	_fill_zone(you_zones["Creatures"], b.you["creatures"], true)
 	_fill_zone(you_zones["Non-creature permanents"], b.you["noncreatures"])
 	_fill_zone(you_zones["Lands"], b.you["lands"], true)
-	_fill_zone(rival_zones["Creatures"], b.rival["creatures"])
+	_fill_zone(rival_zones["Creatures"], b.rival["creatures"], true)
 	_fill_zone(rival_zones["Non-creature permanents"], b.rival["noncreatures"])
 	_fill_zone(rival_zones["Lands"], b.rival["lands"], true)
 	_clear(hand_row)
@@ -941,12 +947,68 @@ func _on_select(card_id: String) -> void:
 	if _in_blocking_mode():
 		_on_block_click(card_id)
 		return
+	if _in_attack_mode():
+		_on_attack_click(card_id)
+		return
 	_set_selected(card_id)
 	_refresh()
 
 
 func _in_blocking_mode() -> bool:
 	return USE_ENGINE and session != null and session.awaiting_blocks
+
+
+func _in_attack_mode() -> bool:
+	return USE_ENGINE and session != null and session.choosing_attackers
+
+
+## Attack mode: click a creature to add or remove it from the attack.
+func _on_attack_click(card_id: String) -> void:
+	var v = session.view
+	var card: Dictionary = v.find_card(card_id)
+	if card.is_empty() or not _card_in(v.you.get("creatures", []), card_id):
+		_set_status("Pick your own creatures to attack with.")
+		return
+	var nm := str(card.get("name", "That creature"))
+	if _pending_attackers.has(card_id):
+		_pending_attackers.erase(card_id)
+		_set_status("%s stays home." % nm)
+		_refresh()
+		return
+	if not bool(card.get("ready_to_attack", false)):
+		if bool(card.get("summoning_sick", false)):
+			_set_status("%s has summoning sickness — it can attack on your next turn." % nm)
+		elif bool(card.get("tapped", false)):
+			_set_status("%s is tapped." % nm)
+		else:
+			_set_status("%s can't attack." % nm)
+		return
+	_pending_attackers.append(card_id)
+	_set_status("%s will attack. %d attacking — press Attack to confirm." % [nm, _pending_attackers.size()])
+	_refresh()
+
+
+func _confirm_attack() -> void:
+	var ids: Array = []
+	for cid in _pending_attackers:
+		ids.append(int(cid))
+	var life_bot := int(session.view.rival.get("life", 40))
+	var r: SubmitResult = session.attack_with(ids)
+	_pending_attackers.clear()
+	if not r.ok:
+		_set_status(r.error)
+		_refresh()
+		return
+	if not ids.is_empty():
+		_tap_sfx("hit")
+	_refresh()
+	var dealt := life_bot - int(session.view.rival.get("life", 40))
+	if ids.is_empty():
+		_set_status("No attack. " + str(session.view.prompt))
+	elif dealt > 0:
+		_set_status("Attack dealt %d damage. %s" % [dealt, str(session.view.prompt)])
+	else:
+		_set_status("Attack done. " + str(session.view.prompt))
 
 
 ## Border for a creature in combat, or null when it should use the normal border.
@@ -956,6 +1018,8 @@ func _combat_border(card: Dictionary) -> Variant:
 		return null
 	if cid == _block_pick:
 		return GOLD
+	if _pending_attackers.has(cid):
+		return ATTACK_RED
 	for group in _pending_blocks.values():
 		if (group as Array).has(cid):
 			return BLOCK_BLUE
@@ -1190,11 +1254,18 @@ func _paint_match_buttons() -> void:
 			attack_btn.tooltip_text = "Lock in your blockers. Click your creature, then the attacker, to assign one."
 		if pass_btn:
 			pass_btn.disabled = true
+	elif _in_attack_mode():
+		if attack_btn:
+			attack_btn.disabled = false
+			attack_btn.text = ("Attack (%d)" % _pending_attackers.size()) if not _pending_attackers.is_empty() else "No attack"
+			attack_btn.tooltip_text = "Send the creatures you picked. Click a creature to add or remove it."
+		if pass_btn:
+			pass_btn.disabled = true
 	else:
 		if attack_btn:
 			attack_btn.text = "Attack"
 			attack_btn.disabled = not bool(v.can_attack) or not session.can_play()
-			attack_btn.tooltip_text = "Attack with every creature that can."
+			attack_btn.tooltip_text = "Go to combat and choose which creatures attack."
 		if pass_btn:
 			pass_btn.disabled = not session.can_play()
 	if play_btn:
@@ -1220,16 +1291,19 @@ func _on_attack() -> void:
 	if _in_blocking_mode():
 		_confirm_blocks()
 		return
+	if _in_attack_mode():
+		_confirm_attack()
+		return
 	if not session.can_play():
 		_set_status("Keep or Mulligan first.")
 		return
-	var r: SubmitResult = session.attack_all()
-	_tap_sfx("hit")
+	_pending_attackers.clear()
+	var r: SubmitResult = session.begin_attack()
 	_refresh()
 	if not r.ok:
 		_set_status(r.error)
 		return
-	_set_status("Attackers declared.")
+	_set_status(str(session.view.prompt))
 
 
 func _on_next_stage() -> void:
@@ -1238,6 +1312,9 @@ func _on_next_stage() -> void:
 	if USE_ENGINE:
 		if _in_blocking_mode():
 			_set_status("Choose your blockers, then Confirm blocks (or No blocks).")
+			return
+		if _in_attack_mode():
+			_set_status("Pick attackers, then press Attack — or press it with none picked to skip combat.")
 			return
 		if session == null or not session.can_play():
 			_set_status("Keep or Mulligan first.")
@@ -1276,6 +1353,7 @@ func _on_end_turn() -> void:
 		if _in_blocking_mode():
 			_set_status("Choose your blockers, then Confirm blocks (or No blocks).")
 			return
+		_pending_attackers.clear()
 		var life_you := int(session.view.you.get("life", 40))
 		var life_bot := int(session.view.rival.get("life", 40))
 		session.end_you_turn()

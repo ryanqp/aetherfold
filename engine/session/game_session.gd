@@ -30,6 +30,8 @@ var skip_ai: bool = false
 var you_seat: int = 0
 ## True while the bot's attack is paused for you to declare blockers.
 var awaiting_blocks: bool = false
+## True while you are picking which creatures attack.
+var choosing_attackers: bool = false
 
 
 func dbg(msg: String) -> void:
@@ -193,6 +195,8 @@ func prompt_text() -> String:
 		return "You lost."
 	if not can_play():
 		return "Keep or Mulligan first."
+	if choosing_attackers:
+		return "Declare attackers — click creatures to send in (summoning-sick ones can't attack). Confirm when ready."
 	if awaiting_blocks:
 		return "Blocking — click one of your creatures, then the attacker it should block. Confirm blocks when done."
 	if engine.state.mode == EngineEnums.EngineMode.AWAITING_DECISION:
@@ -362,7 +366,33 @@ func _no_activation_reason(object_id: int) -> String:
 	return "\n".join(parts)
 
 
-func attack_all() -> SubmitResult:
+## Moves to the declare attackers step and lets you pick attackers (CR 508.1).
+func begin_attack() -> SubmitResult:
+	var r := SubmitResult.new()
+	r.ok = false
+	if not can_play():
+		r.error = "Keep or mulligan first."
+		last_error = r.error
+		return r
+	_advance_to_attackers()
+	if engine.state.step != EngineEnums.Step.DECLARE_ATTACKERS or engine.state.active_player_id != 0:
+		r.error = "Can't attack now."
+		last_error = r.error
+		rebuild_view()
+		return r
+	if engine.legal_attacker_ids(0).is_empty():
+		r.error = "No creature can attack right now (summoning sick, tapped, or defender)."
+		last_error = r.error
+		rebuild_view()
+		return r
+	choosing_attackers = true
+	r.ok = true
+	rebuild_view()
+	return r
+
+
+## Declares exactly these attackers (an empty array means no attack), then plays out combat.
+func attack_with(ids: Array) -> SubmitResult:
 	if not can_play():
 		var bad := SubmitResult.new()
 		bad.ok = false
@@ -375,23 +405,33 @@ func attack_all() -> SubmitResult:
 		bad2.ok = false
 		bad2.error = "Can't attack now."
 		last_error = bad2.error
+		choosing_attackers = false
 		rebuild_view()
 		return bad2
-	var ids: Array = engine.legal_attacker_ids(0)
 	var a := GameAction.new()
 	a.kind = GameAction.Kind.DECLARE_ATTACKERS
 	a.player_id = 0
 	a.extra = {attackers = ids}
 	var r: SubmitResult = submit(a)
 	if r.ok:
+		choosing_attackers = false
 		_pass_through_combat()
 	rebuild_view()
 	return r
 
 
+## Every creature that can attack does. Used by LAN clients and quick play.
+func attack_all() -> SubmitResult:
+	if not can_play():
+		return attack_with([])
+	_advance_to_attackers()
+	return attack_with(engine.legal_attacker_ids(0))
+
+
 func pass_once() -> void:
 	if not can_play() or engine == null:
 		return
+	choosing_attackers = false
 	if _awaiting_id() == 0:
 		pass_priority(0)
 	var n := 0
@@ -652,6 +692,7 @@ static func ai_should_skip_cast(def: CardDefinition, stack_empty: bool, battlefi
 func ai_take_turn(player_id: int) -> void:
 	var n := 0
 	var skip_cast: Dictionary = {}
+	var declared_attack := false
 	while n < 48 and engine != null and not engine.is_over() and engine.state.active_player_id == player_id:
 		n += 1
 		if _resolve_choice_if_needed():
@@ -690,7 +731,7 @@ func ai_take_turn(player_id: int) -> void:
 					continue
 				if spell == null:
 					spell = ga
-			elif ga.kind == GameAction.Kind.DECLARE_ATTACKERS:
+			elif ga.kind == GameAction.Kind.DECLARE_ATTACKERS and not declared_attack:
 				attack = ga
 		if land != null:
 			submit(land)
@@ -701,6 +742,9 @@ func ai_take_turn(player_id: int) -> void:
 				skip_cast[spell.object_id] = true
 			continue
 		if attack != null:
+			var foe := 1 if player_id == 0 else 0
+			attack.extra = {attackers = AiBlocks.choose_attackers(engine, player_id, foe)}
+			declared_attack = true
 			submit(attack)
 			continue
 		pass_priority(player_id)
@@ -722,6 +766,7 @@ func _ai_has_creature_target(_player_id: int) -> bool:
 func end_you_turn() -> void:
 	if not can_play() or awaiting_blocks:
 		return
+	choosing_attackers = false
 	var other := 1 if you_seat == 0 else 0
 	pass_until_active(other)
 	if engine.is_over():

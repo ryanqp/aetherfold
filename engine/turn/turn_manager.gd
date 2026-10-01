@@ -93,6 +93,9 @@ func _finish_step_and_enter_next() -> void:
 			_rotate_turn(st)
 		else:
 			st.step = _next_step(st.step)
+			## CR 508.8: no attackers means the declare blockers and combat damage steps are skipped.
+			if st.step == EngineEnums.Step.DECLARE_BLOCKERS and not _has_attackers(st):
+				st.step = EngineEnums.Step.END_COMBAT
 		_sync_phase(st)
 		st.passed_since_action.clear()
 		st.log.append(EngineEnums.EventType.STEP_BEGIN, st.active_player_id, {
@@ -179,6 +182,10 @@ func _clear_sickness(st: GameState, player_id: int) -> void:
 		var obj: GameObject = st.objects.get(oid)
 		if obj != null and obj.controller_id == player_id:
 			obj.summoned_this_turn = false
+
+
+func _has_attackers(st: GameState) -> bool:
+	return st.combat is CombatState and not (st.combat as CombatState).attacker_ids.is_empty()
 
 
 func _receives_priority(step: int) -> bool:

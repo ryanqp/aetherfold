@@ -164,3 +164,31 @@ static func _weakest_first(engine: RulesEngine, objs: Array) -> Array:
 		return engine.power_of(x) + engine.toughness_of(x) < engine.power_of(y) + engine.toughness_of(y)
 	)
 	return sorted
+
+
+## Which of the bot's legal attackers to send at defender_id.
+## A creature attacks unless some untapped defender could block it, kill it and survive.
+## If everything together is lethal against an open board, it all goes in.
+static func choose_attackers(engine: RulesEngine, player_id: int, defender_id: int) -> Array:
+	var legal: Array = engine.legal_attacker_ids(player_id)
+	var blockers := _untapped_creatures(engine, defender_id)
+	var out: Array = []
+	var total := 0
+	for raw in legal:
+		var atk: GameObject = engine.state.objects.get(int(raw))
+		if atk == null:
+			continue
+		total += threat(engine, atk)
+		var eaten := false
+		for blk in blockers:
+			if not engine.can_block_as(blk.object_id, defender_id, atk.object_id):
+				continue
+			var res := outcome(engine, atk, blk)
+			if res.attacker_dies and not res.blocker_dies:
+				eaten = true
+				break
+		if not eaten:
+			out.append(atk.object_id)
+	if blockers.is_empty() and total >= int(engine.state.players[defender_id].life):
+		return legal.duplicate()
+	return out

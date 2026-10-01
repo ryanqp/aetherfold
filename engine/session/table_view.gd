@@ -24,6 +24,8 @@ var prompt: String = ""
 var match_start: int = 0
 ## You are choosing blockers against the opponent's attack.
 var blocking_mode: bool = false
+## You are picking attackers.
+var attack_mode: bool = false
 
 
 func header_text() -> String:
@@ -35,7 +37,10 @@ func header_text() -> String:
 		for card in stack:
 			names.append(str(card.get("name", "spell")))
 		extra = " · Stack: %s" % ", ".join(names)
-	return "Turn %d — %s · %s%s" % [turn, active_name(), phase_name_str, extra]
+	var where := phase_name_str
+	if step_name != "" and step_name != phase_name_str and not step_name.begins_with("Main"):
+		where = "%s: %s" % [phase_name_str, step_name]
+	return "Turn %d — %s · %s%s" % [turn, active_name(), where, extra]
 
 
 func phase_name() -> String:
@@ -87,6 +92,7 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 		v.prompt = session.prompt_text()
 		v.match_start = session.match_start
 		v.blocking_mode = session.awaiting_blocks
+		v.attack_mode = session.choosing_attackers
 	var cat := _catalog()
 	var other := 1 if seat == 0 else 0
 	v.you = _player_dict(engine, seat, cat)
@@ -115,6 +121,7 @@ func to_plain() -> Dictionary:
 		prompt = prompt,
 		match_start = match_start,
 		blocking_mode = blocking_mode,
+		attack_mode = attack_mode,
 	}
 
 
@@ -164,6 +171,7 @@ static func from_plain(d: Dictionary) -> TableView:
 	v.prompt = str(d.get("prompt", ""))
 	v.match_start = int(d.get("match_start", 0))
 	v.blocking_mode = bool(d.get("blocking_mode", false))
+	v.attack_mode = bool(d.get("attack_mode", false))
 	return v
 
 
@@ -239,6 +247,9 @@ static func _card_dict(engine: RulesEngine, obj: GameObject, cat: Object) -> Dic
 		toughness = str(snap.get("toughness", "")) if def != null and def.is_creature() else "",
 		is_token = obj.is_token,
 		attacking = _is_attacking(engine, obj),
+		## CR 302.6: a creature can't attack unless you've controlled it since your turn began.
+		summoning_sick = obj.zone == EngineEnums.ZoneId.BATTLEFIELD and obj.summoned_this_turn and engine.is_creature_now(obj) and not engine.has_keyword(obj, "Haste"),
+		ready_to_attack = obj.zone == EngineEnums.ZoneId.BATTLEFIELD and engine.legal_attacker_ids(obj.controller_id).has(obj.object_id),
 		blocking = _blocking_target(engine, obj),
 		scryfall_id = "",
 		imageUrl = "",
