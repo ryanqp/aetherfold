@@ -114,6 +114,7 @@ func _rotate_turn(st: GameState) -> void:
 		return
 	st.active_player_id = (st.active_player_id + 1) % n
 	st.turn_number += 1
+	st.draw_pending = false
 	for i in n:
 		st.land_played[i] = false
 	_clear_sickness(st, st.active_player_id)
@@ -139,7 +140,10 @@ func _start_tba(eng: RulesEngine, st: GameState) -> void:
 		EngineEnums.Step.DRAW:
 			var skip := st.turn_number == 1 and st.rules.first_player_skips_draw
 			if not skip:
-				eng.draw_card(st.active_player_id)
+				if eng.manual_draw_seats.has(st.active_player_id):
+					st.draw_pending = true
+				else:
+					eng.draw_card(st.active_player_id)
 		EngineEnums.Step.COMBAT_DAMAGE:
 			eng.apply_combat_damage()
 		EngineEnums.Step.CLEANUP:

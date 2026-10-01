@@ -18,6 +18,8 @@ var _payment: ManaCost
 var _cast_queries: Array = []
 var _cast_targets: Array = []
 var _cast_from_command: bool = false
+## Seats that click their library to take the draw-step card (CR 504.1). Others draw automatically.
+var manual_draw_seats: Array = []
 var _act_ability_id: StringName = &""
 var _act_paying: bool = false
 
@@ -265,6 +267,14 @@ func draw_card(player_id: int) -> GameObject:
 	if moved != null:
 		state.log.append(EngineEnums.EventType.DRAW, player_id, {to_id = moved.object_id})
 	return moved
+
+
+## The draw step card (CR 504.1), taken when a manual-draw seat clicks its library.
+func take_turn_draw(player_id: int) -> GameObject:
+	if state == null or not state.draw_pending or state.active_player_id != player_id:
+		return null
+	state.draw_pending = false
+	return draw_card(player_id)
 
 
 func draw_n(player_id: int, n: int) -> Array:

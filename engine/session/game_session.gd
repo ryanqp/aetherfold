@@ -32,6 +32,8 @@ var you_seat: int = 0
 var awaiting_blocks: bool = false
 ## True while you are picking which creatures attack.
 var choosing_attackers: bool = false
+## When true you click your library to take the draw-step card instead of getting it automatically.
+var manual_draw: bool = false
 
 
 func dbg(msg: String) -> void:
@@ -64,6 +66,7 @@ func start_with_demo(demo: DemoSetup, seed: int = -1) -> void:
 	db = demo.db
 	engine = RulesEngine.new()
 	match_start = MatchStart.SHUFFLING
+	engine.manual_draw_seats = [you_seat] if manual_draw else []
 	engine.setup_demo(demo, FormatRules.commander_1v1_table(), seed)
 	selected_id = ""
 	pending_draw_anim = false
@@ -101,24 +104,18 @@ func submit(action: GameAction) -> SubmitResult:
 		return bad
 	var r: SubmitResult = engine.submit(action)
 	last_error = r.error if not r.ok else ""
-	if r.ok:
-		for ev in r.events:
-			if ev is GameEvent and (ev as GameEvent).type == EngineEnums.EventType.DRAW and (ev as GameEvent).player_id == 0:
-				pending_draw_anim = true
-				var to_id := int((ev as GameEvent).payload.get("to_id", 0))
-				rebuild_view()
-				pending_draw_card = view.find_card(str(to_id))
-				var nm := str(pending_draw_card.get("name", "?"))
-				dbg("Drew: %s" % nm)
-				dbg("Hand size: %d" % engine.hand_size(0))
-				dbg("Library remaining: %d" % engine.library_size(0))
-				return r
 	rebuild_view()
 	return r
 
 
 func rebuild_view() -> void:
+	pending_draw_anim = draw_waiting()
 	view = TableView.from_engine(engine, self)
+
+
+## True while it is your turn and you still have to click your library for the turn's card.
+func draw_waiting() -> bool:
+	return engine != null and engine.state != null and engine.state.draw_pending and engine.state.active_player_id == you_seat
 
 
 func keep_hand(player_id: int) -> void:
@@ -374,6 +371,11 @@ func begin_attack() -> SubmitResult:
 		r.error = "Keep or mulligan first."
 		last_error = r.error
 		return r
+	if draw_waiting():
+		r.error = "Draw your card first: click your deck."
+		last_error = r.error
+		rebuild_view()
+		return r
 	_advance_to_attackers()
 	if engine.state.step != EngineEnums.Step.DECLARE_ATTACKERS or engine.state.active_player_id != 0:
 		r.error = "Can't attack now."
@@ -437,6 +439,9 @@ func pass_once() -> void:
 	var n := 0
 	while n < 32 and engine != null and not engine.is_over():
 		n += 1
+		if engine.state.draw_pending:
+			rebuild_view()
+			return
 		if _resolve_choice_if_needed():
 			continue
 		if _stop_for_human_decision():
@@ -455,6 +460,9 @@ func resolve_stack_then_yield() -> void:
 	var n := 0
 	while n < 80 and engine != null and not engine.is_over():
 		n += 1
+		if engine.state.draw_pending:
+			rebuild_view()
+			return
 		if _resolve_choice_if_needed():
 			continue
 		if _stop_for_human_decision():
@@ -488,6 +496,9 @@ func _advance_to_attackers() -> void:
 	var n := 0
 	while n < 40 and engine != null and not engine.is_over():
 		n += 1
+		if engine.state.draw_pending:
+			rebuild_view()
+			return
 		if _resolve_choice_if_needed():
 			continue
 		if _stop_for_human_decision():
@@ -507,6 +518,9 @@ func _pass_through_combat() -> void:
 	var n := 0
 	while n < 40 and engine != null and not engine.is_over():
 		n += 1
+		if engine.state.draw_pending:
+			rebuild_view()
+			return
 		if _resolve_choice_if_needed():
 			continue
 		if _stop_for_human_decision():
@@ -563,11 +577,23 @@ func _ai_respond() -> void:
 	pass_priority(1)
 
 
+## You click your library: take the draw-step card (CR 504.1). Returns the card, or {} if there is nothing to take.
 func ack_draw() -> Dictionary:
-	var card := pending_draw_card.duplicate()
+	if not draw_waiting():
+		return {}
+	var obj: GameObject = engine.take_turn_draw(you_seat)
 	pending_draw_anim = false
 	pending_draw_card = {}
+	if obj == null:
+		dbg("Draw from empty library")
+		last_error = "Library is empty."
+		rebuild_view()
+		return {}
 	rebuild_view()
+	var card: Dictionary = view.find_card(str(obj.object_id)) if view != null else {}
+	dbg("Drew: %s" % str(card.get("name", "?")))
+	dbg("Hand size: %d" % engine.hand_size(you_seat))
+	dbg("Library remaining: %d" % engine.library_size(you_seat))
 	return card
 
 
@@ -657,6 +683,9 @@ func pass_until_active(player_id: int, max_steps: int = 80) -> void:
 	var n := 0
 	while n < max_steps and engine != null and not engine.is_over():
 		n += 1
+		if engine.state.draw_pending:
+			rebuild_view()
+			return
 		if _resolve_choice_if_needed():
 			continue
 		if _stop_for_human_decision():
@@ -695,6 +724,9 @@ func ai_take_turn(player_id: int) -> void:
 	var declared_attack := false
 	while n < 48 and engine != null and not engine.is_over() and engine.state.active_player_id == player_id:
 		n += 1
+		if engine.state.draw_pending:
+			rebuild_view()
+			return
 		if _resolve_choice_if_needed():
 			continue
 		if _stop_for_human_decision():
@@ -765,6 +797,10 @@ func _ai_has_creature_target(_player_id: int) -> bool:
 
 func end_you_turn() -> void:
 	if not can_play() or awaiting_blocks:
+		return
+	if draw_waiting():
+		last_error = "Draw your card first: click your deck."
+		rebuild_view()
 		return
 	choosing_attackers = false
 	var other := 1 if you_seat == 0 else 0

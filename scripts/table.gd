@@ -18,6 +18,11 @@ const HAND_CHIP := Vector2(80, 112)
 const BOARD_CHIP := Vector2(48, 68)
 const SIDE_W := 228
 const TURN_GREEN := Color(0.18, 0.78, 0.32)
+## Gold border: a card you can play right now. Light blue border: the card you have selected.
+const PLAYABLE_GOLD := Color(1.0, 0.84, 0.18)
+const SELECT_BLUE := Color(0.62, 0.84, 1.0)
+const COMMAND_CHIP := Vector2(72, 100)
+const TRACK := [["upkeep", "Upkeep"], ["draw", "Draw"], ["main1", "Main 1"], ["combat", "Combat"], ["main2", "Main 2"], ["end", "End"]]
 const TURN_RED := Color(0.86, 0.16, 0.14)
 const ATTACK_RED := Color(0.92, 0.22, 0.16)
 const BLOCK_BLUE := Color(0.30, 0.62, 0.98)
@@ -58,6 +63,12 @@ var hover_printed: Control
 var you_library_btn: Button
 var draw_btn: Button
 var deck_btn: Button
+var _deck_style: StyleBoxFlat
+var _deck_flashing := false
+var phase_chips: Dictionary = {}
+var turn_owner_label: Label
+var you_cmd_row: HBoxContainer
+var rival_cmd_row: HBoxContainer
 var play_btn: Button
 var ability_box: VBoxContainer
 var pass_btn: Button
@@ -105,6 +116,7 @@ func _ready() -> void:
 	add_to_group("aetherfold_table")
 	if USE_ENGINE:
 		session = GameSession.new()
+		session.manual_draw = true
 		session.debug_enabled = DEBUG_MATCH
 		_start_from_app_state()
 	else:
@@ -138,6 +150,7 @@ func _start_from_app_state() -> void:
 	var app := get_node_or_null("/root/AppState")
 	if session == null:
 		session = GameSession.new()
+		session.manual_draw = true
 		session.debug_enabled = DEBUG_MATCH
 	if app != null:
 		session.difficulty = int(app.difficulty)
@@ -243,6 +256,7 @@ func _build() -> void:
 	add_child(root)
 
 	root.add_child(_build_header())
+	root.add_child(_build_phase_track())
 
 	var body := HBoxContainer.new()
 	body.size_flags_vertical = SIZE_EXPAND_FILL
@@ -382,7 +396,7 @@ func _build_hand() -> Control:
 	var hand_inner := VBoxContainer.new()
 	hand_inner.add_theme_constant_override("separation", 2)
 	var hand_label := Label.new()
-	hand_label.text = "Hand — click a card to play it"
+	hand_label.text = "Hand — a gold border means you can play that card now"
 	hand_label.add_theme_color_override("font_color", MUTED)
 	hand_label.add_theme_font_size_override("font_size", 12)
 	hand_inner.add_child(hand_label)
@@ -424,6 +438,7 @@ func _build_sidebar() -> Control:
 	life_row.add_child(_life_block("Rival", "Talrand · Normal", false))
 	col.add_child(life_row)
 	col.add_child(_pile_table())
+	col.add_child(_build_command_panel())
 	col.add_child(_build_inspector())
 
 	ability_box = VBoxContainer.new()
@@ -478,6 +493,135 @@ func _life_block(who: String, subtitle: String, is_you: bool) -> Control:
 		rival_title_label = title_label
 	box.add_child(title_label)
 	return box
+
+func _chip_style(bg: Color, border: Color) -> StyleBoxFlat:
+	var st := StyleBoxFlat.new()
+	st.bg_color = bg
+	st.border_color = border
+	st.set_border_width_all(2)
+	st.set_corner_radius_all(6)
+	st.content_margin_left = 8
+	st.content_margin_right = 8
+	return st
+
+## The turn at a glance: Upkeep, Draw, Main 1, Combat, Main 2, End. Draw, Combat and End are buttons.
+func _build_phase_track() -> Control:
+	var bar := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.06, 0.07)
+	style.content_margin_left = 14
+	style.content_margin_right = 10
+	style.content_margin_top = 4
+	style.content_margin_bottom = 4
+	bar.add_theme_stylebox_override("panel", style)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	turn_owner_label = Label.new()
+	turn_owner_label.custom_minimum_size = Vector2(130, 0)
+	turn_owner_label.add_theme_font_size_override("font_size", 15)
+	row.add_child(turn_owner_label)
+	for entry in TRACK:
+		var key: String = entry[0]
+		var chip := Button.new()
+		chip.text = entry[1]
+		chip.custom_minimum_size = Vector2(98, 28)
+		chip.focus_mode = Control.FOCUS_NONE
+		if key == "draw":
+			chip.pressed.connect(_on_click_library)
+			chip.tooltip_text = "Click your deck to draw your card for the turn."
+		elif key == "combat":
+			chip.pressed.connect(_on_attack)
+			chip.tooltip_text = "Go to combat, then click each creature you want to attack with."
+		elif key == "end":
+			chip.pressed.connect(_on_end_turn)
+			chip.tooltip_text = "End your turn."
+		row.add_child(chip)
+		phase_chips[key] = chip
+	bar.add_child(row)
+	return bar
+
+func _paint_phase_track() -> void:
+	if turn_owner_label == null or session == null or session.view == null:
+		return
+	var v = session.view
+	var mine: bool = bool(v.active_is_you)
+	turn_owner_label.text = "YOUR TURN" if mine else "RIVAL'S TURN"
+	turn_owner_label.add_theme_color_override("font_color", TURN_GREEN if mine else TURN_RED)
+	for key in phase_chips.keys():
+		var chip: Button = phase_chips[key]
+		var now: bool = str(v.turn_track) == str(key)
+		var bg := Color(0.13, 0.14, 0.15)
+		var fg := MUTED
+		var border := Color(0.2, 0.21, 0.22)
+		if now:
+			bg = TURN_GREEN.darkened(0.15) if mine else TURN_RED.darkened(0.2)
+			fg = Color(0.04, 0.1, 0.04) if mine else Color(1, 0.94, 0.9)
+			border = GOLD
+		for sname in ["normal", "hover", "pressed", "disabled", "focus"]:
+			chip.add_theme_stylebox_override(sname, _chip_style(bg, border))
+		for cname in ["font_color", "font_hover_color", "font_pressed_color", "font_disabled_color"]:
+			chip.add_theme_color_override(cname, fg)
+
+## Both commanders, where you can see them. Click yours to cast it (the Gold border means you can).
+func _build_command_panel() -> Control:
+	var box := PanelContainer.new()
+	var st := StyleBoxFlat.new()
+	st.bg_color = PANEL
+	st.set_corner_radius_all(6)
+	st.content_margin_left = 8
+	st.content_margin_right = 8
+	st.content_margin_top = 6
+	st.content_margin_bottom = 6
+	box.add_theme_stylebox_override("panel", st)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	var title := Label.new()
+	title.text = "Command zone"
+	title.add_theme_font_size_override("font_size", 12)
+	title.add_theme_color_override("font_color", MUTED)
+	col.add_child(title)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var you_col := VBoxContainer.new()
+	you_col.add_theme_constant_override("separation", 2)
+	you_col.add_child(_mini("You", GOLD))
+	you_cmd_row = HBoxContainer.new()
+	you_col.add_child(you_cmd_row)
+	var rival_col := VBoxContainer.new()
+	rival_col.add_theme_constant_override("separation", 2)
+	rival_col.add_child(_mini("Rival", GOLD))
+	rival_cmd_row = HBoxContainer.new()
+	rival_col.add_child(rival_cmd_row)
+	row.add_child(you_col)
+	row.add_child(rival_col)
+	col.add_child(row)
+	box.add_child(col)
+	return box
+
+func _fill_command(container: HBoxContainer, cards: Array, mine: bool) -> void:
+	_clear(container)
+	if cards.is_empty():
+		var none := Label.new()
+		none.text = "on the table"
+		none.add_theme_font_size_override("font_size", 11)
+		none.add_theme_color_override("font_color", MUTED)
+		none.custom_minimum_size = Vector2(COMMAND_CHIP.x, 20)
+		container.add_child(none)
+		return
+	for card in cards:
+		var slot := VBoxContainer.new()
+		slot.add_theme_constant_override("separation", 1)
+		slot.add_child(_card_chip(card, false, mine, COMMAND_CHIP))
+		var note := Label.new()
+		note.add_theme_font_size_override("font_size", 11)
+		note.add_theme_color_override("font_color", PLAYABLE_GOLD if bool(card.get("playable", false)) else MUTED)
+		var tax := int(card.get("commander_tax", 0))
+		if mine:
+			note.text = "Click to cast" if bool(card.get("playable", false)) else ("Tax +%d" % tax if tax > 0 else "Not castable yet")
+		else:
+			note.text = "Tax +%d" % tax if tax > 0 else "Commander"
+		slot.add_child(note)
+		container.add_child(slot)
 
 func _pile_table() -> Control:
 	var box := PanelContainer.new()
@@ -653,6 +797,25 @@ func _paint_flash() -> void:
 			draw_btn.add_theme_stylebox_override("normal", bst)
 			draw_btn.add_theme_stylebox_override("hover", bst)
 			draw_btn.add_theme_color_override("font_color", Color(0.06, 0.1, 0.04))
+	if deck_btn:
+		if wait:
+			var dst := StyleBoxFlat.new()
+			dst.bg_color = Color(0.38, 0.12, 0.08).lerp(Color(0.62, 0.3, 0.1), pulse)
+			dst.set_corner_radius_all(8)
+			dst.set_border_width_all(6)
+			dst.border_color = GOLD.lerp(Color(1, 1, 1), pulse)
+			dst.shadow_color = Color(1.0, 0.84, 0.18, 0.35 + 0.4 * pulse)
+			dst.shadow_size = 10 + int(10.0 * pulse)
+			deck_btn.add_theme_stylebox_override("normal", dst)
+			deck_btn.add_theme_stylebox_override("hover", dst)
+			deck_btn.pivot_offset = deck_btn.size * 0.5
+			deck_btn.scale = Vector2.ONE * (1.0 + 0.07 * pulse)
+			_deck_flashing = true
+		elif _deck_flashing:
+			_deck_flashing = false
+			deck_btn.scale = Vector2.ONE
+			deck_btn.add_theme_stylebox_override("normal", _deck_style)
+			deck_btn.add_theme_stylebox_override("hover", _deck_style)
 	if turn_border and wait:
 		var st := StyleBoxFlat.new()
 		st.bg_color = Color(0, 0, 0, 0)
@@ -684,10 +847,11 @@ func _build_deck_pile() -> void:
 	st.shadow_color = Color(0, 0, 0, 0.55)
 	st.shadow_size = 6
 	st.shadow_offset = Vector2(3, 4)
+	_deck_style = st
 	deck_btn.add_theme_stylebox_override("normal", st)
 	deck_btn.add_theme_color_override("font_color", GOLD)
 	deck_btn.pressed.connect(_on_click_library)
-	deck_btn.tooltip_text = "Your library. You draw one card at the start of your turn."
+	deck_btn.tooltip_text = "Your library. On your turn it flashes: click it to draw."
 	add_child(deck_btn)
 
 func _build_draw_button() -> void:
@@ -779,16 +943,23 @@ func _on_unhover_card() -> void:
 	if hover_wrap:
 		hover_wrap.visible = false
 
-func _card_chip(card: Dictionary, compact: bool = false, from_hand: bool = false) -> Button:
+func _card_chip(card: Dictionary, compact: bool = false, from_hand: bool = false, chip_size: Vector2 = Vector2.ZERO) -> Button:
 	var b := Button.new()
 	b.clip_contents = true
-	b.custom_minimum_size = BOARD_CHIP if compact else HAND_CHIP
+	b.custom_minimum_size = chip_size if chip_size != Vector2.ZERO else (BOARD_CHIP if compact else HAND_CHIP)
 	var selected: bool = str(card.get("id", "")) == str(_board().selected_id)
 	var st := StyleBoxFlat.new()
 	st.bg_color = Color(0, 0, 0, 0)
 	st.set_corner_radius_all(6)
 	st.set_border_width_all(2)
-	st.border_color = GOLD if selected else Color(0, 0, 0, 0.55)
+	st.border_color = SELECT_BLUE if selected else Color(0, 0, 0, 0.55)
+	if from_hand and bool(card.get("playable", false)):
+		## Gold border: the rules let you play this right now and you have the mana for it.
+		st.border_color = PLAYABLE_GOLD
+		st.set_border_width_all(4)
+		st.shadow_color = Color(1.0, 0.84, 0.18, 0.55)
+		st.shadow_size = 7
+		b.tooltip_text = "You can play this now."
 	var combat_color: Variant = _combat_border(card)
 	if combat_color is Color:
 		st.border_color = combat_color
@@ -870,12 +1041,15 @@ func _refresh() -> void:
 		hand_row.add_child(_card_chip(card, false, true))
 	_set_pile("you", b.you)
 	_set_pile("rival", b.rival)
+	_fill_command(you_cmd_row, b.you["command"], true)
+	_fill_command(rival_cmd_row, b.rival["command"], false)
+	_paint_phase_track()
 	if deck_btn:
 		deck_btn.text = "Deck\n%d" % int(b.you["library"])
 		if _waiting_for_draw():
-			deck_btn.tooltip_text = "Click to take the one card you drew this turn."
+			deck_btn.tooltip_text = "Your draw step: click to draw a card."
 		else:
-			deck_btn.tooltip_text = "Library: %d cards. One draw per turn." % int(b.you["library"])
+			deck_btn.tooltip_text = "Library: %d cards." % int(b.you["library"])
 	var selected: Dictionary = b.find_card(b.selected_id)
 	if selected.is_empty() and not b.you["hand"].is_empty():
 		_set_selected(str(b.you["hand"].back()["id"]))
@@ -1115,7 +1289,7 @@ func _confirm_blocks() -> void:
 	var lost := life_you - int(session.view.you.get("life", 40))
 	var msg := str(session.view.prompt)
 	if session.pending_draw_anim:
-		msg = "Your turn — click Draw."
+		msg = "Your turn — click your deck to draw."
 	if lost > 0:
 		msg = "You lost %d life. " % lost + msg
 	_set_status(msg)
@@ -1319,6 +1493,9 @@ func _on_next_stage() -> void:
 		if session == null or not session.can_play():
 			_set_status("Keep or Mulligan first.")
 			return
+		if session.draw_waiting():
+			_set_status("Draw first — click your deck.")
+			return
 		session.pass_once()
 		_refresh()
 		if session.engine != null and session.engine.is_over():
@@ -1353,6 +1530,9 @@ func _on_end_turn() -> void:
 		if _in_blocking_mode():
 			_set_status("Choose your blockers, then Confirm blocks (or No blocks).")
 			return
+		if session.draw_waiting():
+			_set_status("Draw first — click your deck.")
+			return
 		_pending_attackers.clear()
 		var life_you := int(session.view.you.get("life", 40))
 		var life_bot := int(session.view.rival.get("life", 40))
@@ -1370,7 +1550,7 @@ func _on_end_turn() -> void:
 		if session.engine.is_over():
 			_set_status(str(session.view.prompt))
 		elif session.pending_draw_anim:
-			var msg := "Your turn — click Draw."
+			var msg := "Your turn — click your deck to draw."
 			if you_lost > 0:
 				msg = "You lost %d life. " % you_lost + msg
 			_set_status(msg)
@@ -1385,7 +1565,7 @@ func _on_end_turn() -> void:
 	if not state.active_is_you:
 		return
 	if not state.you_drew_this_turn:
-		_set_status("Draw first — use the Draw button.")
+		_set_status("Draw first — click your deck.")
 		return
 	var life_you := int(state.you["life"])
 	var life_bot := int(state.rival["life"])
@@ -1401,7 +1581,7 @@ func _on_end_turn() -> void:
 	if int(state.you["life"]) <= 0:
 		msg += " You lost the game."
 	else:
-		msg += " Your turn — click Draw."
+		msg += " Your turn — click your deck to draw."
 	_tap_sfx("mug")
 	_refresh()
 	_set_status(msg)
@@ -1412,7 +1592,7 @@ func _on_click_library() -> void:
 			_set_status("Keep or Mulligan first.")
 			return
 		if not session.pending_draw_anim:
-			_set_status("One draw per turn. It happens at the start of your turn.")
+			_set_status("You have already drawn this turn.")
 			return
 		var drawn: Dictionary = session.ack_draw()
 		if drawn.is_empty():
@@ -2107,6 +2287,7 @@ func _on_play_imported(deck: NormalizedDeck, rows: Dictionary) -> void:
 	_mulligan_sig = ""
 	if session == null:
 		session = GameSession.new()
+		session.manual_draw = true
 		session.debug_enabled = DEBUG_MATCH
 	session.start_imported(deck, rows)
 	_refresh()
@@ -2118,6 +2299,7 @@ func _on_new_game() -> void:
 	_mulligan_sig = ""
 	if USE_ENGINE:
 		session = GameSession.new()
+		session.manual_draw = true
 		session.difficulty = d
 		session.debug_enabled = DEBUG_MATCH
 		session.start_table_demo()

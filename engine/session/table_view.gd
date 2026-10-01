@@ -26,6 +26,8 @@ var match_start: int = 0
 var blocking_mode: bool = false
 ## You are picking attackers.
 var attack_mode: bool = false
+## Where the turn is: upkeep, draw, main1, combat, main2 or end. Drives the phase tracker.
+var turn_track: String = "main1"
 
 
 func header_text() -> String:
@@ -82,6 +84,7 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 		seat = int(session.you_seat)
 	v.your_priority = int(st.awaiting.get("player_id", -1)) == seat
 	v.attacker_count = engine.legal_attacker_ids(seat).size()
+	v.turn_track = _track_of(st.phase)
 	v.can_attack = v.attacker_count > 0 and st.active_player_id == seat and (
 		st.step == EngineEnums.Step.DECLARE_ATTACKERS or st.phase == EngineEnums.Phase.MAIN_1
 	)
@@ -97,6 +100,9 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 	var other := 1 if seat == 0 else 0
 	v.you = _player_dict(engine, seat, cat)
 	v.rival = _player_dict(engine, other, cat)
+	var can_act := session != null and session.match_start == GameSession.MatchStart.MAIN_GAME \
+		and not session.draw_waiting() and not session.awaiting_blocks and not session.choosing_attackers
+	_mark_playable(engine, seat, v.you, can_act)
 	v.stack = _stack_cards(engine, cat)
 	return v
 
@@ -122,6 +128,7 @@ func to_plain() -> Dictionary:
 		match_start = match_start,
 		blocking_mode = blocking_mode,
 		attack_mode = attack_mode,
+		turn_track = turn_track,
 	}
 
 
@@ -172,6 +179,7 @@ static func from_plain(d: Dictionary) -> TableView:
 	v.match_start = int(d.get("match_start", 0))
 	v.blocking_mode = bool(d.get("blocking_mode", false))
 	v.attack_mode = bool(d.get("attack_mode", false))
+	v.turn_track = str(d.get("turn_track", "main1"))
 	return v
 
 
@@ -209,6 +217,48 @@ static func _player_dict(engine: RulesEngine, player_id: int, cat: Object) -> Di
 		untapped_lands = _untapped_lands(lands),
 		mana = (p.mana as ManaPool).total() if p.mana is ManaPool else 0,
 	}
+
+
+## Which phase chip lights up in the tracker.
+static func _track_of(phase: int) -> String:
+	match phase:
+		EngineEnums.Phase.UNTAP, EngineEnums.Phase.UPKEEP:
+			return "upkeep"
+		EngineEnums.Phase.DRAW:
+			return "draw"
+		EngineEnums.Phase.MAIN_1:
+			return "main1"
+		EngineEnums.Phase.COMBAT:
+			return "combat"
+		EngineEnums.Phase.MAIN_2:
+			return "main2"
+		_:
+			return "end"
+
+
+## Marks the hand and command-zone cards you could play right now (gold border on the table).
+## Playable = the rules allow it at this moment (timing, land drop, priority) AND you have enough
+## mana sources untapped for its total cost, commander tax included. Colors are not checked here;
+## the payment step still enforces them.
+static func _mark_playable(engine: RulesEngine, seat: int, you: Dictionary, can_act: bool) -> void:
+	var castable := {}
+	var sources := 0
+	if can_act:
+		for act in engine.legal_actions(seat):
+			var ga := act as GameAction
+			if ga == null:
+				continue
+			if ga.kind == GameAction.Kind.CAST_SPELL or ga.kind == GameAction.Kind.PLAY_LAND:
+				castable[ga.object_id] = true
+			elif ga.kind == GameAction.Kind.ACTIVATE_MANA_ABILITY:
+				sources += 1
+	var available := sources + int(you.get("mana", 0))
+	for key in ["hand", "command"]:
+		for card in you.get(key, []):
+			var ok: bool = castable.has(int(str(card.get("id", "0"))))
+			if ok and str(card.get("kind", "")) != "land":
+				ok = int(card.get("cmc", 0)) + int(card.get("commander_tax", 0)) <= available
+			card["playable"] = ok
 
 
 static func _zone_cards(engine: RulesEngine, zone_id: int, player_id: int, cat: Object) -> Array:
@@ -254,7 +304,14 @@ static func _card_dict(engine: RulesEngine, obj: GameObject, cat: Object) -> Dic
 		scryfall_id = "",
 		imageUrl = "",
 		images = {},
+		playable = false,
+		commander_tax = 0,
 	}
+	## CR 903.8: each earlier cast of a commander from the command zone adds {2}.
+	if obj.zone == EngineEnums.ZoneId.COMMAND and def != null and obj.owner_id < engine.state.players.size():
+		var ckey := def.oracle_id if def.oracle_id != "" else def.name
+		var casts := int(engine.state.players[obj.owner_id].commander_cast_count.get(ckey, 0))
+		d["commander_tax"] = casts * engine.state.rules.commander_tax_step
 	if cat != null and cat.has_method("find_by_name"):
 		var found: Variant = cat.find_by_name(str(d.name))
 		if found is Dictionary and not (found as Dictionary).is_empty():
