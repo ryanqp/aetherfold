@@ -1573,10 +1573,10 @@ func _paint_match_buttons() -> void:
 			pass_btn.disabled = not session.can_play()
 	if declare_btn:
 		var dsel: Dictionary = v.find_card(str(v.selected_id))
-		var mine_creature := not dsel.is_empty() and _card_in(v.you.get("creatures", []), str(dsel.get("id", "")))
+		var mine_creature: bool = not dsel.is_empty() and _card_in(v.you.get("creatures", []), str(dsel.get("id", "")))
 		declare_btn.visible = mine_creature and bool(v.active_is_you) and not _in_blocking_mode()
 		if declare_btn.visible:
-			var ready := bool(dsel.get("ready_to_attack", false)) and session.can_play() and not session.draw_waiting()
+			var ready: bool = bool(dsel.get("ready_to_attack", false)) and session.can_play() and not session.draw_waiting()
 			declare_btn.disabled = not ready
 			declare_btn.text = "Attack with this ⚔" if ready else ("Summoning sick" if bool(dsel.get("summoning_sick", false)) else "Can't attack now")
 	if play_btn:
