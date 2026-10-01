@@ -536,7 +536,8 @@ func _target_style(pulse: float, active: bool) -> StyleBoxFlat:
 
 
 func _on_rival_target_input(ev: InputEvent) -> void:
-	if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+	var mb := ev as InputEventMouseButton
+	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
 		_on_rival_target_click()
 
 
