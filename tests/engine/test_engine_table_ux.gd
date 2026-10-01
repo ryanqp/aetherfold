@@ -55,6 +55,16 @@ func test_clicking_the_deck_draws_one_card() -> void:
 	assert_eq(session.engine.state.phase, EngineEnums.Phase.MAIN_1)
 
 
+func test_drawing_moves_straight_to_main_one() -> void:
+	var session := _session(true)
+	session.end_you_turn()
+	session.pass_until_active(0)
+	assert_eq(session.engine.state.step, EngineEnums.Step.DRAW)
+	session.ack_draw()
+	assert_eq(session.engine.state.phase, EngineEnums.Phase.MAIN_1, "no extra Pass needed after drawing")
+	assert_eq(session.view.turn_track, "main1")
+
+
 func test_draw_is_automatic_unless_manual_draw_is_on() -> void:
 	var session := _session(false)
 	var hand_before := session.engine.hand_size(0)

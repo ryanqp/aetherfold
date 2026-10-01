@@ -589,6 +589,11 @@ func ack_draw() -> Dictionary:
 		last_error = "Library is empty."
 		rebuild_view()
 		return {}
+	## Nothing else happens in the draw step, so move on to Main 1 where cards can be played.
+	## (Anything that does happen, like a trigger, still stops the loop in pass_once.)
+	var stack_empty := engine.state.stack == null or (engine.state.stack as MagicStack).is_empty()
+	if engine.state.step == EngineEnums.Step.DRAW and _awaiting_id() == you_seat and stack_empty:
+		pass_once()
 	rebuild_view()
 	var card: Dictionary = view.find_card(str(obj.object_id)) if view != null else {}
 	dbg("Drew: %s" % str(card.get("name", "?")))

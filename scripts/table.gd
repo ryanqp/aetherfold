@@ -1,7 +1,7 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 31
+const BUILD := 32
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
 const RivalAI := preload("res://scripts/rival_ai.gd")
@@ -71,6 +71,9 @@ var _show_debug := false
 var _deck_flashing := false
 var phase_chips: Dictionary = {}
 var turn_owner_label: Label
+var hint_label: Label
+var next_turn_btn: Button
+var _hint_hold := 0.0
 var you_cmd_row: HBoxContainer
 var rival_cmd_row: HBoxContainer
 var play_btn: Button
@@ -213,6 +216,10 @@ func apply_net_action(kind: String, payload: Dictionary, player_id: int) -> void
 func _set_status(text: String) -> void:
 	if log_label:
 		log_label.text = text
+	## The side log is easy to miss, so the same message shows beside the phase bar for a few seconds.
+	if hint_label and text != "":
+		hint_label.text = text
+		_hint_hold = 7.0
 
 func _hydrate_from_scryfall() -> void:
 	var cat := _catalog()
@@ -319,7 +326,9 @@ func _build_header() -> Control:
 	attack_btn = _header_button("Attack", Color(0.62, 0.16, 0.12), Color(0.98, 0.94, 0.88), _on_attack, 96)
 	attack_btn.tooltip_text = "Declare every creature that can attack. Space passes priority. Enter ends the turn."
 	row.add_child(attack_btn)
-	row.add_child(_header_button("End turn", Color(0.16, 0.17, 0.18), INK, _on_end_turn, 100))
+	next_turn_btn = _header_button("Next turn ▶", Color(0.20, 0.42, 0.18), Color(0.95, 1.0, 0.92), _on_end_turn, 120)
+	next_turn_btn.tooltip_text = "Finish your turn. The rival plays, then it is your turn again."
+	row.add_child(next_turn_btn)
 	mute_button = _header_button("Mute", Color(0.16, 0.17, 0.18), INK, _on_mute, 72)
 	row.add_child(mute_button)
 	sfx_button = _header_button("SFX", Color(0.16, 0.17, 0.18), INK, _on_sfx, 72)
@@ -541,6 +550,13 @@ func _build_phase_track() -> Control:
 			chip.tooltip_text = "End your turn."
 		row.add_child(chip)
 		phase_chips[key] = chip
+	hint_label = Label.new()
+	hint_label.size_flags_horizontal = SIZE_EXPAND_FILL
+	hint_label.clip_text = true
+	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	hint_label.add_theme_font_size_override("font_size", 15)
+	hint_label.add_theme_color_override("font_color", GOLD)
+	row.add_child(hint_label)
 	bar.add_child(row)
 	return bar
 
@@ -565,6 +581,28 @@ func _paint_phase_track() -> void:
 			chip.add_theme_stylebox_override(sname, _chip_style(bg, border))
 		for cname in ["font_color", "font_hover_color", "font_pressed_color", "font_disabled_color"]:
 			chip.add_theme_color_override(cname, fg)
+
+## What to do next, in plain words, beside the phase bar.
+func _paint_hint() -> void:
+	if hint_label == null or session == null or session.view == null:
+		return
+	var v = session.view
+	var t := ""
+	if not session.can_play():
+		t = "Keep or Mulligan your hand."
+	elif not bool(v.active_is_you):
+		t = "Rival is taking their turn…"
+	elif session.draw_waiting():
+		t = "Click your deck to draw a card."
+	else:
+		match str(v.turn_track):
+			"main1", "main2":
+				t = "Play a land or spell (gold border = playable). Then Combat or Next turn."
+			"combat":
+				t = "Click creatures to attack with."
+			_:
+				t = "Press Pass to move on, or Next turn to end your turn."
+	hint_label.text = t
 
 ## Both commanders, where you can see them. Click yours to cast it (the Gold border means you can).
 func _build_command_panel() -> Control:
@@ -788,6 +826,10 @@ func _waiting_for_draw() -> bool:
 func _process(dt: float) -> void:
 	_flash_t += dt
 	_paint_flash()
+	if _hint_hold > 0.0:
+		_hint_hold -= dt
+		if _hint_hold <= 0.0:
+			_paint_hint()
 
 func _paint_flash() -> void:
 	var wait := _waiting_for_draw()
@@ -1056,6 +1098,8 @@ func _refresh() -> void:
 	_fill_command(you_cmd_row, b.you["command"], true)
 	_fill_command(rival_cmd_row, b.rival["command"], false)
 	_paint_phase_track()
+	if _hint_hold <= 0.0:
+		_paint_hint()
 	if deck_btn:
 		deck_btn.text = "Deck\n%d" % int(b.you["library"])
 		if _waiting_for_draw():
@@ -1089,8 +1133,8 @@ func _refresh() -> void:
 	if USE_ENGINE and session != null and session.view != null:
 		if session.engine != null and session.engine.is_over():
 			_set_status(str(session.view.prompt))
-		elif not session.pending_draw_anim and str(session.view.prompt) != "":
-			_set_status(str(session.view.prompt))
+		elif not session.pending_draw_anim and str(session.view.prompt) != "" and log_label:
+			log_label.text = str(session.view.prompt)
 
 func _paint_difficulty_buttons() -> void:
 	for i in menu_diff_buttons.size():
@@ -1506,7 +1550,7 @@ func _on_next_stage() -> void:
 			_set_status("Keep or Mulligan first.")
 			return
 		if session.draw_waiting():
-			_set_status("Draw first — click your deck.")
+			_on_click_library()
 			return
 		session.pass_once()
 		_refresh()
