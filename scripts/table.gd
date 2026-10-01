@@ -1,7 +1,7 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 39
+const BUILD := 40
 const Mats := preload("res://engine/session/playmat_catalog.gd")
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
@@ -75,6 +75,7 @@ var turn_owner_label: Label
 var hint_label: Label
 var next_turn_btn: Button
 var history_panel: PanelContainer
+var history_button: Button
 var coin_overlay: ColorRect
 var coin_face: Label
 var coin_status: Label
@@ -350,8 +351,8 @@ func _build_header() -> Control:
 	row.add_child(mute_button)
 	sfx_button = _header_button("SFX", Color(0.16, 0.17, 0.18), INK, _on_sfx, 72)
 	row.add_child(sfx_button)
-	var hist_btn := _header_button("History", Color(0.16, 0.17, 0.18), INK, _toggle_history, 84)
-	row.add_child(hist_btn)
+	history_button = _header_button("Hide history", Color(0.16, 0.17, 0.18), INK, _toggle_history, 110)
+	row.add_child(history_button)
 	row.add_child(_header_button("Dice", Color(0.16, 0.17, 0.18), INK, _on_dice, 72))
 	row.add_child(_header_button("Menu", Color(0.16, 0.17, 0.18), INK, _on_menu, 72))
 	row.add_child(_header_button("Main menu", Color(0.16, 0.17, 0.18), INK, _on_main_menu, 100))
@@ -1007,7 +1008,7 @@ func _build_history_panel() -> void:
 	title.add_theme_font_size_override("font_size", 15)
 	head.add_child(title)
 	var close := Button.new()
-	close.text = "✕"
+	close.text = "Hide"
 	close.focus_mode = Control.FOCUS_NONE
 	close.pressed.connect(_toggle_history)
 	head.add_child(close)
@@ -1029,6 +1030,8 @@ func _build_history_panel() -> void:
 func _toggle_history() -> void:
 	if history_panel:
 		history_panel.visible = not history_panel.visible
+		if history_button != null:
+			history_button.text = "Hide history" if history_panel.visible else "History"
 		_history_shown = -1
 		_paint_history()
 
