@@ -728,49 +728,154 @@ func _is_land(obj: GameObject) -> bool:
 	return obj != null and obj.definition is CardDefinition and (obj.definition as CardDefinition).is_land()
 
 
+## Combat damage step (CR 510). With first or double strike in combat there are two
+## damage steps (CR 510.4); both run here, with state-based actions in between.
+## Damage is assigned automatically: lethal to each blocker in declared order, the rest
+## to the last blocker, or to the player when the attacker has trample (CR 510.1c, 702.19).
 func apply_combat_damage() -> void:
 	if not (state.combat is CombatState):
 		return
-	var cs := state.combat as CombatState
-	var n := state.players.size()
-	if n <= 0:
+	if state.players.is_empty():
 		return
-	var pending_lethal: Array[int] = []
+	var cs := state.combat as CombatState
+	var split := _combat_has_first_strike(cs)
+	if split:
+		_combat_damage_pass(cs, true, true)
+		if sba != null:
+			sba.check(self)
+	_combat_damage_pass(cs, false, split)
+	if sba != null:
+		sba.check(self)
+
+
+func _combat_has_first_strike(cs: CombatState) -> bool:
+	for aid in cs.attacker_ids:
+		var obj: GameObject = state.objects.get(int(aid))
+		if _strikes_first(obj):
+			return true
+		for bid in _blocker_ids(cs, int(aid)):
+			if _strikes_first(state.objects.get(int(bid))):
+				return true
+	return false
+
+
+func _strikes_first(obj: GameObject) -> bool:
+	return has_keyword(obj, "First strike") or has_keyword(obj, "Double strike")
+
+
+## Whether obj deals damage in this pass. first_pass: the first-strike step.
+func _deals_damage_now(obj: GameObject, first_pass: bool, split: bool) -> bool:
+	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return false
+	if not split:
+		return true
+	if first_pass:
+		return _strikes_first(obj)
+	return has_keyword(obj, "Double strike") or not has_keyword(obj, "First strike")
+
+
+func _blocker_ids(cs: CombatState, attacker_id: int) -> Array:
+	var raw: Variant = cs.blockers.get(attacker_id, [])
+	return raw if raw is Array else []
+
+
+func _combat_damage_pass(cs: CombatState, first_pass: bool, split: bool) -> void:
 	for aid in cs.attacker_ids:
 		var attacker: GameObject = state.objects.get(int(aid))
 		if attacker == null or attacker.zone != EngineEnums.ZoneId.BATTLEFIELD:
 			continue
 		var defender := _attacker_defender(cs, int(aid))
-		if defender < 0:
+		var declared := _blocker_ids(cs, int(aid))
+		var live: Array = []
+		for bid in declared:
+			var candidate: GameObject = state.objects.get(int(bid))
+			if candidate != null and candidate.zone == EngineEnums.ZoneId.BATTLEFIELD:
+				live.append(candidate)
+		## Blockers strike back.
+		for striker in live:
+			if _deals_damage_now(striker, first_pass, split):
+				var back := _power_of(striker)
+				if back > 0:
+					_combat_damage_to_object(striker, attacker, back)
+		if not _deals_damage_now(attacker, first_pass, split):
 			continue
-		var atk_dmg := _power_of(attacker)
-		var blocker := _assigned_blocker(cs, int(aid))
-		if blocker == null:
-			if atk_dmg <= 0:
-				continue
-			state.players[defender].life -= atk_dmg
-			state.log.append(EngineEnums.EventType.DAMAGE, state.active_player_id, {
-				to_player = defender,
-				amount = atk_dmg,
-				object_id = attacker.object_id,
-				combat = true,
-			})
-			if triggers != null:
-				triggers.on_combat_damage_to_player(self, attacker, defender, atk_dmg)
-			if attacker.is_commander:
-				var key := str(attacker.owner_id) + ":" + str((attacker.definition as CardDefinition).name if attacker.definition is CardDefinition else attacker.object_id)
-				var prev := int(state.players[defender].commander_damage_from.get(key, 0))
-				state.players[defender].commander_damage_from[key] = prev + atk_dmg
+		var power := _power_of(attacker)
+		if power <= 0:
 			continue
-		if atk_dmg > 0:
-			_mark_combat_damage(attacker, blocker, atk_dmg, pending_lethal)
-		var blk_dmg := _power_of(blocker)
-		if blk_dmg > 0:
-			_mark_combat_damage(blocker, attacker, blk_dmg, pending_lethal)
-	for oid in pending_lethal:
-		_bury_if_lethal(oid)
-	if sba != null:
-		sba.check(self)
+		if declared.is_empty():
+			if defender >= 0:
+				_combat_damage_to_player(attacker, defender, power)
+			continue
+		var trample := has_keyword(attacker, "Trample")
+		var remaining := power
+		for i in live.size():
+			if remaining <= 0:
+				break
+			var target_blocker: GameObject = live[i]
+			var amount := remaining
+			if trample or i < live.size() - 1:
+				amount = mini(remaining, _lethal_for(attacker, target_blocker))
+			if amount > 0:
+				_combat_damage_to_object(attacker, target_blocker, amount)
+				remaining -= amount
+		## A blocked creature with no blockers left deals no damage unless it has trample (CR 509.1h).
+		if trample and remaining > 0 and defender >= 0:
+			_combat_damage_to_player(attacker, defender, remaining)
+
+
+## Damage that counts as lethal for assignment (CR 702.2c for deathtouch).
+func _lethal_for(source: GameObject, target: GameObject) -> int:
+	if has_keyword(source, "Deathtouch"):
+		return 0 if target.deathtouch_damage else 1
+	return maxi(0, _toughness_of(target) - target.damage_marked)
+
+
+func _combat_damage_to_object(source: GameObject, target: GameObject, amount: int) -> void:
+	target.damage_marked += amount
+	if has_keyword(source, "Deathtouch"):
+		target.deathtouch_damage = true
+	state.log.append(EngineEnums.EventType.DAMAGE, source.controller_id, {
+		to_object = target.object_id,
+		amount = amount,
+		object_id = source.object_id,
+		combat = true,
+	})
+	_apply_lifelink(source, amount)
+
+
+func _combat_damage_to_player(source: GameObject, player_id: int, amount: int) -> void:
+	if player_id < 0 or player_id >= state.players.size():
+		return
+	state.players[player_id].life -= amount
+	state.log.append(EngineEnums.EventType.DAMAGE, state.active_player_id, {
+		to_player = player_id,
+		amount = amount,
+		object_id = source.object_id,
+		combat = true,
+	})
+	if triggers != null:
+		triggers.on_combat_damage_to_player(self, source, player_id, amount)
+	if source.is_commander:
+		var key := str(source.owner_id) + ":" + str((source.definition as CardDefinition).name if source.definition is CardDefinition else source.object_id)
+		var prev := int(state.players[player_id].commander_damage_from.get(key, 0))
+		state.players[player_id].commander_damage_from[key] = prev + amount
+	_apply_lifelink(source, amount)
+
+
+## Lifelink (CR 702.15b): the source's controller gains that much life.
+func _apply_lifelink(source: GameObject, amount: int) -> void:
+	if amount <= 0 or not has_keyword(source, "Lifelink"):
+		return
+	var pid := source.controller_id
+	if pid < 0 or pid >= state.players.size():
+		return
+	state.players[pid].life += amount
+	state.log.append(EngineEnums.EventType.LIFE_CHANGE, pid, {
+		to_player = pid,
+		amount = amount,
+		gain = true,
+		object_id = source.object_id,
+	})
 
 
 func _submit_declare_attackers(action: GameAction) -> SubmitResult:
@@ -815,7 +920,7 @@ func _submit_declare_attackers(action: GameAction) -> SubmitResult:
 		var oid := int(raw)
 		cs.attacker_ids.append(oid)
 		var obj: GameObject = state.objects.get(oid)
-		if obj != null:
+		if obj != null and not has_keyword(obj, "Vigilance"):
 			obj.tapped = true
 		if use_map:
 			cs.defenders[oid] = int(assigned[oid])
@@ -869,24 +974,30 @@ func _submit_declare_blockers(action: GameAction) -> SubmitResult:
 		else:
 			r.error = "bad blocker assignment"
 			return r
-		if bids.size() > 1:
-			r.error = "one blocker per attacker"
-			return r
 		if bids.is_empty():
 			next_blocks.erase(attacker_id)
 			continue
-		var bid := int(bids[0])
-		if used.has(bid):
-			r.error = "blocker already assigned"
-			return r
-		if not _can_block(bid, action.player_id):
-			r.error = "illegal blocker"
-			return r
-		used[bid] = true
-		next_blocks[attacker_id] = [bid]
+		var ordered: Array = []
+		for raw_bid in bids:
+			var bid := int(raw_bid)
+			if used.has(bid):
+				r.error = "blocker already assigned"
+				return r
+			if not _can_block(bid, action.player_id, attacker_id):
+				r.error = "illegal blocker"
+				return r
+			used[bid] = true
+			ordered.append(bid)
+		next_blocks[attacker_id] = ordered
 	if (raw as Dictionary).is_empty() and not _player_is_defender(cs, action.player_id):
 		r.error = "not the defending player"
 		return r
+	## Menace (CR 702.110b): blocked only by two or more creatures.
+	for key in next_blocks.keys():
+		var group: Variant = next_blocks[key]
+		if group is Array and (group as Array).size() == 1 and has_keyword(state.objects.get(int(key)), "Menace"):
+			r.error = "menace needs two blockers"
+			return r
 	cs.blockers = next_blocks
 	r.ok = true
 	return r
@@ -914,23 +1025,21 @@ func _attacker_defender(cs: CombatState, attacker_id: int) -> int:
 	return fallback
 
 
-func _can_block(object_id: int, defender_id: int) -> bool:
+func _can_block(object_id: int, defender_id: int, attacker_id: int = -1) -> bool:
 	var obj: GameObject = state.objects.get(object_id)
 	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
 		return false
 	if obj.controller_id != defender_id or obj.tapped:
 		return false
-	return obj.definition is CardDefinition and (obj.definition as CardDefinition).is_creature()
-
-
-func _assigned_blocker(cs: CombatState, attacker_id: int) -> GameObject:
-	var raw: Variant = cs.blockers.get(attacker_id, [])
-	if not (raw is Array) or (raw as Array).is_empty():
-		return null
-	var blocker: GameObject = state.objects.get(int((raw as Array)[0]))
-	if blocker == null or blocker.zone != EngineEnums.ZoneId.BATTLEFIELD:
-		return null
-	return blocker
+	if not _is_creature_now(obj):
+		return false
+	var attacker: GameObject = state.objects.get(attacker_id) if attacker_id >= 0 else null
+	if attacker == null:
+		return true
+	## Flying (CR 702.9b): only creatures with flying or reach can block it.
+	if has_keyword(attacker, "Flying") and not (has_keyword(obj, "Flying") or has_keyword(obj, "Reach")):
+		return false
+	return true
 
 
 func _power_of(obj: GameObject) -> int:
@@ -947,28 +1056,6 @@ func _toughness_of(obj: GameObject) -> int:
 	if obj.definition is CardDefinition and (obj.definition as CardDefinition).toughness.is_valid_int():
 		return int((obj.definition as CardDefinition).toughness)
 	return 0
-
-
-func _mark_combat_damage(source: GameObject, target: GameObject, amount: int, pending_lethal: Array[int]) -> void:
-	target.damage_marked += amount
-	state.log.append(EngineEnums.EventType.DAMAGE, source.controller_id, {
-		to_object = target.object_id,
-		amount = amount,
-		object_id = source.object_id,
-	})
-	if target.definition is CardDefinition and (target.definition as CardDefinition).is_creature():
-		if target.damage_marked >= _toughness_of(target) and not pending_lethal.has(target.object_id):
-			pending_lethal.append(target.object_id)
-
-
-func _bury_if_lethal(object_id: int) -> void:
-	var obj: GameObject = state.objects.get(object_id)
-	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
-		return
-	if not (obj.definition is CardDefinition) or not (obj.definition as CardDefinition).is_creature():
-		return
-	if obj.damage_marked >= _toughness_of(obj):
-		state.zones.move(obj.object_id, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
 
 
 func _is_legal_defender(attacking_player_id: int, defender_id: int) -> bool:
@@ -1073,6 +1160,8 @@ func _legal_attacker_ids(player_id: int) -> Array:
 			continue
 		if obj.summoned_this_turn and not _has_haste(obj):
 			continue
+		if has_keyword(obj, "Defender"):
+			continue
 		out.append(obj.object_id)
 	return out
 
@@ -1153,15 +1242,29 @@ func summoning_sickness_blocks(obj: GameObject, ab: Ability) -> bool:
 
 
 func _has_haste(obj: GameObject) -> bool:
+	return has_keyword(obj, "Haste")
+
+
+## Current keywords (after continuous effects) when layers exist, printed keywords otherwise.
+func has_keyword(obj: GameObject, keyword: String) -> bool:
 	if obj == null:
 		return false
 	if layers != null:
-		return layers.has_keyword(state, obj, "Haste")
+		return layers.has_keyword(state, obj, keyword)
 	if obj.definition is CardDefinition:
+		var want := keyword.to_lower()
 		for kw in (obj.definition as CardDefinition).keywords:
-			if str(kw).to_lower() == "haste":
+			if str(kw).to_lower() == want:
 				return true
 	return false
+
+
+func is_creature_now(obj: GameObject) -> bool:
+	return _is_creature_now(obj)
+
+
+func toughness_of(obj: GameObject) -> int:
+	return _toughness_of(obj)
 
 
 func _is_creature_now(obj: GameObject) -> bool:

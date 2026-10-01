@@ -155,14 +155,11 @@ func _deal_damage(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> 
 	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
 		return
 	obj.damage_marked += n
-	var tou := 0
-	if engine.layers != null:
-		tou = int(engine.layers.snapshot(engine.state, obj).get("toughness", 0))
-	elif obj.definition is CardDefinition:
-		var def := obj.definition as CardDefinition
-		tou = int(def.toughness) if def.toughness.is_valid_int() else 0
-	if obj.definition is CardDefinition and (obj.definition as CardDefinition).is_creature() and obj.damage_marked >= tou:
-		engine.state.zones.move(obj.object_id, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
+	engine.state.log.append(EngineEnums.EventType.DAMAGE, entry.controller_id, {
+		to_object = obj.object_id,
+		amount = n,
+	})
+	## Lethal damage is a state-based action (CR 704.5g), so indestructible is respected.
 	if engine.sba != null:
 		engine.sba.check(engine)
 

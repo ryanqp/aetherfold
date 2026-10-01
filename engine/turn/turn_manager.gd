@@ -117,6 +117,18 @@ func _rotate_turn(st: GameState) -> void:
 	st.step = EngineEnums.Step.UNTAP
 
 
+## CR 514.2: damage wears off in the cleanup step.
+func _clear_damage(st: GameState) -> void:
+	var bf: Zone = st.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return
+	for oid in bf.object_ids:
+		var obj: GameObject = st.objects.get(oid)
+		if obj != null:
+			obj.damage_marked = 0
+			obj.deathtouch_damage = false
+
+
 func _start_tba(eng: RulesEngine, st: GameState) -> void:
 	match st.step:
 		EngineEnums.Step.UNTAP:
@@ -129,6 +141,7 @@ func _start_tba(eng: RulesEngine, st: GameState) -> void:
 			eng.apply_combat_damage()
 		EngineEnums.Step.CLEANUP:
 			_clear_may_play(st)
+			_clear_damage(st)
 			if eng.layers != null:
 				eng.layers.clear_until_eot(st)
 			if st.combat is CombatState:

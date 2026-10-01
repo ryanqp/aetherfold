@@ -3,6 +3,7 @@ extends RefCounted
 
 func check(engine: RulesEngine) -> bool:
 	var st := engine.state
+	_check_creatures(engine)
 	_check_life(st)
 	_check_commander_damage(st)
 	_check_legend(engine)
@@ -37,6 +38,39 @@ func apply_choose(engine: RulesEngine, player_id: int, keep_id: int) -> bool:
 	engine.priority.give(st, st.active_player_id)
 	check(engine)
 	return true
+
+
+## CR 704.5f: toughness 0 or less goes to the graveyard (indestructible does not help).
+## CR 704.5g / 704.5h: lethal damage, or any damage from a deathtouch source, destroys it
+## unless it has indestructible (CR 702.12b).
+func _check_creatures(engine: RulesEngine) -> void:
+	var st := engine.state
+	var bf: Zone = st.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return
+	var doomed: Array[int] = []
+	for oid in bf.object_ids:
+		var obj: GameObject = st.objects.get(oid)
+		if obj == null or not engine.is_creature_now(obj):
+			continue
+		var toughness := engine.toughness_of(obj)
+		if toughness <= 0:
+			## A printed "*" toughness reads as 0 until its defining ability is in the engine.
+			## Keep those creatures alive instead of killing them on arrival.
+			var printed_star: bool = obj.definition is CardDefinition and not (obj.definition as CardDefinition).toughness.is_valid_int()
+			if printed_star:
+				continue
+			doomed.append(obj.object_id)
+			continue
+		if obj.damage_marked <= 0:
+			continue
+		var lethal := obj.damage_marked >= toughness or obj.deathtouch_damage
+		if lethal and not engine.has_keyword(obj, "Indestructible"):
+			doomed.append(obj.object_id)
+	for oid in doomed:
+		var obj: GameObject = st.objects.get(oid)
+		if obj != null and obj.zone == EngineEnums.ZoneId.BATTLEFIELD:
+			st.zones.move(oid, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
 
 
 func _check_life(st: GameState) -> void:

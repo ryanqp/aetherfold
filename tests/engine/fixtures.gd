@@ -165,7 +165,39 @@ static func memory_catalog() -> CatalogSource:
 		colors = ["R"],
 		commander_legal = true,
 	})
+	## Vanilla keyword bodies for combat rules tests.
+	cat.add(_keyword_creature("Test Flyer", "2", "2", ["Flying"]))
+	cat.add(_keyword_creature("Test Reacher", "1", "4", ["Reach"]))
+	cat.add(_keyword_creature("Test Wall", "0", "5", ["Defender"]))
+	cat.add(_keyword_creature("Test Watcher", "2", "2", ["Vigilance"]))
+	cat.add(_keyword_creature("Test Brute", "3", "3", ["Menace"]))
+	cat.add(_keyword_creature("Test Trampler", "5", "5", ["Trample"]))
+	cat.add(_keyword_creature("Test Viper", "1", "1", ["Deathtouch"]))
+	cat.add(_keyword_creature("Test Healer", "3", "3", ["Lifelink"]))
+	cat.add(_keyword_creature("Test Duelist", "2", "2", ["First strike"]))
+	cat.add(_keyword_creature("Test Champion", "2", "2", ["Double strike"]))
+	cat.add(_keyword_creature("Test Stalwart", "2", "2", ["Indestructible"]))
+	cat.add(_keyword_creature("Test Bear", "2", "2", []))
+	cat.add(_keyword_creature("Test Ogre", "3", "3", []))
+	cat.add(_keyword_creature("Test Shapeless", "*", "*", []))
 	return cat
+
+
+static func _keyword_creature(p_name: String, power: String, toughness: String, keywords: Array) -> Dictionary:
+	return {
+		name = p_name,
+		oracle_id = p_name.to_lower().replace(" ", "_"),
+		mana_cost = "{2}",
+		cmc = 2,
+		type_line = "Creature — Test",
+		oracle_text = ", ".join(PackedStringArray(keywords)),
+		power = power,
+		toughness = toughness,
+		keywords = keywords,
+		color_identity = [],
+		colors = [],
+		commander_legal = true,
+	}
 
 
 static func memory_db() -> CardDatabase:
