@@ -654,7 +654,7 @@ func _sentence(s: String) -> bool:
 	var x_count: Variant = null
 	var xm := _match("^(create x .+?), where x is (?:its|that creature's|~'s) (power|toughness)$", s)
 	if xm != null:
-		s = xm.get_string(1).replace("create x ", "create one ", 1).replace("create X ", "create one ", 1)
+		s = RegEx.create_from_string("(?i)^create x ").sub(xm.get_string(1), "create one ")
 		x_count = {"expr": "TRIGGER_POWER" if xm.get_string(2).to_lower() == "power" else "TRIGGER_TOUGHNESS"}
 	m = _match("^create (a|an|one|two|three|four|five|\\d+) (tapped )?(\\d+)/(\\d+) ((?:white|blue|black|red|green|colorless)(?:(?:,| and|, and) (?:white|blue|black|red|green))*) ([a-z' -]+?) (artifact )?creature tokens?(?: with ([a-z ,]+))?$", s)
 	if m != null:
