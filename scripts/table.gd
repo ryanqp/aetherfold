@@ -1,7 +1,7 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 30
+const BUILD := 31
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
 const RivalAI := preload("res://scripts/rival_ai.gd")
@@ -64,6 +64,10 @@ var you_library_btn: Button
 var draw_btn: Button
 var deck_btn: Button
 var _deck_style: StyleBoxFlat
+## Border styles of the cards you can play right now; pulsed every frame so they flash.
+var _playable_styles: Array = []
+## F3 shows the developer log over the board. Off by default.
+var _show_debug := false
 var _deck_flashing := false
 var phase_chips: Dictionary = {}
 var turn_owner_label: Label
@@ -797,6 +801,12 @@ func _paint_flash() -> void:
 			draw_btn.add_theme_stylebox_override("normal", bst)
 			draw_btn.add_theme_stylebox_override("hover", bst)
 			draw_btn.add_theme_color_override("font_color", Color(0.06, 0.1, 0.04))
+	_playable_styles = _playable_styles.filter(func(x) -> bool: return x != null)
+	for pst in _playable_styles:
+		var sb := pst as StyleBoxFlat
+		sb.border_color = PLAYABLE_GOLD.lerp(Color(1, 1, 1), pulse * 0.7)
+		sb.shadow_color = Color(1.0, 0.84, 0.18, 0.3 + 0.5 * pulse)
+		sb.shadow_size = 4 + int(9.0 * pulse)
 	if deck_btn:
 		if wait:
 			var dst := StyleBoxFlat.new()
@@ -959,6 +969,7 @@ func _card_chip(card: Dictionary, compact: bool = false, from_hand: bool = false
 		st.set_border_width_all(4)
 		st.shadow_color = Color(1.0, 0.84, 0.18, 0.55)
 		st.shadow_size = 7
+		_playable_styles.append(st)
 		b.tooltip_text = "You can play this now."
 	var combat_color: Variant = _combat_border(card)
 	if combat_color is Color:
@@ -1025,6 +1036,7 @@ func _apply_tap_visual(chip: Control, card: Dictionary) -> void:
 
 func _refresh() -> void:
 	var b = _board()
+	_playable_styles.clear()
 	header_label.text = "%s   BF-%d" % [b.header_text(), BUILD]
 	_paint_life(you_life, int(b.you["life"]))
 	_paint_life(rival_life, int(b.rival["life"]))
@@ -1727,6 +1739,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif key.keycode == KEY_ENTER or key.keycode == KEY_KP_ENTER:
 		_on_end_turn()
 		get_viewport().set_input_as_handled()
+	elif key.keycode == KEY_F3:
+		_show_debug = not _show_debug
+		if debug_label:
+			debug_label.visible = _show_debug
+		_refresh_debug()
+		get_viewport().set_input_as_handled()
 
 func _on_dice() -> void:
 	if dice_overlay:
@@ -1977,12 +1995,12 @@ func _build_debug_label() -> void:
 	debug_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	debug_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	debug_label.z_index = 40
-	debug_label.visible = DEBUG_MATCH
+	debug_label.visible = _show_debug
 	add_child(debug_label)
 
 
 func _refresh_debug() -> void:
-	if debug_label == null or not DEBUG_MATCH or session == null or session.engine == null:
+	if debug_label == null or not _show_debug or session == null or session.engine == null:
 		if debug_label:
 			debug_label.visible = false
 		return
