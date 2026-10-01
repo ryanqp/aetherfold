@@ -273,6 +273,7 @@ static func _mark_playable(engine: RulesEngine, seat: int, you: Dictionary, can_
 				var card_obj: GameObject = engine.state.objects.get(int(str(card.get("id", "0"))))
 				cost.generic = maxi(0, cost.generic - engine.cost_reduction(seat, card_obj))
 				ok = engine.can_afford(seat, cost)
+				card["cost_note"] = "Cost: %s  ·  Your mana: %s" % [str(card.get("mana_cost", "")), engine.mana_summary(seat)]
 			card["playable"] = ok
 
 

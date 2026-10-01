@@ -14,6 +14,8 @@ var triggers: TriggerManager
 var sba: SbaManager
 var layers: LayerManager
 var _cast_source: int = 0
+## Seats whose player answers choices on screen (targets of effects, discards, hideaway ...). Others are automatic.
+var interactive_seats: Array = []
 ## Log position up to which zone changes have been checked for enters-the-battlefield triggers.
 var _zone_seq: int = 0
 var _payment: ManaCost
@@ -1517,6 +1519,14 @@ func _slots_of(raw: ManaCost, identity: Array) -> Array:
 		if not allowed.is_empty():
 			out.append(allowed)
 	return out
+
+
+## "R/G  W  C" - one group per mana the player can make now, listing the colors it can be. For tooltips.
+func mana_summary(player_id: int) -> String:
+	var parts: PackedStringArray = PackedStringArray()
+	for slot in mana_slots(player_id):
+		parts.append("/".join(PackedStringArray(slot)))
+	return "  ".join(parts) if not parts.is_empty() else "none"
 
 
 ## True if the player's pool and untapped mana sources can pay `cost`, colors included.

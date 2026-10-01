@@ -164,6 +164,7 @@ func _build_hub() -> void:
 	wrap.add_child(_btn("Library Builder", _show.bind("library"), 400))
 	wrap.add_child(_btn("Menu", _show.bind("settings"), 400))
 	wrap.add_child(_btn("Exit Game", _on_exit, 400))
+	_volume_row(wrap)
 	c.add_child(wrap)
 	status_label = _sub(c, "Play Krenko against a Talrand bot, or bring your own decks.")
 
@@ -647,17 +648,46 @@ func _build_settings() -> void:
 	_sub(c, "Audio and display.")
 	settings_music = _btn("Music: On", _toggle_music, 280)
 	c.add_child(settings_music)
+	_volume_row(c)
 	c.add_child(_btn("Toggle fullscreen", _toggle_fullscreen, 280))
 	_sub(c, "Aetherfold  ·  Godot 4.7  ·  fan Commander table")
 	_back_row(c)
 
 
 func _toggle_music() -> void:
-	var bus := AudioServer.get_bus_index("Master")
-	var mute := not AudioServer.is_bus_mute(bus)
-	# music is on table; toggle Master here as a coarse control
+	var music := get_node_or_null("/root/Music")
+	if music == null:
+		return
+	var off: bool = music.toggle_mute()
 	if settings_music:
-		settings_music.text = "Music: Off" if settings_music.text.ends_with("On") else "Music: On"
+		settings_music.text = "Music: Off" if off else "Music: On"
+
+
+func _volume_row(parent: Control) -> void:
+	var music := get_node_or_null("/root/Music")
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 10)
+	var lab := Label.new()
+	lab.text = "Volume"
+	row.add_child(lab)
+	var sl := HSlider.new()
+	sl.min_value = 0
+	sl.max_value = 100
+	sl.step = 1
+	sl.value = (music.volume if music != null else 0.7) * 100.0
+	sl.custom_minimum_size = Vector2(200, 24)
+	row.add_child(sl)
+	var pct := Label.new()
+	pct.text = "%d%%" % int(sl.value)
+	pct.custom_minimum_size = Vector2(44, 0)
+	row.add_child(pct)
+	sl.value_changed.connect(func(v: float) -> void:
+		pct.text = "%d%%" % int(v)
+		if music != null:
+			music.set_volume(v / 100.0)
+	)
+	parent.add_child(row)
 
 
 func _on_mp_copy() -> void:

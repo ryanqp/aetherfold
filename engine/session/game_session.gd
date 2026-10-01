@@ -65,6 +65,13 @@ func start_imported(deck: NormalizedDeck, rows: Dictionary, seed: int = -1) -> v
 
 
 ## Prints (to the Godot Output panel, not History) the cards in your deck that have rules text the engine doesn't act on yet.
+## A question the table is showing before something happens (see table.gd): target choices and the
+## optional reveal / life payment of a land. Empty when there is none.
+var target_prompt: Dictionary = {}
+var land_prompt: Dictionary = {}
+var target_pending: bool = false
+
+
 func _note_unread_cards() -> void:
 	if db == null or engine == null:
 		return
@@ -104,6 +111,7 @@ func start_with_demo(demo: DemoSetup, seed: int = -1) -> void:
 	debug_lines = PackedStringArray()
 	db = demo.db
 	engine = RulesEngine.new()
+	engine.interactive_seats = [0]  ## you answer your own choices on screen; the rival decides for itself
 	match_start = MatchStart.SHUFFLING
 	history.clear()
 	engine.manual_draw_seats = [you_seat] if manual_draw else []
@@ -304,21 +312,68 @@ func prompt_text() -> String:
 	return "Pass to continue."
 
 
-func play_land(object_id: int) -> SubmitResult:
+func play_land(object_id: int, etb_choice: int = -1) -> SubmitResult:
 	if not can_play():
 		var bad := SubmitResult.new()
 		bad.ok = false
 		bad.error = "Keep or mulligan first."
 		last_error = bad.error
 		return bad
+	## Lands with "you may reveal a card / pay N life, otherwise it enters tapped": ask first.
+	if etb_choice < 0:
+		var q := _land_question(object_id)
+		if not q.is_empty():
+			land_prompt = q
+			var wait := SubmitResult.new()
+			wait.ok = true
+			target_pending = true
+			return wait
 	var a := GameAction.new()
 	a.kind = GameAction.Kind.PLAY_LAND
 	a.player_id = 0
 	a.object_id = object_id
+	engine.state.zones.etb_choice = etb_choice
 	var r: SubmitResult = submit(a)
+	engine.state.zones.etb_choice = -1
 	if r.ok:
 		resolve_stack_then_yield()
 	return r
+
+
+func _land_question(object_id: int) -> Dictionary:
+	var obj: GameObject = engine.state.objects.get(object_id)
+	if obj == null or not (obj.definition is CardDefinition):
+		return {}
+	var def := obj.definition as CardDefinition
+	var rule := EtbRules.parse(def)
+	var kind := str(rule.get("kind", ""))
+	if kind == "REVEAL":
+		var hand: Array = []
+		for oid in engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, 0).object_ids:
+			if int(oid) != object_id:
+				hand.append(engine.state.objects.get(oid))
+		if not EtbRules._any_has(hand, rule.get("types", [])):
+			return {}
+		return {"object_id": object_id, "name": def.name, "kind": kind,
+			"text": "Reveal a %s card from your hand so %s enters untapped?" % [" or ".join(PackedStringArray(rule.get("types", []))), def.name],
+			"yes": "Reveal", "no": "Enter tapped"}
+	if kind == "PAY_LIFE":
+		var n := int(rule.get("n", 0))
+		if int(engine.state.players[0].life) <= n:
+			return {}
+		return {"object_id": object_id, "name": def.name, "kind": kind,
+			"text": "Pay %d life so %s enters untapped? (You have %d.)" % [n, def.name, int(engine.state.players[0].life)],
+			"yes": "Pay %d life" % n, "no": "Enter tapped"}
+	return {}
+
+
+func answer_land(accept: bool) -> SubmitResult:
+	var q := land_prompt
+	land_prompt = {}
+	target_pending = false
+	if q.is_empty():
+		return SubmitResult.new()
+	return play_land(int(q.get("object_id", 0)), 1 if accept else 0)
 
 
 func cast_auto(player_id: int, object_id: int) -> SubmitResult:
@@ -341,6 +396,9 @@ func cast_auto(player_id: int, object_id: int) -> SubmitResult:
 		var picked := chosen != null
 		if picked:
 			r = chosen
+		if target_pending:
+			rebuild_view()
+			return r
 		if not picked:
 			var cancel_t := GameAction.new()
 			cancel_t.kind = GameAction.Kind.CANCEL_CAST
@@ -379,21 +437,115 @@ func _choose_target_auto(player_id: int) -> SubmitResult:
 		var slot_hostile := TargetingManager.slot_hostile(slot_dict, hostile)
 		var best: GameAction = null
 		var best_score := -1000000
+		var cand_ids: Array = []
 		for act in engine.legal_actions(player_id):
 			var ga := act as GameAction
 			if ga == null or ga.kind != GameAction.Kind.CHOOSE_TARGETS or ga.targets.is_empty():
 				continue
+			cand_ids.append(int(ga.targets[0]))
 			var sc := _target_score(int(ga.targets[0]), player_id, slot_hostile)
 			if sc > best_score:
 				best_score = sc
 				best = ga
 		if best == null:
 			return null
+		## You choose your own targets; with a single legal one there is nothing to choose.
+		if player_id == 0 and cand_ids.size() > 1:
+			_open_target_prompt(cand_ids, slot, slot_hostile)
+			var wait := SubmitResult.new()
+			wait.ok = true
+			return wait
 		best.extra = {auto_pay = true}
 		last = submit(best)
 		if last == null or not last.ok:
 			return last
 	return last
+
+
+func _open_target_prompt(cand_ids: Array, slot: int, hostile: bool) -> void:
+	var src: GameObject = engine.state.objects.get(engine._cast_source)
+	var src_name := (src.definition as CardDefinition).name if src != null and src.definition is CardDefinition else "the ability"
+	var options: Array = []
+	cand_ids.sort_custom(func(a, b) -> bool: return _target_score(int(a), 0, hostile) > _target_score(int(b), 0, hostile))
+	for tid in cand_ids:
+		options.append(_target_option(int(tid)))
+	var total: int = engine._cast_queries.size()
+	target_prompt = {
+		"title": "Choose a target for %s" % src_name,
+		"sub": "Target %d of %d" % [slot + 1, total] if total > 1 else "",
+		"options": options,
+	}
+	target_pending = true
+
+
+func _target_option(tid: int) -> Dictionary:
+	var pid := TargetingManager.decode_player(tid)
+	if pid >= 0:
+		var you := pid == 0
+		return {"id": tid, "label": "You" if you else "Talrand (rival)", "detail": "Player · %d life" % int(engine.state.players[pid].life), "kind": "player", "mine": you}
+	if engine.state.stack is MagicStack:
+		for e in (engine.state.stack as MagicStack).entries:
+			var entry := e as StackEntry
+			if entry != null and entry.stack_id == tid:
+				var so: GameObject = engine.state.objects.get(entry.object_id)
+				var nm := (so.definition as CardDefinition).name if so != null and so.definition is CardDefinition else "Spell"
+				return {"id": tid, "label": nm, "detail": "Spell on the stack", "kind": "spell", "mine": entry.controller_id == 0}
+	var obj: GameObject = engine.state.objects.get(tid)
+	if obj == null or not (obj.definition is CardDefinition):
+		return {"id": tid, "label": "Unknown", "detail": "", "kind": "card", "mine": false}
+	var def := obj.definition as CardDefinition
+	var detail := def.type_line
+	if engine.is_creature_now(obj):
+		detail += "  %d/%d" % [engine.power_of(obj), engine.toughness_of(obj)]
+	if obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		detail += "  (in a graveyard)"
+	return {"id": tid, "label": def.name, "detail": detail, "kind": "card", "mine": obj.controller_id == 0, "object_id": obj.object_id}
+
+
+## The player clicked a target in the picker.
+func choose_target(tid: int) -> SubmitResult:
+	target_prompt = {}
+	target_pending = false
+	var a := GameAction.new()
+	a.kind = GameAction.Kind.CHOOSE_TARGETS
+	a.player_id = 0
+	a.object_id = engine._cast_source
+	a.targets = [tid]
+	a.extra = {auto_pay = true}
+	var r: SubmitResult = submit(a)
+	if not r.ok:
+		last_error = r.error
+		_cancel_pending_cast()
+		rebuild_view()
+		return r
+	if engine.state.mode == EngineEnums.EngineMode.CASTING:
+		_choose_target_auto(0)
+		if target_pending:
+			rebuild_view()
+			return r
+	if engine.state.mode == EngineEnums.EngineMode.PAYING_COSTS or engine.state.mode == EngineEnums.EngineMode.CASTING:
+		_cancel_pending_cast()
+		r.ok = false
+		r.error = "Can't pay that."
+		last_error = r.error
+		rebuild_view()
+		return r
+	resolve_stack_then_yield()
+	return r
+
+
+func cancel_target() -> void:
+	target_prompt = {}
+	target_pending = false
+	_cancel_pending_cast()
+	rebuild_view()
+
+
+func _cancel_pending_cast() -> void:
+	var c := GameAction.new()
+	c.kind = GameAction.Kind.CANCEL_CAST
+	c.player_id = 0
+	submit(c)
 
 
 func _pending_is_hostile() -> bool:
@@ -450,6 +602,9 @@ func activate_ability(object_id: int, ability_id: StringName) -> SubmitResult:
 				rebuild_view()
 				return r
 			r = picked
+			if target_pending:
+				rebuild_view()
+				return r
 			if not r.ok:
 				last_error = r.error
 				rebuild_view()

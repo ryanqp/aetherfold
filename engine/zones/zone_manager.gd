@@ -170,6 +170,10 @@ func _last_known(old: GameObject) -> Dictionary:
 	return out if out is Dictionary else {}
 
 
+## -1 = automatic, 0 = the player declined the optional reveal/payment, 1 = accepted. Set by the table around a land play.
+var etb_choice: int = -1
+
+
 func _etb_tapped(definition, controller: int) -> bool:
 	if not (definition is CardDefinition):
 		return false
@@ -195,6 +199,18 @@ func _etb_tapped(definition, controller: int) -> bool:
 			if o != null and o.controller_id == controller:
 				mine.append(o)
 	var life := int(gs.players[controller].life) if controller >= 0 and controller < gs.players.size() else 0
+	var kind := str(rule.get("kind"))
+	## The player's own answer ("reveal a card?", "pay life?") when the table asked; otherwise automatic.
+	if etb_choice >= 0 and (kind == "REVEAL" or kind == "PAY_LIFE"):
+		if etb_choice == 0:
+			return true
+		if kind == "REVEAL":
+			return not EtbRules._any_has(hand, rule.get("types", []))
+		if life <= int(rule.get("n", 0)):
+			return true
+		gs.players[controller].life -= int(rule.get("n", 0))
+		gs.log.append(EngineEnums.EventType.LIFE_CHANGE, controller, {to_player = controller, amount = int(rule.get("n", 0))})
+		return false
 	var tapped := EtbRules.tapped_on_entry(rule, hand, mine, life)
 	if str(rule.get("kind")) == "PAY_LIFE" and not tapped:
 		gs.players[controller].life -= int(rule.get("n", 0))

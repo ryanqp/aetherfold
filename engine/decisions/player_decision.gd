@@ -14,3 +14,6 @@ var min_count: int = 1
 var max_count: int = 1
 var optional: bool = false
 var candidates: Array = []
+
+## Text for the choice screen, keyed by str(candidate): {label, detail}.
+var info: Dictionary = {}

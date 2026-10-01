@@ -36,6 +36,10 @@ func resolve(engine: RulesEngine, entry: StackEntry) -> bool:
 			entry.cursor += 1
 			continue
 		_apply(engine, entry, source, fx)
+		## An effect that needs a player's pick leaves a decision open: wait, and run this effect again after.
+		if engine.state.mode == EngineEnums.EngineMode.AWAITING_DECISION and engine.state.pending_decision is PlayerDecision \
+				and (engine.state.pending_decision as PlayerDecision).stack_id == entry.stack_id:
+			return false
 		entry.cursor += 1
 	return true
 
@@ -542,6 +546,75 @@ func _put_counter(engine: RulesEngine, entry: StackEntry, source: GameObject, fx
 		obj.counters[cname] = int(obj.counters.get(cname, 0)) + n
 
 
+# --- Asking the player ---------------------------------------------------------------------
+## Asks `pid` to pick one of `options` ({value, label, detail}). Returns {"s": status, "value": v}:
+##   "picked"   the player chose `value`
+##   "declined" the player passed on an optional choice
+##   "paused"   the game now waits for the answer; the effect must return before changing anything
+##   "auto"     nobody to ask (rival or no options): the effect decides itself
+## Answers are kept in entry.choices under `link`, so running the effect again after the answer finds them.
+func _ask(engine: RulesEngine, entry: StackEntry, pid: int, link: String, prompt: String, options: Array, optional: bool = false, kind: String = "PICK") -> Dictionary:
+	if entry.choices.has(link):
+		var got: Variant = entry.choices[link]
+		if got is bool:
+			return {"s": "picked" if got else "declined", "value": got}
+		return {"s": "picked", "value": got}
+	if options.is_empty() or not engine.interactive_seats.has(pid):
+		return {"s": "auto"}
+	var dec := PlayerDecision.new()
+	dec.decision_id = engine.state.next_stack_id
+	dec.kind = StringName(kind)
+	dec.player_id = pid
+	dec.stack_id = entry.stack_id
+	dec.link = link
+	dec.prompt = prompt
+	dec.optional = optional
+	dec.min_count = 0 if optional else 1
+	dec.max_count = 1
+	for o in options:
+		dec.candidates.append(o.get("value"))
+		dec.info[str(o.get("value"))] = {"label": str(o.get("label", o.get("value"))), "detail": str(o.get("detail", ""))}
+	engine.state.pending_decision = dec
+	engine.state.mode = EngineEnums.EngineMode.AWAITING_DECISION
+	engine.state.awaiting = {player_id = pid, type = &"decision", decision_id = dec.decision_id}
+	return {"s": "paused"}
+
+
+func _ask_yes_no(engine: RulesEngine, entry: StackEntry, pid: int, link: String, prompt: String) -> Dictionary:
+	if entry.choices.has(link):
+		return {"s": "picked", "value": bool(entry.choices[link])}
+	if not engine.interactive_seats.has(pid):
+		return {"s": "auto"}
+	var dec := PlayerDecision.new()
+	dec.decision_id = engine.state.next_stack_id
+	dec.kind = &"OPTIONAL_YES_NO"
+	dec.player_id = pid
+	dec.stack_id = entry.stack_id
+	dec.link = link
+	dec.prompt = prompt
+	dec.optional = true
+	dec.min_count = 0
+	dec.max_count = 1
+	engine.state.pending_decision = dec
+	engine.state.mode = EngineEnums.EngineMode.AWAITING_DECISION
+	engine.state.awaiting = {player_id = pid, type = &"decision", decision_id = dec.decision_id}
+	return {"s": "paused"}
+
+
+## {value, label, detail} for choosing a card.
+func _card_option(engine: RulesEngine, oid: int) -> Dictionary:
+	var c: GameObject = engine.state.objects.get(oid)
+	var def := c.definition as CardDefinition if c != null and c.definition is CardDefinition else null
+	if def == null:
+		return {"value": oid, "label": "Card", "detail": ""}
+	return {"value": oid, "label": def.name, "detail": "%s  %s" % [def.mana_cost, def.type_line]}
+
+
+func _name_of(engine: RulesEngine, oid: int) -> String:
+	var c: GameObject = engine.state.objects.get(oid)
+	return (c.definition as CardDefinition).name if c != null and c.definition is CardDefinition else "the card"
+
+
 # --- Search, scry, fights, equipment -----------------------------------------------------
 
 ## "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle."
@@ -602,26 +675,9 @@ func _controlled_of_type(engine: RulesEngine, pid: int, subtype: String) -> int:
 	return n
 
 
-## Scry N (CR 701.22): without a choice screen, lands go to the bottom once you have plenty of them.
+## Scry N (CR 701.22): see _look_at_top.
 func _scry(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
-	var pid := entry.controller_id
-	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
-	if lib == null:
-		return
-	var lands := _controlled_of_type(engine, pid, "Land")
-	var hand: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, pid)
-	if hand != null:
-		for oid in hand.object_ids:
-			var h: GameObject = engine.state.objects.get(oid)
-			if h != null and h.definition is CardDefinition and (h.definition as CardDefinition).is_land():
-				lands += 1
-	var top_ids: Array = []
-	for i in mini(int(fx.params.get("n", 1)), lib.object_ids.size()):
-		top_ids.append(int(lib.object_ids[i]))
-	for oid in top_ids:
-		var c: GameObject = engine.state.objects.get(oid)
-		if c != null and c.definition is CardDefinition and (c.definition as CardDefinition).is_land() and lands >= 6:
-			engine.put_library_bottom(oid, pid)
+	_look_at_top(engine, entry, int(fx.params.get("n", 1)), false)
 
 
 ## CR 701.14: each creature deals damage equal to its power to the other. "one_sided": only `a` deals damage.
@@ -663,7 +719,7 @@ func _attach(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: Abi
 	source.attached_to = host.object_id
 
 
-## "As ~ enters, choose a creature type": the type you have most of across your cards.
+## "As ~ enters, choose a creature type": the player picks (the rival takes the type it has most of).
 func _choose_type(engine: RulesEngine, entry: StackEntry, source: GameObject) -> void:
 	if source == null:
 		return
@@ -682,71 +738,94 @@ func _choose_type(engine: RulesEngine, entry: StackEntry, source: GameObject) ->
 				continue
 			for t in Query._subtype_words(def.type_line):
 				counts[str(t)] = int(counts.get(str(t), 0)) + 1
-	var best := ""
-	var best_n := 0
 	var names: Array = counts.keys()
-	names.sort()
+	names.sort_custom(func(a, b) -> bool: return int(counts[a]) > int(counts[b]) or (int(counts[a]) == int(counts[b]) and str(a) < str(b)))
+	var options: Array = []
 	for t in names:
-		if int(counts[t]) > best_n:
-			best_n = int(counts[t])
-			best = str(t)
-	source.chosen_type = best
+		options.append({"value": str(t), "label": str(t), "detail": "%d of your cards" % int(counts[t])})
+	var ans := _ask(engine, entry, pid, "chosen_type", "Choose a creature type.", options)
+	if ans.s == "paused":
+		return
+	if ans.s == "picked":
+		source.chosen_type = str(ans.value)
+	elif not names.is_empty():
+		source.chosen_type = str(names[0])
 
 
 ## Discover X (CR 701.57): exile cards from the top of your library until a nonland card with mana
-## value X or less; permanents go onto the battlefield, other spells to your hand (there is no free-cast
-## yet), and the rest go to the bottom of the library.
+## value X or less. You may cast it without paying its mana cost; if you don't (or can't) it goes to
+## your hand. The rest go to the bottom of the library in a random order.
 func _discover(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
 	var pid := entry.controller_id
 	var x := _value(engine, entry, source, fx.params.get("n", 0))
 	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
 	if lib == null:
 		return
-	var skipped: Array = []
-	var found: GameObject = null
-	var guard := 0
-	while not lib.object_ids.is_empty() and guard < 200:
-		guard += 1
-		var top: GameObject = engine.state.objects.get(lib.object_ids[0])
-		if top == null:
-			lib.object_ids.remove_at(0)
-			continue
-		var moved: GameObject = engine.state.zones.move(top.object_id, EngineEnums.ZoneId.EXILE, pid)
-		if moved == null:
-			break
-		var def := moved.definition as CardDefinition if moved.definition is CardDefinition else null
-		if def != null and not def.is_land() and def.cmc <= x:
-			found = moved
-			break
-		skipped.append(moved.object_id)
-	if found != null:
-		var fdef := found.definition as CardDefinition
-		var dest := EngineEnums.ZoneId.BATTLEFIELD if fdef.is_permanent_type() else EngineEnums.ZoneId.HAND
-		engine.state.zones.move(found.object_id, dest, pid)
-	for oid in skipped:
-		var back: GameObject = engine.state.zones.move(int(oid), EngineEnums.ZoneId.LIBRARY, pid)
-		if back != null:
-			lib.object_ids.erase(back.object_id)
-			lib.object_ids.append(back.object_id)
+	## The exile step runs once; a pause for the cast question re-runs this effect afterwards.
+	if not entry.ctx.has("dc_done"):
+		var skipped: Array = []
+		var found_id := -1
+		var guard := 0
+		while not lib.object_ids.is_empty() and guard < 200:
+			guard += 1
+			var top: GameObject = engine.state.objects.get(lib.object_ids[0])
+			if top == null:
+				lib.object_ids.remove_at(0)
+				continue
+			var moved: GameObject = engine.state.zones.move(top.object_id, EngineEnums.ZoneId.EXILE, pid)
+			if moved == null:
+				break
+			var def := moved.definition as CardDefinition if moved.definition is CardDefinition else null
+			if def != null and not def.is_land() and def.cmc <= x:
+				found_id = moved.object_id
+				break
+			skipped.append(moved.object_id)
+		engine.state.rng.shuffle(skipped)
+		for oid in skipped:
+			var back: GameObject = engine.state.zones.move(int(oid), EngineEnums.ZoneId.LIBRARY, pid)
+			if back != null:
+				lib.object_ids.erase(back.object_id)
+				lib.object_ids.append(back.object_id)
+		entry.ctx["dc_done"] = true
+		entry.ctx["dc_found"] = found_id
+	var fid := int(entry.ctx.get("dc_found", -1))
+	var found: GameObject = engine.state.objects.get(fid)
+	if found == null or found.zone != EngineEnums.ZoneId.EXILE:
+		return
+	var ans := _ask_yes_no(engine, entry, pid, "discover_cast", "Discover: cast %s without paying its mana cost? (No puts it into your hand.)" % _name_of(engine, fid))
+	if ans.s == "paused":
+		return
+	var cast_it := true if ans.s == "auto" else bool(ans.value)
+	if cast_it and engine.cast_free(pid, fid):
+		return
+	engine.state.zones.move(fid, EngineEnums.ZoneId.HAND, pid)
 
 
-## "As ~ enters, choose a color other than green": the first color of your commander's identity that fits.
+## "As ~ enters, choose a color other than green": the player picks; the rival takes the first fitting
+## color of its commander's identity.
 func _choose_color(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
 	if source == null:
 		return
 	var avoid := str(fx.params.get("not", ""))
+	var names := {"W": "White", "U": "Blue", "B": "Black", "R": "Red", "G": "Green"}
+	var order: Array = []
 	for c in engine.commander_identity(entry.controller_id):
 		if str(c) != avoid:
-			source.chosen_color = str(c)
-			return
+			order.append(str(c))
 	for c2 in ["W", "U", "B", "R", "G"]:
-		if c2 != avoid:
-			source.chosen_color = c2
-			return
+		if c2 != avoid and not order.has(c2):
+			order.append(c2)
+	var options: Array = []
+	for c3 in order:
+		options.append({"value": c3, "label": names[c3], "detail": ""})
+	var ans := _ask(engine, entry, entry.controller_id, "chosen_color", "Choose a color.", options)
+	if ans.s == "paused":
+		return
+	source.chosen_color = str(ans.value) if ans.s == "picked" else str(order[0])
 
 
-## Hideaway N (CR 702.75): look at the top N cards, exile one face down (the best nonland, else a land),
-## put the rest on the bottom in a random order. The permanent remembers which card (hideaway_card).
+## Hideaway N (CR 702.75): look at the top N cards, exile one face down, put the rest on the bottom in a
+## random order. The permanent remembers which card (hideaway_card). The player picks; the rival takes the best.
 func _hideaway(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
 	if source == null:
 		return
@@ -757,17 +836,26 @@ func _hideaway(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: A
 	var ids: Array = []
 	for i in mini(int(fx.params.get("n", 1)), lib.object_ids.size()):
 		ids.append(int(lib.object_ids[i]))
-	var best_id := -1
-	var best_score := -1
+	var options: Array = []
 	for oid in ids:
-		var c: GameObject = engine.state.objects.get(oid)
-		if c == null or not (c.definition is CardDefinition):
-			continue
-		var def := c.definition as CardDefinition
-		var sc := 1 if def.is_land() else 2 + def.cmc
-		if sc > best_score:
-			best_score = sc
-			best_id = int(oid)
+		options.append(_card_option(engine, int(oid)))
+	var ans := _ask(engine, entry, pid, "hideaway", "Hideaway: choose a card to exile face down. The rest go to the bottom.", options)
+	if ans.s == "paused":
+		return
+	var best_id := -1
+	if ans.s == "picked":
+		best_id = int(ans.value)
+	else:
+		var best_score := -1
+		for oid in ids:
+			var c: GameObject = engine.state.objects.get(oid)
+			if c == null or not (c.definition is CardDefinition):
+				continue
+			var def := c.definition as CardDefinition
+			var sc := 1 if def.is_land() else 2 + def.cmc
+			if sc > best_score:
+				best_score = sc
+				best_id = int(oid)
 	if best_id < 0:
 		return
 	var hidden: GameObject = engine.state.zones.move(best_id, EngineEnums.ZoneId.EXILE, pid)
@@ -796,6 +884,11 @@ func _play_hidden(engine: RulesEngine, entry: StackEntry, source: GameObject, fx
 	if card == null or card.zone != EngineEnums.ZoneId.EXILE or not (card.definition is CardDefinition):
 		return
 	var def := card.definition as CardDefinition
+	var yn := _ask_yes_no(engine, entry, pid, "play_hidden", "Play %s from exile without paying its mana cost?" % def.name)
+	if yn.s == "paused":
+		return
+	if yn.s == "picked" and not bool(yn.value):
+		return
 	if def.is_land():
 		if bool(engine.state.land_played.get(pid, false)):
 			return
@@ -817,44 +910,100 @@ func _mill(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
 			engine.state.zones.move(int(lib.object_ids[0]), EngineEnums.ZoneId.GRAVEYARD, pid)
 
 
-## Discard N (CR 701.8): without a choice screen the player discards the cheapest cards (extra lands first).
+## Discard N (CR 701.8): the player picks the cards; the rival throws away its cheapest (extra lands first).
 func _discard(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
 	var n := int(fx.params.get("n", 1))
+	var plan := {}
 	for pid in _players_for(engine, entry, str(fx.params.get("who", "CONTROLLER"))):
-		for _i in n:
-			var hand: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, pid)
-			if hand == null or hand.is_empty():
+		var hand: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, pid)
+		var chosen: Array = []
+		for i in n:
+			var left: Array = []
+			if hand != null:
+				for oid in hand.object_ids:
+					if not chosen.has(int(oid)):
+						left.append(int(oid))
+			if left.is_empty():
 				break
-			var lands := _controlled_of_type(engine, pid, "Land")
-			var worst := -1
-			var worst_score := 1000000
-			for oid in hand.object_ids:
-				var c: GameObject = engine.state.objects.get(oid)
-				if c == null or not (c.definition is CardDefinition):
-					continue
-				var def := c.definition as CardDefinition
-				var sc := def.cmc * 2 + (-3 if def.is_land() and lands >= 5 else (4 if def.is_land() else 0))
-				if sc < worst_score:
-					worst_score = sc
-					worst = int(oid)
-			if worst >= 0:
-				engine.state.zones.move(worst, EngineEnums.ZoneId.GRAVEYARD, pid)
+			var options: Array = []
+			for oid in left:
+				options.append(_card_option(engine, int(oid)))
+			var ans := _ask(engine, entry, int(pid), "discard_%d_%d" % [pid, i], "Discard a card (%d of %d)." % [i + 1, n], options)
+			if ans.s == "paused":
+				return
+			if ans.s == "picked":
+				chosen.append(int(ans.value))
+			else:
+				chosen.append(_cheapest_in_hand(engine, int(pid), chosen))
+		plan[pid] = chosen
+	for pid in plan.keys():
+		for oid in plan[pid]:
+			if int(oid) >= 0 and engine.state.objects.has(int(oid)):
+				engine.state.zones.move(int(oid), EngineEnums.ZoneId.GRAVEYARD, int(pid))
 
 
-## Surveil N (CR 701.46): lands beyond what you need go to the graveyard, the rest stay on top.
+func _cheapest_in_hand(engine: RulesEngine, pid: int, exclude: Array) -> int:
+	var hand: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, pid)
+	var lands := _controlled_of_type(engine, pid, "Land")
+	var worst := -1
+	var worst_score := 1000000
+	if hand == null:
+		return -1
+	for oid in hand.object_ids:
+		if exclude.has(int(oid)):
+			continue
+		var c: GameObject = engine.state.objects.get(oid)
+		if c == null or not (c.definition is CardDefinition):
+			continue
+		var def := c.definition as CardDefinition
+		var sc := def.cmc * 2 + (-3 if def.is_land() and lands >= 5 else (4 if def.is_land() else 0))
+		if sc < worst_score:
+			worst_score = sc
+			worst = int(oid)
+	return worst
+
+
+## Surveil N (CR 701.46): for each of the top N cards the player chooses graveyard or stay on top.
+## The rival puts spare lands (once it has six) into the graveyard.
 func _surveil(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
+	_look_at_top(engine, entry, int(fx.params.get("n", 1)), true)
+
+
+## Shared by surveil (to the graveyard) and scry (to the bottom).
+func _look_at_top(engine: RulesEngine, entry: StackEntry, n: int, to_graveyard: bool) -> void:
 	var pid := entry.controller_id
 	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
 	if lib == null:
 		return
 	var lands := _controlled_of_type(engine, pid, "Land")
+	var hand: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, pid)
+	if hand != null:
+		for oid in hand.object_ids:
+			var h: GameObject = engine.state.objects.get(oid)
+			if h != null and h.definition is CardDefinition and (h.definition as CardDefinition).is_land():
+				lands += 1
 	var top_ids: Array = []
-	for i in mini(int(fx.params.get("n", 1)), lib.object_ids.size()):
+	for i in mini(n, lib.object_ids.size()):
 		top_ids.append(int(lib.object_ids[i]))
-	for oid in top_ids:
-		var c: GameObject = engine.state.objects.get(oid)
-		if c != null and c.definition is CardDefinition and (c.definition as CardDefinition).is_land() and lands >= 6:
-			engine.state.zones.move(oid, EngineEnums.ZoneId.GRAVEYARD, pid)
+	var away: Array = []
+	for i in top_ids.size():
+		var oid := int(top_ids[i])
+		var word := "graveyard" if to_graveyard else "bottom of your library"
+		var ans := _ask_yes_no(engine, entry, pid, "look_%d" % i, "%s: put %s into the %s? (No keeps it on top.)" % ["Surveil" if to_graveyard else "Scry", _name_of(engine, oid), word])
+		if ans.s == "paused":
+			return
+		if ans.s == "picked":
+			if bool(ans.value):
+				away.append(oid)
+		else:
+			var c: GameObject = engine.state.objects.get(oid)
+			if c != null and c.definition is CardDefinition and (c.definition as CardDefinition).is_land() and lands >= 6:
+				away.append(oid)
+	for oid in away:
+		if to_graveyard:
+			engine.state.zones.move(int(oid), EngineEnums.ZoneId.GRAVEYARD, pid)
+		else:
+			engine.put_library_bottom(int(oid), pid)
 
 
 func _return_from_graveyard(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:

@@ -47,7 +47,8 @@ func resolve_top(engine: RulesEngine) -> bool:
 		done = engine.executor.resolve(engine, entry)
 	if not done:
 		return false
-	pop()
+	## An effect may have put something new on top (a free cast), so remove this entry by id.
+	remove_by_stack_id(entry.stack_id)
 	if entry.kind != StackEntry.Kind.SPELL:
 		return true
 	var obj: GameObject = engine.state.objects.get(entry.object_id)

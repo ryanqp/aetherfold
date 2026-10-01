@@ -1,12 +1,11 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 42
+const BUILD := 43
 const Mats := preload("res://engine/session/playmat_catalog.gd")
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
 const RivalAI := preload("res://scripts/rival_ai.gd")
-const ThemeMusicScript := preload("res://scripts/theme_music.gd")
 const CardFaceScript := preload("res://scripts/card_face.gd")
 const RIVAL_TEAL := Color(0.18, 0.42, 0.48)
 const YOU_EMBER := Color(0.42, 0.18, 0.08)
@@ -117,9 +116,7 @@ var import_overlay: ImportOverlay
 func _ready() -> void:
 	clip_contents = true
 	set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	music = ThemeMusicScript.new()
-	music.name = "ThemeMusic"
-	add_child(music)
+	music = get_node_or_null("/root/Music")
 	var cat := _catalog()
 	if cat and cat.has_signal("art_updated") and not cat.art_updated.is_connected(_on_art_updated):
 		cat.art_updated.connect(_on_art_updated)
@@ -342,6 +339,7 @@ func _build_header() -> Control:
 	row.add_child(next_turn_btn)
 	mute_button = _header_button("Mute", Color(0.16, 0.17, 0.18), INK, _on_mute, 72)
 	row.add_child(mute_button)
+	row.add_child(_volume_slider())
 	history_button = _header_button("Hide history", Color(0.16, 0.17, 0.18), INK, _toggle_history, 110)
 	row.add_child(history_button)
 	row.add_child(_header_button("Dice", Color(0.16, 0.17, 0.18), INK, _on_dice, 72))
@@ -1190,7 +1188,7 @@ func _card_chip(card: Dictionary, compact: bool = false, from_hand: bool = false
 		st.shadow_color = Color(1.0, 0.84, 0.18, 0.55)
 		st.shadow_size = 12
 		_playable_styles.append(st)
-		b.tooltip_text = "You can play this now."
+		b.tooltip_text = "You can play this now.\n%s" % str(card.get("cost_note", ""))
 	var combat_color: Variant = _combat_border(card)
 	if combat_color is Color:
 		st.border_color = combat_color
@@ -1330,6 +1328,7 @@ func _refresh() -> void:
 	_paint_library_btn()
 	_paint_match_buttons()
 	_refresh_ability_panel()
+	_update_prompts()
 	_refresh_mulligan()
 	_refresh_coin()
 	_refresh_debug()
@@ -1657,6 +1656,9 @@ func _engine_play_card(card_id: String) -> void:
 		r = session.play_land(oid)
 	else:
 		r = session.cast_auto(0, oid)
+	if r.ok and session.target_pending:
+		_refresh()
+		return
 	var msg := r.error if not r.ok else _play_ok_message(before, zone, is_land)
 	if r.ok:
 		_tap_sfx("card")
@@ -2007,6 +2009,32 @@ func _tap_sfx(kind: String) -> void:
 		"dice":
 			sfx.play_dice()
 
+## Music volume bar for the header (0-100%, default 70%).
+func _volume_slider() -> Control:
+	var box := HBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	box.custom_minimum_size = Vector2(130, 32)
+	var lab := Label.new()
+	lab.text = "Vol"
+	lab.add_theme_font_size_override("font_size", 12)
+	lab.size_flags_vertical = SIZE_SHRINK_CENTER
+	box.add_child(lab)
+	var sl := HSlider.new()
+	sl.min_value = 0
+	sl.max_value = 100
+	sl.step = 1
+	sl.value = (music.volume if music != null else 0.7) * 100.0
+	sl.custom_minimum_size = Vector2(80, 20)
+	sl.size_flags_vertical = SIZE_SHRINK_CENTER
+	sl.tooltip_text = "Music volume"
+	sl.value_changed.connect(func(v: float) -> void:
+		if music != null:
+			music.set_volume(v / 100.0)
+	)
+	box.add_child(sl)
+	return box
+
+
 func _on_mute() -> void:
 	if music == null:
 		return
@@ -2200,14 +2228,6 @@ func _refresh_ability_panel() -> void:
 			prompt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			prompt.add_theme_font_size_override("font_size", 12)
 			ability_box.add_child(prompt)
-			if dec.kind == &"OPTIONAL_YES_NO":
-				ability_box.add_child(_decision_button("Yes", true, null))
-				ability_box.add_child(_decision_button("No", false, null))
-			else:
-				for cand in dec.candidates:
-					ability_box.add_child(_decision_button(str(cand), true, cand))
-				if dec.optional:
-					ability_box.add_child(_decision_button("Decline", false, null))
 		return
 	var sid := str(session.selected_id)
 	if sid == "" or not sid.is_valid_int():
@@ -2241,6 +2261,107 @@ func _refresh_ability_panel() -> void:
 				parts.append("%s: %s" % [str((row2 as Dictionary).get("cost", "")), str((row2 as Dictionary).get("reason", ""))])
 		why.text = "\n".join(parts)
 		ability_box.add_child(why)
+
+
+## Pick screens: a land's optional reveal / life payment, targets, and the engine's own questions
+## (hideaway, discard, surveil, colors, discover ...). Shown over the table until answered.
+var _choice_dialog: ChoiceDialog = null
+
+
+func _update_prompts() -> void:
+	if session == null or session.engine == null:
+		return
+	var want_sig := ""
+	var title := ""
+	var sub := ""
+	var options: Array = []
+	var cancel_text := ""
+	var kind := ""
+	var eng: RulesEngine = session.engine
+	if not session.land_prompt.is_empty():
+		kind = "land"
+		var q: Dictionary = session.land_prompt
+		title = str(q.get("text", ""))
+		options = [{"value": true, "label": str(q.get("yes", "Yes"))}, {"value": false, "label": str(q.get("no", "No"))}]
+		want_sig = "land:%s" % str(q.get("object_id"))
+	elif not session.target_prompt.is_empty():
+		kind = "target"
+		var tp: Dictionary = session.target_prompt
+		title = str(tp.get("title", "Choose a target"))
+		sub = str(tp.get("sub", ""))
+		for o in tp.get("options", []):
+			options.append({"value": int(o.get("id")), "label": o.get("label", ""), "detail": o.get("detail", ""), "mine": o.get("mine", true)})
+		cancel_text = "Cancel"
+		want_sig = "target:%s:%d" % [title + sub, options.size()]
+	elif eng.state.mode == EngineEnums.EngineMode.AWAITING_DECISION and int(eng.state.awaiting.get("player_id", -1)) == 0 \
+			and eng.state.pending_decision is PlayerDecision:
+		kind = "decision"
+		var dec := eng.state.pending_decision as PlayerDecision
+		title = dec.prompt if dec.prompt != "" else "Choose"
+		want_sig = "decision:%d:%s:%s" % [dec.decision_id, dec.link, dec.prompt]
+		if dec.kind == &"OPTIONAL_YES_NO":
+			options = [{"value": true, "label": "Yes"}, {"value": false, "label": "No"}]
+		else:
+			for cand in dec.candidates:
+				var info: Dictionary = dec.info.get(str(cand), {})
+				options.append({"value": cand, "label": str(info.get("label", cand)), "detail": str(info.get("detail", ""))})
+			if dec.optional:
+				cancel_text = "Skip"
+	if want_sig == "":
+		if _choice_dialog != null:
+			_choice_dialog.queue_free()
+			_choice_dialog = null
+		return
+	if _choice_dialog != null and _choice_dialog.signature == want_sig:
+		return
+	if _choice_dialog != null:
+		_choice_dialog.queue_free()
+	_choice_dialog = ChoiceDialog.new()
+	_choice_dialog.signature = want_sig
+	add_child(_choice_dialog)
+	_choice_dialog.show_choices(title, sub, options, cancel_text)
+	_choice_dialog.picked.connect(_on_choice_picked.bind(kind))
+	_choice_dialog.cancelled.connect(_on_choice_cancelled.bind(kind))
+
+
+func _close_choice() -> void:
+	if _choice_dialog != null:
+		_choice_dialog.queue_free()
+		_choice_dialog = null
+
+
+func _on_choice_picked(value: Variant, kind: String) -> void:
+	_close_choice()
+	if session == null:
+		return
+	match kind:
+		"land":
+			var r: SubmitResult = session.answer_land(bool(value))
+			_refresh()
+			_set_status(r.error if not r.ok else "Land played.")
+		"target":
+			var r2: SubmitResult = session.choose_target(int(value))
+			_refresh()
+			_set_status(r2.error if not r2.ok else "Target chosen.")
+		"decision":
+			var dec: PlayerDecision = session.engine.state.pending_decision as PlayerDecision
+			if dec != null and dec.kind == &"OPTIONAL_YES_NO":
+				_on_decision_button(bool(value), null)
+			else:
+				_on_decision_button(true, value)
+
+
+func _on_choice_cancelled(kind: String) -> void:
+	_close_choice()
+	if session == null:
+		return
+	match kind:
+		"target":
+			session.cancel_target()
+			_refresh()
+			_set_status("Cancelled.")
+		"decision":
+			_on_decision_button(false, null)
 
 
 func _decision_button(label: String, accept: bool, choice: Variant) -> Button:
