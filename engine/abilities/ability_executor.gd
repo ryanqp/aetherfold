@@ -63,7 +63,7 @@ func _apply(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: Abil
 		"COUNTER_SPELL":
 			_counter_spell(engine, entry, fx)
 		"ADD_MANA":
-			var produced := ManaCost.parse(str(fx.params.get("mana", "")))
+			var produced := engine.resolve_mana(entry.controller_id, ManaCost.parse(str(fx.params.get("mana", ""))))
 			engine.mana.add(entry.controller_id, produced)
 		"DEAL_DAMAGE":
 			_deal_damage(engine, entry, fx)

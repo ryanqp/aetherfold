@@ -104,7 +104,7 @@ Allowed keys: `kind`, `params`
 | `CREATE_TOKEN` | `token`, `count` | `token` is a `TokenCatalog` id. `count` is an int **or** a `{ "query": { … } }` |
 | `COUNTER_SPELL` | `target` | Index into this ability’s `targets` array |
 | `MOVE_ZONE` | `target`, `to` | `to` is a zone name (`HAND`, `GRAVEYARD`, …) |
-| `ADD_MANA` | `mana` | e.g. `"{R}"` |
+| `ADD_MANA` | `mana` | e.g. `"{R}"`. Choices: `"{R|G}"` (one of), `"{W|U|B|R|G}"` (any color), `"{CI}"` (a color in your commander's identity) |
 | `TAP` | `target` | |
 | `UNTAP` | `target` | |
 | `DEAL_DAMAGE` | `n`, `target` | |

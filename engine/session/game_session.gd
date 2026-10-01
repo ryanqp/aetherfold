@@ -64,6 +64,34 @@ func start_imported(deck: NormalizedDeck, rows: Dictionary, seed: int = -1) -> v
 	start_with_demo(DemoSetup.imported_vs_talrand(deck, rows), seed)
 
 
+## Lists, in History, the cards in your deck that have rules text the engine doesn't act on yet.
+func _note_unread_cards() -> void:
+	if db == null or engine == null:
+		return
+	var seen := {}
+	var lines: Array = []
+	for oid in engine.state.objects.keys():
+		var obj: GameObject = engine.state.objects[oid]
+		if obj == null or obj.owner_id != you_seat or obj.is_token or not (obj.definition is CardDefinition):
+			continue
+		var def := obj.definition as CardDefinition
+		if seen.has(def.name):
+			continue
+		seen[def.name] = true
+		var unread: Array = db.unread_lines(def)
+		if not unread.is_empty():
+			var first := str(unread[0])
+			if first.length() > 70:
+				first = first.substr(0, 67) + "..."
+			lines.append("%s: %s%s" % [def.name, first, " (+%d more)" % (unread.size() - 1) if unread.size() > 1 else ""])
+	lines.sort()
+	if lines.is_empty():
+		return
+	history.add_note("%d of your cards have effects not coded yet (they play as their body only):" % lines.size(), "info")
+	for l in lines:
+		history.add_note("  " + str(l), "info")
+
+
 func start_with_demo(demo: DemoSetup, seed: int = -1) -> void:
 	if seed < 0:
 		seed = int(Time.get_unix_time_from_system()) ^ Time.get_ticks_usec()
@@ -79,6 +107,7 @@ func start_with_demo(demo: DemoSetup, seed: int = -1) -> void:
 	history.clear()
 	engine.manual_draw_seats = [you_seat] if manual_draw else []
 	engine.setup_demo(demo, FormatRules.commander_1v1_table(), seed)
+	_note_unread_cards()
 	selected_id = ""
 	pending_draw_anim = false
 	pending_draw_card = {}

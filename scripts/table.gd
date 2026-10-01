@@ -1,7 +1,7 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 35
+const BUILD := 36
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
 const RivalAI := preload("res://scripts/rival_ai.gd")
@@ -382,6 +382,13 @@ func _make_field(parent: Control, tint: Color, zone_order: Array) -> Dictionary:
 	style.border_color = tint.lightened(0.15)
 	style.set_border_width_all(2)
 	field.add_theme_stylebox_override("panel", style)
+	## Felt playmat behind the zones; the picture is chosen from the commander's colors in _apply_mats.
+	var mat := TextureRect.new()
+	mat.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	mat.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	mat.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mat.modulate = Color(0.92, 0.92, 0.92)
+	field.add_child(mat)
 	var zones_col := VBoxContainer.new()
 	zones_col.clip_contents = true
 	var map := {}
@@ -411,6 +418,7 @@ func _make_field(parent: Control, tint: Color, zone_order: Array) -> Dictionary:
 		map[str(zone_name)] = cards
 	field.add_child(zones_col)
 	parent.add_child(field)
+	map["__mat"] = mat
 	return map
 
 func _build_hand() -> Control:
@@ -1262,8 +1270,26 @@ func _apply_tap_visual(chip: Control, card: Dictionary) -> void:
 		chip.rotation_degrees = 0.0
 	_was_tapped[cid] = now
 
+## Each player's field gets the playmat for their commander's color identity.
+func _apply_mats() -> void:
+	if session == null or session.engine == null:
+		return
+	_set_mat(you_zones, int(session.you_seat))
+	_set_mat(rival_zones, 1 - int(session.you_seat))
+
+func _set_mat(zones: Dictionary, seat: int) -> void:
+	var mat := zones.get("__mat") as TextureRect
+	if mat == null:
+		return
+	var file := PlaymatCatalog.file_for(session.engine.commander_identity(seat))
+	if str(mat.get_meta("file", "")) == file:
+		return
+	mat.set_meta("file", file)
+	mat.texture = PlaymatCatalog.texture(file)
+
 func _refresh() -> void:
 	var b = _board()
+	_apply_mats()
 	_playable_styles.clear()
 	header_label.text = "%s   BF-%d" % [b.header_text(), BUILD]
 	_paint_life(you_life, int(b.you["life"]))

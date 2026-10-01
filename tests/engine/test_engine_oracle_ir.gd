@@ -186,6 +186,40 @@ func test_draw_two() -> void:
 	assert_eq(engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, 0).size(), hand_before + 2)
 
 
+# --- Mana abilities --------------------------------------------------------------------
+
+func test_arcane_signet_is_read_as_commander_identity_mana() -> void:
+	var abilities := _mana_of("Arcane Signet")
+	assert_eq(abilities.size(), 1)
+	assert_eq((abilities[0] as Ability).kind, &"MANA")
+	assert_eq(str(((abilities[0] as Ability).effects[0] as AbilityEffect).params.get("mana")), "{CI}")
+
+
+func test_two_type_land_gets_both_basic_abilities() -> void:
+	assert_eq(_mana_of("Test Duo Land").size(), 2)
+
+
+func test_pain_land_keeps_the_plain_mana_and_skips_the_damage_one() -> void:
+	var abilities := _mana_of("Test Painland")
+	assert_eq(abilities.size(), 1)
+	assert_eq(str(((abilities[0] as Ability).effects[0] as AbilityEffect).params.get("mana")), "{C}")
+
+
+func test_mana_text_forms() -> void:
+	assert_eq(OracleIr._mana_text("{R} or {G}."), "{R|G}")
+	assert_eq(OracleIr._mana_text("{W}, {U}, or {B}"), "{W|U|B}")
+	assert_eq(OracleIr._mana_text("{C}{C}"), "{C}{C}")
+	assert_eq(OracleIr._mana_text("one mana of any color"), "{W|U|B|R|G}")
+	assert_eq(OracleIr._mana_text("{R}. Test deals 1 damage to you"), "")
+
+
+func test_unread_lines_are_reported() -> void:
+	var def := db.definition_for("Arcane Signet")
+	assert_true(db.unread_lines(def).is_empty(), "fully read")
+	var odd := db.definition_for("Test Painland")
+	assert_eq(db.unread_lines(odd).size(), 1, "the pain ability isn't coded")
+
+
 # --- Helpers -------------------------------------------------------------------------
 
 ## Casts `card_name` for player 0 with a Mountain to pay, choosing `target_id` when it needs one.
@@ -204,3 +238,11 @@ func _cast(engine: RulesEngine, card_name: String, target_id: int) -> void:
 		t.extra = {auto_pay = true}
 		assert_true(engine.submit(t).ok, "target for " + card_name)
 	Fixtures.both_pass(engine)
+
+
+func _mana_of(card_name: String) -> Array:
+	var out: Array = []
+	for a in db.definition_for(card_name).abilities:
+		if (a as Ability).is_mana():
+			out.append(a)
+	return out

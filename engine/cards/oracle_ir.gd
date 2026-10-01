@@ -50,11 +50,11 @@ static func translate(def: CardDefinition) -> Array:
 ## line is read on its own; a line that isn't understood is skipped (the card keeps its other abilities,
 ## and keywords still come from the catalog). Lands are left to the mana-ability inference.
 static func translate_permanent(def: CardDefinition) -> Array:
-	if def == null or def.is_land() or _applies(def):
+	if def == null or _applies(def):
 		return []
 	if def.type_line.contains("Instant") or def.type_line.contains("Sorcery"):
 		return []
-	var text := def.oracle_text.replace("\r", "")
+	var text := def.oracle_text.replace("\r", "").replace("’", "'")
 	text = RegEx.create_from_string("\\([^)]*\\)").sub(text, "", true)
 	if def.name != "":
 		text = text.replace(def.name, "~")
@@ -75,6 +75,22 @@ static func translate_permanent(def: CardDefinition) -> Array:
 					"costs": [],
 					"targets": tr._targets,
 					"effects": tr._effects,
+					"restrictions": [],
+					"text": line,
+				})
+			continue
+		## CR 605.1a: "{T}: Add ..." is a mana ability (no stack, no targets).
+		var mm := _match("^\\{T\\}: add (.+)$", line)
+		if mm != null:
+			var produced := _mana_text(mm.get_string(1))
+			if produced != "":
+				n += 1
+				out.append({
+					"ability_id": "%s_mana%d" % [_snake(def.name), n],
+					"kind": "MANA",
+					"costs": [{"kind": "TAP"}],
+					"targets": [],
+					"effects": [{"kind": "ADD_MANA", "params": {"mana": produced}}],
 					"restrictions": [],
 					"text": line,
 				})
@@ -105,6 +121,29 @@ static func translate_permanent(def: CardDefinition) -> Array:
 	if not loader.errors.is_empty():
 		return []
 	return abilities
+
+
+## "{R}{G}" stays as is; "{R} or {G}" becomes "{R|G}"; "one mana of any color" becomes "{W|U|B|R|G}";
+## "...in your commander's color identity" becomes "{CI}". "" when the text says anything else
+## (extra sentences such as pain damage, conditions, "any type a land could produce").
+static func _mana_text(t: String) -> String:
+	t = t.strip_edges().trim_suffix(".").strip_edges()
+	var low := t.to_lower()
+	if low == "one mana of any color":
+		return "{W|U|B|R|G}"
+	if low == "one mana of any color in your commander's color identity":
+		return "{CI}"
+	if _match("^(\\{[WUBRGC]\\})+$", t) != null:
+		return t
+	var letters: Array = []
+	for part in t.replace(", or ", ",").replace(" or ", ",").split(","):
+		var p := str(part).strip_edges()
+		if _match("^\\{[WUBRGC]\\}$", p) == null:
+			return ""
+		letters.append(p.substr(1, 1).to_upper())
+	if letters.size() >= 2:
+		return "{%s}" % "|".join(PackedStringArray(letters))
+	return ""
 
 
 ## Reads each sentence of an ability's effect text. False if any is not understood or nothing was read.

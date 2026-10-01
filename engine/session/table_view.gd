@@ -249,12 +249,10 @@ static func _track_of(phase: int) -> String:
 
 
 ## Marks the hand and command-zone cards you could play right now (gold border on the table).
-## Playable = the rules allow it at this moment (timing, land drop, priority) AND you have enough
-## mana sources untapped for its total cost, commander tax included. Colors are not checked here;
-## the payment step still enforces them.
+## Playable = the rules allow it at this moment (timing, land drop, priority) AND your untapped mana
+## sources and floating mana can pay its cost, colors included (commander tax is added as generic).
 static func _mark_playable(engine: RulesEngine, seat: int, you: Dictionary, can_act: bool) -> void:
 	var castable := {}
-	var sources := 0
 	if can_act:
 		for act in engine.legal_actions(seat):
 			var ga := act as GameAction
@@ -262,14 +260,16 @@ static func _mark_playable(engine: RulesEngine, seat: int, you: Dictionary, can_
 				continue
 			if ga.kind == GameAction.Kind.CAST_SPELL or ga.kind == GameAction.Kind.PLAY_LAND:
 				castable[ga.object_id] = true
-			elif ga.kind == GameAction.Kind.ACTIVATE_MANA_ABILITY:
-				sources += 1
-	var available := sources + int(you.get("mana", 0))
 	for key in ["hand", "command"]:
 		for card in you.get(key, []):
 			var ok: bool = castable.has(int(str(card.get("id", "0"))))
 			if ok and str(card.get("kind", "")) != "land":
-				ok = int(card.get("cmc", 0)) + int(card.get("commander_tax", 0)) <= available
+				var cost := ManaCost.parse(str(card.get("mana_cost", "")))
+				## Hybrid, X and similar symbols aren't parsed; whatever the printed total has beyond the
+				## parsed symbols (plus tax) is treated as generic, so those cards are never blocked by color.
+				var total := int(card.get("cmc", 0)) + int(card.get("commander_tax", 0))
+				cost.generic += maxi(0, total - cost.cmc())
+				ok = engine.can_afford(seat, cost)
 			card["playable"] = ok
 
 

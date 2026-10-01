@@ -199,6 +199,24 @@ static func memory_catalog() -> CatalogSource:
 	var warden := _keyword_creature("Test Warden", "2", "2", [])
 	warden["oracle_text"] = "When Test Warden enters, for each opponent, exile up to one target nonland permanent that player controls until Test Warden leaves the battlefield."
 	cat.add(warden)
+	## Mana from Oracle text: a rock that taps for the commander's colors, and a two-type land.
+	cat.add({name = "Arcane Signet", oracle_id = "arcane_signet", mana_cost = "{2}", cmc = 2, type_line = "Artifact",
+		oracle_text = "{T}: Add one mana of any color in your commander's color identity.", color_identity = [], colors = [], keywords = [], commander_legal = true})
+	cat.add({name = "Test Duo Land", oracle_id = "test_duo_land", mana_cost = "", cmc = 0, type_line = "Land — Mountain Forest",
+		oracle_text = "({T}: Add {R} or {G}.)", color_identity = ["R", "G"], colors = [], keywords = [], commander_legal = true})
+	cat.add({name = "Test Painland", oracle_id = "test_painland", mana_cost = "", cmc = 0, type_line = "Land",
+		oracle_text = "{T}: Add {C}.\n{T}: Add {R} or {G}. Test Painland deals 1 damage to you.", color_identity = ["R", "G"], colors = [], keywords = [], commander_legal = true})
+	var itz := _keyword_creature("Test Itz", "2", "3", ["Flash"])
+	itz["mana_cost"] = "{2}{R}{G}"
+	itz["cmc"] = 4
+	itz["color_identity"] = ["R", "G"]
+	cat.add(itz)
+	var verdant := _keyword_creature("Test Verdant", "2", "2", [])
+	verdant["mana_cost"] = "{2}{G}"
+	verdant["cmc"] = 3
+	verdant["type_line"] = "Legendary Creature — Test"
+	verdant["color_identity"] = ["G"]
+	cat.add(verdant)
 	cat.add(_keyword_creature("Test Ogre", "3", "3", []))
 	cat.add(_keyword_creature("Test Shapeless", "*", "*", []))
 	return cat

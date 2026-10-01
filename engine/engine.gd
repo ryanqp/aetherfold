@@ -437,7 +437,7 @@ func _submit_activate_mana(action: GameAction) -> SubmitResult:
 	costs.pay(obj, ab)
 	for fx in ab.effects:
 		if fx is AbilityEffect and (fx as AbilityEffect).kind == &"ADD_MANA":
-			var produced := ManaCost.parse(str((fx as AbilityEffect).params.get("mana", "")))
+			var produced := resolve_mana(action.player_id, ManaCost.parse(str((fx as AbilityEffect).params.get("mana", ""))))
 			mana.add(action.player_id, produced)
 	state.log.append(EngineEnums.EventType.ABILITY_ACTIVATED, action.player_id, {
 		object_id = obj.object_id,
@@ -655,13 +655,21 @@ func _can_play_land(player_id: int) -> bool:
 
 func _timing_ok_to_cast(player_id: int, obj: GameObject) -> bool:
 	var def: CardDefinition = obj.definition as CardDefinition if obj.definition is CardDefinition else null
-	if def != null and def.is_instant():
+	## CR 702.8: flash lets a permanent spell be cast any time you could cast an instant.
+	if def != null and (def.is_instant() or _def_has_keyword(def, "flash")):
 		return true
 	if player_id != state.active_player_id:
 		return false
 	if not _is_main_phase():
 		return false
 	return _stack_empty()
+
+
+func _def_has_keyword(def: CardDefinition, keyword: String) -> bool:
+	for kw in def.keywords:
+		if str(kw).to_lower() == keyword:
+			return true
+	return false
 
 
 func _is_main_phase() -> bool:
@@ -1199,27 +1207,35 @@ func _auto_finish_payment(player_id: int) -> bool:
 
 func _pick_auto_mana(player_id: int) -> GameAction:
 	var acts: Array = _legal_mana_abilities(player_id)
-	var best: GameAction = null
-	for a in acts:
-		var produced := _produced_mana(int((a as GameAction).object_id), (a as GameAction).ability_id)
-		if produced == null:
-			continue
-		if _payment.r > 0 and produced.r > 0:
-			return a
-		if _payment.u > 0 and produced.u > 0:
-			return a
-		if _payment.w > 0 and produced.w > 0:
-			return a
-		if _payment.b > 0 and produced.b > 0:
-			return a
-		if _payment.g > 0 and produced.g > 0:
-			return a
-		if _payment.generic > 0 and produced.cmc() > 0:
-			best = a
-	return best
+	## Colors still missing once what is already floating in the pool is counted.
+	var pool: ManaPool = mana.pool(player_id)
+	var need := {}
+	for k in ["w", "u", "b", "r", "g", "colorless"]:
+		need[k] = maxi(0, int(_payment.get(k)) - (int(pool.get(k)) if pool != null else 0))
+	## Sources that always make the same mana go first, so a flexible source (any color, a dual land)
+	## is still free for whatever color is left over.
+	for flexible in [false, true]:
+		var best: GameAction = null
+		for a in acts:
+			var ga := a as GameAction
+			var raw := _produced_mana(ga.object_id, ga.ability_id, false)
+			if raw == null or raw.choices.is_empty() == flexible:
+				continue
+			var produced := _produced_mana(ga.object_id, ga.ability_id, true)
+			if produced == null:
+				continue
+			for k in ["w", "u", "b", "r", "g", "colorless"]:
+				if int(need[k]) > 0 and int(produced.get(k)) > 0:
+					return a
+			if _payment.generic > 0 and produced.cmc() > 0 and best == null:
+				best = a
+		if best != null:
+			return best
+	return null
 
 
-func _produced_mana(object_id: int, ability_id: StringName) -> ManaCost:
+## What a mana ability makes. With `resolve` the "any color" choices are turned into real colors.
+func _produced_mana(object_id: int, ability_id: StringName, resolve: bool = true) -> ManaCost:
 	var obj: GameObject = state.objects.get(object_id)
 	if obj == null or not (obj.definition is CardDefinition):
 		return null
@@ -1231,8 +1247,150 @@ func _produced_mana(object_id: int, ability_id: StringName) -> ManaCost:
 		return null
 	for fx in ab.effects:
 		if fx is AbilityEffect and (fx as AbilityEffect).kind == &"ADD_MANA":
-			return ManaCost.parse(str((fx as AbilityEffect).params.get("mana", "")))
+			var raw := ManaCost.parse(str((fx as AbilityEffect).params.get("mana", "")))
+			return resolve_mana(obj.controller_id, raw) if resolve else raw
 	return null
+
+
+## Picks the colors for "one mana of any color" style mana as it is produced (CR 106.5). Prefers a color
+## the payment in progress still needs. "{CI}" means a color in the player's commander's color identity;
+## with no such color nothing is produced.
+func resolve_mana(player_id: int, produced: ManaCost) -> ManaCost:
+	if produced == null or produced.choices.is_empty():
+		return produced
+	var out := produced.duplicate_cost()
+	out.choices = []
+	var pool: ManaPool = mana.pool(player_id)
+	var identity := commander_identity(player_id)
+	for opt in produced.choices:
+		var allowed: Array = []
+		for c in opt:
+			if str(c) == "CI":
+				allowed.append_array(identity)
+			else:
+				allowed.append(str(c))
+		if allowed.is_empty():
+			continue
+		var pick := str(allowed[0])
+		for c in allowed:
+			var key := str(c).to_lower()
+			var have: int = int(out.get(key))
+			if pool != null:
+				have += int(pool.get(key))
+			if _payment != null and int(_payment.get(key)) > have:
+				pick = str(c)
+				break
+		var pk := pick.to_lower()
+		if pk in ["w", "u", "b", "r", "g"]:
+			out.set(pk, int(out.get(pk)) + 1)
+		else:
+			out.colorless += 1
+	return out
+
+
+## Colors (W, U, B, R, G) in the color identity of the player's commander(s).
+func commander_identity(player_id: int) -> Array:
+	var found := {}
+	if player_id >= 0 and player_id < state.players.size():
+		for cid in state.players[player_id].commander_ids:
+			var obj: GameObject = state.objects.get(cid)
+			if obj != null and obj.definition is CardDefinition:
+				for c in (obj.definition as CardDefinition).color_identity:
+					found[str(c)] = true
+	var out: Array = []
+	for c in ["W", "U", "B", "R", "G"]:
+		if found.has(c):
+			out.append(c)
+	return out
+
+
+## One entry per mana the player could make right now: the pool plus every untapped source. Each entry
+## lists the colors that mana can be ("C" is colorless).
+func mana_slots(player_id: int) -> Array:
+	var slots: Array = []
+	var pool: ManaPool = mana.pool(player_id)
+	if pool != null:
+		for key in ["w", "u", "b", "r", "g", "colorless"]:
+			for _i in int(pool.get(key)):
+				slots.append([key.to_upper() if key != "colorless" else "C"])
+	var by_object := {}
+	for a in _legal_mana_abilities(player_id):
+		var ga := a as GameAction
+		var raw := _produced_mana(ga.object_id, ga.ability_id, false)
+		if raw != null:
+			if not by_object.has(ga.object_id):
+				by_object[ga.object_id] = []
+			(by_object[ga.object_id] as Array).append(raw)
+	var identity := commander_identity(player_id)
+	for oid in by_object.keys():
+		var list: Array = by_object[oid]
+		if list.size() > 1:
+			## One land with several abilities (a dual-type land) taps for just one of them.
+			var union: Array = []
+			for raw in list:
+				for slot in _slots_of(raw, identity):
+					for c in slot:
+						if not union.has(c):
+							union.append(c)
+			slots.append(union)
+		else:
+			slots.append_array(_slots_of(list[0], identity))
+	return slots
+
+
+func _slots_of(raw: ManaCost, identity: Array) -> Array:
+	var out: Array = []
+	for pair in [["W", raw.w], ["U", raw.u], ["B", raw.b], ["R", raw.r], ["G", raw.g], ["C", raw.colorless + raw.generic]]:
+		for _i in int(pair[1]):
+			out.append([pair[0]])
+	for opt in raw.choices:
+		var allowed: Array = []
+		for c in opt:
+			if str(c) == "CI":
+				allowed.append_array(identity)
+			else:
+				allowed.append(str(c))
+		if not allowed.is_empty():
+			out.append(allowed)
+	return out
+
+
+## True if the player's pool and untapped mana sources can pay `cost`, colors included.
+func can_afford(player_id: int, cost: ManaCost) -> bool:
+	var slots := mana_slots(player_id)
+	var pips: Array = []
+	for pair in [["W", cost.w], ["U", cost.u], ["B", cost.b], ["R", cost.r], ["G", cost.g], ["C", cost.colorless]]:
+		for _i in int(pair[1]):
+			pips.append(pair[0])
+	if pips.size() + cost.generic > slots.size():
+		return false
+	var used: Array = []
+	used.resize(slots.size())
+	used.fill(false)
+	return _assign_pips(pips, 0, slots, used, cost.generic)
+
+
+func _assign_pips(pips: Array, i: int, slots: Array, used: Array, generic: int) -> bool:
+	if i >= pips.size():
+		var free := 0
+		for u in used:
+			if not u:
+				free += 1
+		return free >= generic
+	var seen := {}
+	for j in slots.size():
+		if used[j] or not (slots[j] as Array).has(pips[i]):
+			continue
+		var key := ",".join(PackedStringArray(slots[j]))
+		if seen.has(key):
+			continue
+		seen[key] = true
+		used[j] = true
+		var ok := _assign_pips(pips, i + 1, slots, used, generic)
+		used[j] = false
+		if ok:
+			return true
+	return false
 
 
 func legal_attacker_ids(player_id: int) -> Array:

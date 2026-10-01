@@ -184,6 +184,60 @@ func test_commander_can_actually_be_cast_from_the_zone() -> void:
 	assert_true(session.cast_auto(0, int(str(cmd.get("id")))).ok)
 
 
+# --- Gold border needs the right colors ---------------------------------------------------
+
+func test_missing_color_means_no_gold() -> void:
+	var session := _session(true)
+	Fixtures.spawn_named(session.engine, db, 0, EngineEnums.ZoneId.HAND, "Test Itz")
+	_mountains(session.engine, 4)
+	session.rebuild_view()
+	assert_false(_card(session, "hand", "Test Itz").get("playable"), "four red sources can't make {G}")
+
+
+func test_signet_supplies_the_commander_color() -> void:
+	var session := _session(true)
+	var engine := session.engine
+	var cmd := Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.COMMAND, "Test Verdant")
+	if not engine.state.players[0].commander_ids.has(cmd.object_id):
+		engine.state.players[0].commander_ids.append(cmd.object_id)
+	Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.HAND, "Test Itz")
+	_mountains(engine, 3)
+	var rock := Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.BATTLEFIELD, "Arcane Signet")
+	rock.summoned_this_turn = false
+	session.rebuild_view()
+	assert_true(_card(session, "hand", "Test Itz").get("playable"), "Signet makes G for a green commander")
+	assert_true(session.cast_auto(0, int(str(_card(session, "hand", "Test Itz").get("id")))).ok)
+
+
+func test_two_type_land_covers_a_color() -> void:
+	var session := _session(true)
+	Fixtures.spawn_named(session.engine, db, 0, EngineEnums.ZoneId.HAND, "Test Itz")
+	_mountains(session.engine, 3)
+	var duo := Fixtures.spawn_named(session.engine, db, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Duo Land")
+	duo.summoned_this_turn = false
+	session.rebuild_view()
+	assert_true(_card(session, "hand", "Test Itz").get("playable"))
+
+
+func test_flash_creature_can_be_cast_on_the_rivals_turn() -> void:
+	var session := _session(true)
+	var engine := session.engine
+	var itz := Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.HAND, "Test Itz")
+	engine.state.active_player_id = 1
+	var timing_ok: bool = engine._timing_ok_to_cast(0, itz)
+	assert_true(timing_ok, "Flash (CR 702.8)")
+
+
+# --- Playmats --------------------------------------------------------------------------
+
+func test_playmat_file_follows_commander_colors() -> void:
+	assert_eq(PlaymatCatalog.file_for([]), "Colorless.jpg")
+	assert_eq(PlaymatCatalog.file_for(["R"]), "Red.jpg")
+	assert_eq(PlaymatCatalog.file_for(["G", "U"]), "Blue-Green.jpg", "WUBRG order, not input order")
+	assert_eq(PlaymatCatalog.file_for(["G", "R", "B"]), "Black-Red-Green.jpg")
+	assert_eq(PlaymatCatalog.file_for(["G", "U", "B", "R", "W"]), "White-Blue-Black-Red-Green.jpg")
+
+
 # --- Helpers ---------------------------------------------------------------------------
 
 ## Your first main phase with priority, cards in both libraries, mid-game.

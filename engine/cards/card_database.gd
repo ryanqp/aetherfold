@@ -32,15 +32,59 @@ func _from_row(row: Dictionary) -> CardDefinition:
 	var d := CardDefinition.from_catalog_row(row)
 	var abs: Array = _ir_for(d)
 	if abs.is_empty():
-		## No hand-written IR: read the simple instants and sorceries straight from Oracle text.
+		## No hand-written IR: read what Oracle text says (instants/sorceries, activated abilities,
+		## ETBs, mana abilities). Lands also get the mana ability their basic land types give (CR 305.6).
 		abs = OracleIr.translate(d)
-	if abs.is_empty():
-		abs = OracleIr.translate_permanent(d)
+		if abs.is_empty():
+			abs = OracleIr.translate_permanent(d)
+		if d.is_land():
+			var have := {}
+			for a in abs:
+				have[(a as Ability).ability_id] = true
+			for a in _infer_basic_mana(d):
+				if not have.has((a as Ability).ability_id):
+					abs.push_front(a)
 	if not abs.is_empty():
 		d.abilities = abs
-	else:
-		d.abilities = _infer_basic_mana(d)
 	return d
+
+
+## Oracle lines the engine does not act on yet, for a card without hand-written IR: not a keyword the
+## engine enforces, not read into an ability, not "enters tapped". The table lists them in History.
+func unread_lines(d: CardDefinition) -> Array:
+	var out: Array = []
+	if d == null or d.is_basic_land() or not _ir_for(d).is_empty():
+		return out
+	var text := d.oracle_text.replace("\r", "").replace("’", "'")
+	text = RegEx.create_from_string("\\([^)]*\\)").sub(text, "", true)
+	var covered: Array = []
+	for a in d.abilities:
+		if (a as Ability).kind == &"SPELL":
+			return out  ## instants and sorceries are read whole or not at all
+		covered.append(str((a as Ability).text).strip_edges())
+	for raw in text.replace(d.name, "~").split("\n"):
+		var line := str(raw).strip_edges()
+		if line == "" or covered.has(line) or _keyword_line(line):
+			continue
+		if d.enters_tapped() and line.to_lower().begins_with("~ enters"):
+			continue
+		out.append(line)
+	return out
+
+
+const ENFORCED_KEYWORDS := [
+	"haste", "defender", "vigilance", "flying", "reach", "menace", "first strike", "double strike",
+	"trample", "deathtouch", "lifelink", "indestructible", "hexproof", "shroud", "flash",
+	"protection from white", "protection from blue", "protection from black", "protection from red",
+	"protection from green",
+]
+
+
+func _keyword_line(line: String) -> bool:
+	for part in line.to_lower().split(","):
+		if not str(part).strip_edges() in ENFORCED_KEYWORDS:
+			return false
+	return true
 
 
 func _ir_for(d: CardDefinition) -> Array:
@@ -52,37 +96,31 @@ func _ir_for(d: CardDefinition) -> Array:
 	return []
 
 
+const BASIC_TYPES := [
+	["Plains", "W", "plains_w"], ["Island", "U", "island_u"], ["Swamp", "B", "swamp_b"],
+	["Mountain", "R", "mountain_r"], ["Forest", "G", "forest_g"],
+]
+
+
+## CR 305.6: a land with a basic land type has "{T}: Add <that color>". Applies to dual lands too.
 func _infer_basic_mana(d: CardDefinition) -> Array:
-	if not d.is_basic_land():
-		return []
-	var produced := ""
-	var ability_id := &""
-	if d.type_line.contains("Mountain"):
-		produced = "{R}"
-		ability_id = &"mountain_r"
-	elif d.type_line.contains("Island"):
-		produced = "{U}"
-		ability_id = &"island_u"
-	elif d.type_line.contains("Plains"):
-		produced = "{W}"
-		ability_id = &"plains_w"
-	elif d.type_line.contains("Swamp"):
-		produced = "{B}"
-		ability_id = &"swamp_b"
-	elif d.type_line.contains("Forest"):
-		produced = "{G}"
-		ability_id = &"forest_g"
-	else:
-		return []
-	var ab := Ability.new()
-	ab.ability_id = ability_id
-	ab.kind = &"MANA"
-	ab.text = "{T}: Add %s." % produced
-	var tap := AbilityCost.new()
-	tap.kind = &"TAP"
-	ab.costs.append(tap)
-	var fx := AbilityEffect.new()
-	fx.kind = &"ADD_MANA"
-	fx.params = {mana = produced}
-	ab.effects.append(fx)
-	return [ab]
+	var out: Array = []
+	if not d.is_land():
+		return out
+	for t in BASIC_TYPES:
+		if not d.type_line.contains(str(t[0])):
+			continue
+		var produced := "{%s}" % t[1]
+		var ab := Ability.new()
+		ab.ability_id = StringName(str(t[2]))
+		ab.kind = &"MANA"
+		ab.text = "{T}: Add %s." % produced
+		var tap := AbilityCost.new()
+		tap.kind = &"TAP"
+		ab.costs.append(tap)
+		var fx := AbilityEffect.new()
+		fx.kind = &"ADD_MANA"
+		fx.params = {mana = produced}
+		ab.effects.append(fx)
+		out.append(ab)
+	return out
