@@ -31,18 +31,18 @@ func pump(engine: RulesEngine, you_seat: int, enabled: bool) -> void:
 	if engine == null or engine.state == null or engine.state.log == null:
 		return
 	_remember(engine)
-	var log: GameLog = engine.state.log
+	var glog: GameLog = engine.state.log
 	if not enabled:
-		_cursor = log.seq()
+		_cursor = glog.seq()
 		return
 	if not _started:
 		_started = true
-		_cursor = log.seq()
+		_cursor = glog.seq()
 		_add("Game start", "info")
 		return
-	for e in log.since(_cursor):
+	for e in glog.since(_cursor):
 		_event(engine, e as GameEvent, you_seat)
-	_cursor = log.seq()
+	_cursor = glog.seq()
 	while lines.size() > CAP:
 		lines.remove_at(0)
 
