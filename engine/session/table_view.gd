@@ -269,6 +269,9 @@ static func _mark_playable(engine: RulesEngine, seat: int, you: Dictionary, can_
 				## parsed symbols (plus tax) is treated as generic, so those cards are never blocked by color.
 				var total := int(card.get("cmc", 0)) + int(card.get("commander_tax", 0))
 				cost.generic += maxi(0, total - cost.cmc())
+				## Cost reductions (CR 601.2f): lords on the battlefield, "costs {2} less if it targets ...".
+				var card_obj: GameObject = engine.state.objects.get(int(str(card.get("id", "0"))))
+				cost.generic = maxi(0, cost.generic - engine.cost_reduction(seat, card_obj))
 				ok = engine.can_afford(seat, cost)
 			card["playable"] = ok
 

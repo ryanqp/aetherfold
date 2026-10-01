@@ -188,6 +188,11 @@ Target `query` accepts `type`, `not_type`, `subtype`, and `controller`: `SOURCE_
 | `Scry N`, `Untap …`, `Counter target spell`, `~ fights target …` | `SCRY`, `UNTAP`, `COUNTER_SPELL`, `FIGHT` |
 | `Prowess`, `As ~ enters, choose a creature type`, `~ enters with N +1/+1 counters` | built in |
 
+| `~ costs {2} less to cast if it targets a Dinosaur you control` | spell discount (`cost_reduction_if_target`) |
+| `enters tapped unless you control …`, "reveal a Mountain or Forest", "pay 2 life" | `EtbRules`, applied as the land arrives |
+
+Keywords are looked up in `engine/cards/keyword_db.gd` (`KeywordDb`): each has a status (ENFORCED, READ, NONE or MISSING). Missing ones show in History as "(ward: not enforced yet)". When you implement one, change its status there. Reveal and pay-life choices have no prompt yet: revealing always happens when you can, life is paid while you have 8 or more.
+
 Up to three targets per card; each is chosen one at a time. Targets are picked automatically (see CLAUDE.md). Not read yet: Auras, kicker, cycling, flashback, crew, ward, convoke, X costs, modal "choose one", conditional ("if ...") triggers, discover / explore / monarch. To teach it a new wording, add the pattern to `OracleIr._sentence` (or `_header` for triggers) and a row to `tests/engine/fixtures.gd`; to cover a card it can't read, write IR as below.
 
 ## 7. Triggers

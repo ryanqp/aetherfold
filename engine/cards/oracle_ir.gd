@@ -50,6 +50,8 @@ const COLOR_LETTERS := {
 
 var _targets: Array = []
 var _effects: Array = []
+## Extra abilities a spell comes with (its own cost discount).
+var _extra: Array = []
 ## Set while reading a trigger on "this creature": a leading "it" means the creature itself.
 var _self_it: bool = false
 
@@ -64,7 +66,9 @@ static func translate(def: CardDefinition) -> Array:
 	if ability.is_empty():
 		return []
 	var loader := IrLoader.new()
-	var abilities := loader.from_dict({"abilities": [ability]})
+	var all: Array = [ability]
+	all.append_array(reader._extra)
+	var abilities := loader.from_dict({"abilities": all})
 	if not loader.errors.is_empty():
 		return []
 	return abilities
@@ -454,6 +458,18 @@ func _read(def: CardDefinition) -> Dictionary:
 		for sentence in line.split(". "):
 			var s := str(sentence).strip_edges().trim_suffix(".").strip_edges()
 			if s == "":
+				continue
+			## "~ costs {2} less to cast if it targets a Dinosaur you control." (CR 601.2f)
+			var disc := _match("^~ costs \\{(\\d+)\\} less to cast if it targets an? ([a-z]+) you control$", s)
+			if disc != null:
+				_extra.append({
+					"ability_id": "%s_discount" % _snake(def.name), "kind": "STATIC", "costs": [], "targets": [],
+					"effects": [], "restrictions": [],
+					"static": {"scope": "SELF", "cost_reduction_if_target": {
+						"amount": int(disc.get_string(1)),
+						"query": {"type": "creature", "subtype": _cap(disc.get_string(2)), "controller": "SOURCE_CONTROLLER"},
+					}},
+				})
 				continue
 			if not _clause(s):
 				return {}

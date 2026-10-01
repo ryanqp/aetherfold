@@ -319,7 +319,7 @@ func put_library_bottom(object_id: int, player_id: int) -> GameObject:
 func cost_reduction(player_id: int, spell: GameObject) -> int:
 	if spell == null:
 		return 0
-	var total := 0
+	var total := _own_discount(player_id, spell)
 	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
 	if bf == null:
 		return 0
@@ -335,6 +335,37 @@ func cost_reduction(player_id: int, spell: GameObject) -> int:
 			var f: Variant = spec.get("filter", {})
 			if f is Dictionary and Query._matches(spell, src, f):
 				total += int(spec.get("amount", 1))
+	return total
+
+
+## "This spell costs {2} less to cast if it targets a Dinosaur you control." While you are casting it the
+## chosen targets decide; before that (is it castable?) it counts when some legal target would qualify.
+func _own_discount(player_id: int, spell: GameObject) -> int:
+	if not (spell.definition is CardDefinition):
+		return 0
+	var total := 0
+	for a in (spell.definition as CardDefinition).abilities:
+		var ab := a as Ability
+		if ab == null or ab.kind != &"STATIC" or not ab.static_spec.has("cost_reduction_if_target"):
+			continue
+		var spec: Dictionary = ab.static_spec["cost_reduction_if_target"]
+		var q: Dictionary = spec.get("query", {})
+		var hit := false
+		if _cast_source == spell.object_id and not _cast_targets.is_empty():
+			for tid in _cast_targets:
+				var t: GameObject = state.objects.get(int(tid))
+				if t != null and Query._matches(t, spell, q):
+					hit = true
+		elif _cast_source != spell.object_id:
+			var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+			if bf != null:
+				for oid in bf.object_ids:
+					var t2: GameObject = state.objects.get(oid)
+					if t2 != null and t2.controller_id == player_id and Query._matches(t2, spell, q):
+						hit = true
+						break
+		if hit:
+			total += int(spec.get("amount", 0))
 	return total
 
 

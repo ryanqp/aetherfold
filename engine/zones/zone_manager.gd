@@ -72,7 +72,7 @@ func create(owner_id: int, zone_id: int, opts: Dictionary = {}) -> GameObject:
 	obj.is_commander = bool(opts.get("is_commander", false))
 	obj.tapped = bool(opts.get("tapped", false))
 	if zone_id == EngineEnums.ZoneId.BATTLEFIELD and not opts.has("tapped"):
-		obj.tapped = _etb_tapped(obj.definition)
+		obj.tapped = _etb_tapped(obj.definition, owner_id)
 	obj.summoned_this_turn = bool(opts.get(
 		"summoned_this_turn", zone_id == EngineEnums.ZoneId.BATTLEFIELD
 	))
@@ -140,7 +140,7 @@ func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip
 	new_obj.face_id = old.face_id
 	new_obj.is_token = old.is_token
 	new_obj.is_commander = old.is_commander
-	new_obj.tapped = dest_zone == EngineEnums.ZoneId.BATTLEFIELD and _etb_tapped(old.definition)
+	new_obj.tapped = dest_zone == EngineEnums.ZoneId.BATTLEFIELD and _etb_tapped(old.definition, new_obj.controller_id)
 	new_obj.summoned_this_turn = dest_zone == EngineEnums.ZoneId.BATTLEFIELD
 	new_obj.damage_marked = 0
 	gs.objects.erase(object_id)
@@ -170,8 +170,36 @@ func _last_known(old: GameObject) -> Dictionary:
 	return out if out is Dictionary else {}
 
 
-func _etb_tapped(definition) -> bool:
-	return definition is CardDefinition and (definition as CardDefinition).enters_tapped()
+func _etb_tapped(definition, controller: int) -> bool:
+	if not (definition is CardDefinition):
+		return false
+	var def := definition as CardDefinition
+	if def.enters_tapped():
+		return true
+	var rule := EtbRules.parse(def)
+	if rule.is_empty():
+		return false
+	var gs := _gs()
+	if gs == null:
+		return false
+	var hand: Array = []
+	var hz := get_zone(EngineEnums.ZoneId.HAND, controller)
+	if hz != null:
+		for oid in hz.object_ids:
+			hand.append(gs.objects.get(oid))
+	var mine: Array = []
+	var bz := get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bz != null:
+		for oid in bz.object_ids:
+			var o: GameObject = gs.objects.get(oid)
+			if o != null and o.controller_id == controller:
+				mine.append(o)
+	var life := int(gs.players[controller].life) if controller >= 0 and controller < gs.players.size() else 0
+	var tapped := EtbRules.tapped_on_entry(rule, hand, mine, life)
+	if str(rule.get("kind")) == "PAY_LIFE" and not tapped:
+		gs.players[controller].life -= int(rule.get("n", 0))
+		gs.log.append(EngineEnums.EventType.LIFE_CHANGE, controller, {to_player = controller, amount = int(rule.get("n", 0))})
+	return tapped
 
 
 func _gs() -> GameState:

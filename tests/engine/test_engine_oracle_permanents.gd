@@ -76,3 +76,43 @@ func test_lord_boosts_other_dinosaurs_only() -> void:
 func test_unread_lines_shrink_when_read() -> void:
 	assert_true(db.unread_lines(db.definition_for("Test Egg Layer")).is_empty(), "everything on it is read")
 	assert_eq(db.unread_lines(db.definition_for("Test Unsure")).size(), 2, "a half understood spell lists both lines")
+
+
+func test_reveal_land_enters_untapped_only_with_a_matching_card_in_hand() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var land := Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.HAND, "Test Gamefield")
+	var moved := engine.state.zones.move(land.object_id, EngineEnums.ZoneId.BATTLEFIELD, 0)
+	assert_true(moved.tapped, "no Mountain or Forest in hand: tapped")
+	var engine2 := Fixtures.empty_engine_1v1()
+	Fixtures.spawn_named(engine2, db, 0, EngineEnums.ZoneId.HAND, "Mountain")
+	var land2 := Fixtures.spawn_named(engine2, db, 0, EngineEnums.ZoneId.HAND, "Test Gamefield")
+	var moved2 := engine2.state.zones.move(land2.object_id, EngineEnums.ZoneId.BATTLEFIELD, 0)
+	assert_false(moved2.tapped, "revealed a Mountain: untapped")
+
+
+func test_checkland_and_fastland() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var chk := Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.HAND, "Test Checkland")
+	assert_true(engine.state.zones.move(chk.object_id, EngineEnums.ZoneId.BATTLEFIELD, 0).tapped, "no Mountain or Island")
+	var fast := Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.HAND, "Test Fastland")
+	assert_false(engine.state.zones.move(fast.object_id, EngineEnums.ZoneId.BATTLEFIELD, 0).tapped, "only one other land")
+
+
+func test_stomp_is_read_with_its_discount() -> void:
+	var def := db.definition_for("Test Stomp")
+	var spell := def.spell_ability()
+	assert_true(spell != null, "spell read")
+	assert_eq(spell.targets.size(), 2)
+	assert_eq(str(spell.effects[0].kind), "PUT_COUNTER")
+	assert_eq(str(spell.effects[1].kind), "FIGHT")
+	var found := false
+	for a in def.abilities:
+		if (a as Ability).static_spec.has("cost_reduction_if_target"):
+			found = true
+	assert_true(found, "the discount is read")
+
+
+func test_keyword_db_knows_unimplemented_keywords() -> void:
+	assert_eq(str(KeywordDb.lookup("Ward {2}").get("status")), "MISSING")
+	assert_true(KeywordDb.line_is_handled("Flying, vigilance"))
+	assert_false(KeywordDb.line_is_handled("Ward {1}"))

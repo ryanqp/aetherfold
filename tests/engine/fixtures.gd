@@ -185,6 +185,10 @@ static func memory_catalog() -> CatalogSource:
 	cat.add(_spell_row("Test Blade", "{1}", 1, "Artifact — Equipment", "Equipped creature gets +2/+2 and has menace.\nEquip {2}", []))
 	cat.add(_spell_row("Test Fetch", "{1}{G}", 2, "Sorcery", "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.", ["G"]))
 	cat.add(_spell_row("Test Rend", "{1}{G}", 2, "Sorcery", "Target creature you control fights target creature you don't control.", ["G"]))
+	cat.add(_land_row("Test Gamefield", "Land", "As Test Gamefield enters, you may reveal a Mountain or Forest card from your hand. If you don't, Test Gamefield enters tapped.\n{T}: Add {R} or {G}.", ["R", "G"]))
+	cat.add(_land_row("Test Fastland", "Land", "Test Fastland enters tapped unless you control two or fewer other lands.\n{T}: Add {R} or {G}.", ["R", "G"]))
+	cat.add(_land_row("Test Checkland", "Land", "Test Checkland enters tapped unless you control a Mountain or an Island.\n{T}: Add {U} or {R}.", ["U", "R"]))
+	cat.add(_spell_row("Test Stomp", "{2}{G}", 3, "Sorcery", "Test Stomp costs {2} less to cast if it targets a Dinosaur you control.\nPut a +1/+1 counter on target creature you control. Then that creature fights target creature you don't control.", ["G"]))
 	## Vanilla keyword bodies for combat rules tests.
 	cat.add(_keyword_creature("Test Flyer", "2", "2", ["Flying"]))
 	cat.add(_keyword_creature("Test Reacher", "1", "4", ["Reach"]))

@@ -57,6 +57,7 @@ func unread_lines(d: CardDefinition) -> Array:
 		return out
 	var text := OracleIr.normalize(d)
 	var covered: Array = []
+	var etb := EtbRules.parse(d)
 	for a in d.abilities:
 		if (a as Ability).kind == &"SPELL":
 			return out  ## instants and sorceries are read whole or not at all
@@ -65,29 +66,18 @@ func unread_lines(d: CardDefinition) -> Array:
 		var line := OracleIr.strip_ability_word(str(raw).strip_edges())
 		if line == "" or covered.has(line) or _keyword_line(line):
 			continue
-		if d.enters_tapped() and line.to_lower().begins_with("~ enters"):
+		var low_line := line.to_lower()
+		if d.enters_tapped() and low_line.begins_with("~ enters"):
 			continue
-		out.append(line)
+		## "enters tapped unless ..." / reveal-or-tapped / shock: handled as it enters (EtbRules).
+		if not etb.is_empty() and low_line.contains("enters") and (low_line.contains("tapped") or low_line.contains("reveal") or low_line.contains("pay")):
+			continue
+		out.append(KeywordDb.describe_unread(line))
 	return out
 
 
-## Keywords with nothing for the engine to do (or read by OracleIr), so they are not "unread".
-const HARMLESS_KEYWORDS := ["devoid", "partner", "ascend", "prowess", "changeling", "banding"]
-
-const ENFORCED_KEYWORDS := [
-	"haste", "defender", "vigilance", "flying", "reach", "menace", "first strike", "double strike",
-	"trample", "deathtouch", "lifelink", "indestructible", "hexproof", "shroud", "flash",
-	"protection from white", "protection from blue", "protection from black", "protection from red",
-	"protection from green",
-]
-
-
 func _keyword_line(line: String) -> bool:
-	for part in line.to_lower().split(","):
-		var w := str(part).strip_edges()
-		if not (w in ENFORCED_KEYWORDS or w in HARMLESS_KEYWORDS):
-			return false
-	return true
+	return KeywordDb.line_is_handled(line)
 
 
 func _ir_for(d: CardDefinition) -> Array:
