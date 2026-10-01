@@ -1,7 +1,7 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 33
+const BUILD := 34
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
 const RivalAI := preload("res://scripts/rival_ai.gd")
@@ -73,6 +73,9 @@ var phase_chips: Dictionary = {}
 var turn_owner_label: Label
 var hint_label: Label
 var next_turn_btn: Button
+var history_panel: PanelContainer
+var history_text: RichTextLabel
+var _history_shown := 0
 var declare_btn: Button
 var _rival_target: PanelContainer
 var _hint_hold := 0.0
@@ -298,6 +301,7 @@ func _build() -> void:
 	_build_turn_border()
 	_build_hover()
 	_build_deck_pile()
+	_build_history_panel()
 	_build_draw_button()
 	_build_dice_tray()
 	_build_menu()
@@ -323,18 +327,21 @@ func _build_header() -> Control:
 	header_label.add_theme_font_size_override("font_size", 18)
 	header_label.add_theme_color_override("font_color", INK)
 	row.add_child(header_label)
-	pass_btn = _header_button("Pass", GOLD, Color(0.12, 0.10, 0.04), _on_next_stage, 88)
+	pass_btn = _header_button("Next phase ▶", Color(0.20, 0.42, 0.18), Color(0.95, 1.0, 0.92), _on_next_phase, 150)
+	pass_btn.tooltip_text = "Move to the next part of the turn: Upkeep, Draw, Main 1, Combat, Main 2, End."
 	row.add_child(pass_btn)
 	attack_btn = _header_button("Attack", Color(0.62, 0.16, 0.12), Color(0.98, 0.94, 0.88), _on_attack, 96)
 	attack_btn.tooltip_text = "Declare every creature that can attack. Space passes priority. Enter ends the turn."
 	row.add_child(attack_btn)
-	next_turn_btn = _header_button("Next turn ▶", Color(0.20, 0.42, 0.18), Color(0.95, 1.0, 0.92), _on_end_turn, 120)
-	next_turn_btn.tooltip_text = "Finish your turn. The rival plays, then it is your turn again."
+	next_turn_btn = _header_button("End turn", Color(0.16, 0.17, 0.18), INK, _on_end_turn, 100)
+	next_turn_btn.tooltip_text = "Skip the rest of your turn. The rival plays, then it is your turn again."
 	row.add_child(next_turn_btn)
 	mute_button = _header_button("Mute", Color(0.16, 0.17, 0.18), INK, _on_mute, 72)
 	row.add_child(mute_button)
 	sfx_button = _header_button("SFX", Color(0.16, 0.17, 0.18), INK, _on_sfx, 72)
 	row.add_child(sfx_button)
+	var hist_btn := _header_button("History", Color(0.16, 0.17, 0.18), INK, _toggle_history, 84)
+	row.add_child(hist_btn)
 	row.add_child(_header_button("Dice", Color(0.16, 0.17, 0.18), INK, _on_dice, 72))
 	row.add_child(_header_button("Menu", Color(0.16, 0.17, 0.18), INK, _on_menu, 72))
 	row.add_child(_header_button("Main menu", Color(0.16, 0.17, 0.18), INK, _on_main_menu, 100))
@@ -949,6 +956,92 @@ func _paint_flash() -> void:
 		st.border_color = TURN_GREEN.lerp(Color(0.65, 1.0, 0.5), pulse)
 		turn_border.add_theme_stylebox_override("panel", st)
 
+## Scrollable play-by-play: casts, summons, activations, attacks, blocks, damage, life.
+func _build_history_panel() -> void:
+	history_panel = PanelContainer.new()
+	history_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	history_panel.anchor_left = 1.0
+	history_panel.anchor_right = 1.0
+	history_panel.anchor_top = 0.0
+	history_panel.anchor_bottom = 1.0
+	history_panel.offset_left = -(SIDE_W + 352)
+	history_panel.offset_right = -(SIDE_W + 10)
+	history_panel.offset_top = 92
+	history_panel.offset_bottom = -170
+	history_panel.z_index = 30
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.05, 0.06, 0.07, 0.94)
+	st.border_color = GOLD.darkened(0.3)
+	st.set_border_width_all(2)
+	st.set_corner_radius_all(8)
+	st.content_margin_left = 10
+	st.content_margin_right = 6
+	st.content_margin_top = 8
+	st.content_margin_bottom = 8
+	history_panel.add_theme_stylebox_override("panel", st)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	var head := HBoxContainer.new()
+	var title := Label.new()
+	title.text = "History"
+	title.size_flags_horizontal = SIZE_EXPAND_FILL
+	title.add_theme_color_override("font_color", GOLD)
+	title.add_theme_font_size_override("font_size", 15)
+	head.add_child(title)
+	var close := Button.new()
+	close.text = "✕"
+	close.focus_mode = Control.FOCUS_NONE
+	close.pressed.connect(_toggle_history)
+	head.add_child(close)
+	col.add_child(head)
+	history_text = RichTextLabel.new()
+	history_text.bbcode_enabled = true
+	history_text.scroll_active = true
+	history_text.scroll_following = true
+	history_text.selection_enabled = true
+	history_text.size_flags_vertical = SIZE_EXPAND_FILL
+	history_text.add_theme_font_size_override("normal_font_size", 13)
+	history_text.add_theme_font_size_override("bold_font_size", 13)
+	col.add_child(history_text)
+	history_panel.add_child(col)
+	history_panel.visible = true
+	add_child(history_panel)
+
+
+func _toggle_history() -> void:
+	if history_panel:
+		history_panel.visible = not history_panel.visible
+		_history_shown = -1
+		_paint_history()
+
+
+func _paint_history() -> void:
+	if history_text == null or history_panel == null or not history_panel.visible:
+		return
+	if session == null or session.view == null:
+		return
+	var lines: Array = session.view.history
+	if lines.size() == _history_shown:
+		return
+	_history_shown = lines.size()
+	var out := ""
+	for entry in lines:
+		var d: Dictionary = entry
+		var t := str(d.get("t", "")).replace("[", "(").replace("]", ")")
+		match str(d.get("k", "info")):
+			"turn":
+				out += "\n[b][color=#f2c94c]%s[/color][/b]\n" % t
+			"step":
+				out += "[color=#6f7a78]· %s[/color]\n" % t
+			"you":
+				out += "[color=#cfe9c6]%s[/color]\n" % t
+			"rival":
+				out += "[color=#f0a79c]%s[/color]\n" % t
+			_:
+				out += "[color=#b9c0bf]%s[/color]\n" % t
+	history_text.text = out
+
+
 func _build_deck_pile() -> void:
 	deck_btn = Button.new()
 	deck_btn.text = "92"
@@ -1172,6 +1265,7 @@ func _refresh() -> void:
 	_fill_command(you_cmd_row, b.you["command"], true)
 	_fill_command(rival_cmd_row, b.rival["command"], false)
 	_paint_phase_track()
+	_paint_history()
 	if _hint_hold <= 0.0:
 		_paint_hint()
 	if deck_btn:
@@ -1572,6 +1666,7 @@ func _paint_match_buttons() -> void:
 			attack_btn.tooltip_text = "Go to combat and choose which creatures attack."
 		if pass_btn:
 			pass_btn.disabled = not session.can_play()
+			pass_btn.text = _next_phase_label(v)
 	if declare_btn:
 		var dsel: Dictionary = v.find_card(str(v.selected_id))
 		var mine_creature: bool = not dsel.is_empty() and _card_in(v.you.get("creatures", []), str(dsel.get("id", "")))
@@ -1616,6 +1711,52 @@ func _on_attack() -> void:
 		_set_status(r.error)
 		return
 	_set_status(str(session.view.prompt))
+
+
+## The green button: step to the next part of the turn.
+func _on_next_phase() -> void:
+	if not USE_ENGINE or session == null or session.view == null:
+		_on_next_stage()
+		return
+	if _client_net("pass"):
+		return
+	if not session.can_play():
+		_set_status("Keep or Mulligan first.")
+		return
+	if _in_blocking_mode():
+		_on_next_stage()
+		return
+	if _in_attack_mode():
+		_confirm_attack()
+		return
+	var v = session.view
+	if bool(v.active_is_you) and not session.draw_waiting() and str(v.turn_track) == "main1" and bool(v.can_attack):
+		_on_attack()
+		return
+	if bool(v.active_is_you) and str(v.turn_track) == "end":
+		## Past the end step comes the rival's turn, which End turn plays out.
+		_on_end_turn()
+		return
+	_on_next_stage()
+
+
+func _next_phase_label(v) -> String:
+	if not bool(v.active_is_you):
+		return "Rival's turn"
+	if session.draw_waiting():
+		return "Draw card ▶"
+	match str(v.turn_track):
+		"upkeep":
+			return "Draw ▶"
+		"draw":
+			return "Main 1 ▶"
+		"main1":
+			return "Combat ▶" if bool(v.can_attack) else "Main 2 ▶"
+		"combat":
+			return "Main 2 ▶"
+		"main2":
+			return "End step ▶"
+	return "Next turn ▶"
 
 
 func _on_next_stage() -> void:
