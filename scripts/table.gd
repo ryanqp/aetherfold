@@ -1,13 +1,12 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 40
+const BUILD := 41
 const Mats := preload("res://engine/session/playmat_catalog.gd")
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
 const RivalAI := preload("res://scripts/rival_ai.gd")
 const ThemeMusicScript := preload("res://scripts/theme_music.gd")
-const TavernSfxScript := preload("res://scripts/tavern_sfx.gd")
 const CardFaceScript := preload("res://scripts/card_face.gd")
 const RIVAL_TEAL := Color(0.18, 0.42, 0.48)
 const YOU_EMBER := Color(0.42, 0.18, 0.08)
@@ -46,10 +45,10 @@ var inspector_type: Label
 var inspector_text: Label
 var log_label: Label
 var mute_button: Button
-var sfx_button: Button
 var quit_dialog: ConfirmationDialog
 var music
-var sfx
+## Sound effects were removed (they cost frames); _tap_sfx stays as a no-op so the call sites don't change.
+var sfx = null
 var you_zones: Dictionary = {}
 var rival_zones: Dictionary = {}
 var hand_row: HBoxContainer
@@ -121,12 +120,6 @@ func _ready() -> void:
 	music = ThemeMusicScript.new()
 	music.name = "ThemeMusic"
 	add_child(music)
-	sfx = TavernSfxScript.new()
-	sfx.name = "TavernSfx"
-	add_child(sfx)
-	var app := get_node_or_null("/root/AppState")
-	if app != null and bool(app.sfx_muted):
-		sfx.set_muted(true)
 	var cat := _catalog()
 	if cat and cat.has_signal("art_updated") and not cat.art_updated.is_connected(_on_art_updated):
 		cat.art_updated.connect(_on_art_updated)
@@ -349,16 +342,12 @@ func _build_header() -> Control:
 	row.add_child(next_turn_btn)
 	mute_button = _header_button("Mute", Color(0.16, 0.17, 0.18), INK, _on_mute, 72)
 	row.add_child(mute_button)
-	sfx_button = _header_button("SFX", Color(0.16, 0.17, 0.18), INK, _on_sfx, 72)
-	row.add_child(sfx_button)
 	history_button = _header_button("Hide history", Color(0.16, 0.17, 0.18), INK, _toggle_history, 110)
 	row.add_child(history_button)
 	row.add_child(_header_button("Dice", Color(0.16, 0.17, 0.18), INK, _on_dice, 72))
 	row.add_child(_header_button("Menu", Color(0.16, 0.17, 0.18), INK, _on_menu, 72))
 	row.add_child(_header_button("Main menu", Color(0.16, 0.17, 0.18), INK, _on_main_menu, 100))
 	bar.add_child(row)
-	if sfx != null and sfx.muted and sfx_button:
-		sfx_button.text = "SFX off"
 	return bar
 
 func _header_button(text: String, bg: Color, fg: Color, cb: Callable, width: float = 120) -> Button:
@@ -2024,16 +2013,6 @@ func _on_mute() -> void:
 	var on: bool = music.toggle_mute()
 	mute_button.text = "Music" if on else "Mute"
 	_set_status("Music off." if on else "Music on.")
-
-func _on_sfx() -> void:
-	if sfx == null:
-		return
-	var on: bool = sfx.toggle_mute()
-	sfx_button.text = "SFX off" if on else "SFX"
-	var app := get_node_or_null("/root/AppState")
-	if app != null:
-		app.sfx_muted = on
-	_set_status("Tavern sounds off." if on else "Tavern sounds on.")
 
 
 func _paint_life(label: Label, life: int) -> void:

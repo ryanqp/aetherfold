@@ -25,6 +25,15 @@ func list_decks() -> Array:
 	return out
 
 
+## Test runs used to leave "Mono Red Test" decks behind in the saved deck list. Removes them.
+func purge_test_decks() -> int:
+	var n := 0
+	for rec in list_decks():
+		if str(rec.get("name", "")) == "Mono Red Test" and delete_path(str(rec.get("_path", ""))):
+			n += 1
+	return n
+
+
 func find_by_source_url(url: String) -> Dictionary:
 	if url.strip_edges() == "":
 		return {}

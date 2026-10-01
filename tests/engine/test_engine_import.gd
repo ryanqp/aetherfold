@@ -290,6 +290,7 @@ func test_saved_deck_roundtrip() -> void:
 	assert_eq(str(loaded.get("name", "")), deck.name)
 	assert_eq((loaded.get("commander", []) as Array).size(), 1)
 	assert_true((loaded.get("cards", {}) as Dictionary).has("Mountain"))
+	store.delete_path(path)  # don't leave a "Mono Red Test" deck in the player's saved decks
 
 
 func _mono_red(mountains: int) -> NormalizedDeck:

@@ -28,7 +28,6 @@ var builder_count: Label
 var builder_cmd_name: String = ""
 var builder_cards: Dictionary = {}
 var settings_music: Button
-var settings_sfx: Button
 
 
 func _ready() -> void:
@@ -441,6 +440,7 @@ func _refresh_gallery() -> void:
 		var ch := gallery_grid.get_child(0)
 		gallery_grid.remove_child(ch)
 		ch.queue_free()
+	DeckStore.new().purge_test_decks()
 	var recs: Array = DeckStore.new().list_decks()
 	if recs.is_empty():
 		var empty := Label.new()
@@ -646,13 +646,7 @@ func _build_settings() -> void:
 	_title(c, "Menu", 32)
 	_sub(c, "Audio and display.")
 	settings_music = _btn("Music: On", _toggle_music, 280)
-	var sfx_off := false
-	var app_now := _app()
-	if app_now != null:
-		sfx_off = bool(app_now.sfx_muted)
-	settings_sfx = _btn("SFX: Off" if sfx_off else "SFX: On", _toggle_sfx, 280)
 	c.add_child(settings_music)
-	c.add_child(settings_sfx)
 	c.add_child(_btn("Toggle fullscreen", _toggle_fullscreen, 280))
 	_sub(c, "Aetherfold  ·  Godot 4.7  ·  fan Commander table")
 	_back_row(c)
@@ -664,15 +658,6 @@ func _toggle_music() -> void:
 	# music is on table; toggle Master here as a coarse control
 	if settings_music:
 		settings_music.text = "Music: Off" if settings_music.text.ends_with("On") else "Music: On"
-
-
-func _toggle_sfx() -> void:
-	var app := _app()
-	if app == null:
-		return
-	app.sfx_muted = not bool(app.sfx_muted)
-	if settings_sfx:
-		settings_sfx.text = "SFX: Off" if app.sfx_muted else "SFX: On"
 
 
 func _on_mp_copy() -> void:
