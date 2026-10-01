@@ -174,3 +174,42 @@ func test_fear_and_skulk_keywords_are_enforced() -> void:
 	assert_eq(str(KeywordDb.lookup("Fear").get("status")), "ENFORCED")
 	assert_eq(str(KeywordDb.lookup("Skulk").get("status")), "ENFORCED")
 	assert_eq(str(KeywordDb.lookup("Hideaway 4").get("status")), "READ")
+
+
+func _trigger_kinds(card_name: String) -> Dictionary:
+	var ab := _first(card_name, &"TRIGGERED")
+	var out := {"trigger": {}, "kinds": []}
+	if ab == null:
+		return out
+	out["trigger"] = ab.trigger
+	for fx in ab.effects:
+		(out["kinds"] as Array).append(str(fx.kind))
+	return out
+
+
+func test_keyword_triggers_are_read() -> void:
+	var ex := _trigger_kinds("Test Exalter")
+	assert_eq(str(ex.trigger.get("on")), "ATTACKS_ALONE")
+	assert_true((ex.kinds as Array).has("PUMP"))
+	var af := _trigger_kinds("Test Afterlifer")
+	assert_eq(str(af.trigger.get("on")), "DIES")
+	assert_true((af.kinds as Array).has("CREATE_TOKEN"))
+	var an := _trigger_kinds("Test Annihilator")
+	assert_true((an.kinds as Array).has("SACRIFICE"))
+	var un := _trigger_kinds("Test Undying")
+	assert_eq(str(un.trigger.get("unless_counter")), "+1/+1")
+	assert_true((un.kinds as Array).has("RETURN_SELF"))
+	var inv := _trigger_kinds("Test Investigator")
+	assert_true((inv.kinds as Array).has("CREATE_TOKEN"))
+
+
+func test_infect_deals_poison_and_toxic_adds_poison() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var inf: GameObject = Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Infector")
+	engine._combat_damage_to_player(inf, 1, 2)
+	assert_eq(engine.state.players[1].life, 40)
+	assert_eq(engine.state.players[1].poison, 2)
+	var tox: GameObject = Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Toxic")
+	engine._combat_damage_to_player(tox, 1, 2)
+	assert_eq(engine.state.players[1].life, 38)
+	assert_eq(engine.state.players[1].poison, 4)

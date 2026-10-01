@@ -200,6 +200,12 @@ func _read_line(def: CardDefinition, line: String) -> Array:
 			"restrictions": [],
 		}]
 
+	# Keyword abilities that are triggers (CR 702): exalted, battle cry, afterlife, annihilator, evolve,
+	# undying, persist, renown, fabricate, cascade.
+	var kt := _keyword_trigger(line)
+	if not kt.is_empty():
+		return [kt]
+
 	var st := _static_line(line)
 	if not st.is_empty():
 		return [st]
@@ -261,6 +267,47 @@ func _read_line(def: CardDefinition, line: String) -> Array:
 
 
 ## "Creatures you control get +1/+1", "Equipped creature gets +2/+2 and has menace", cost reductions.
+## One keyword line that is really a triggered ability, or {}.
+func _keyword_trigger(line: String) -> Dictionary:
+	var low := line.to_lower().strip_edges()
+	var m: RegExMatch
+	if low == "exalted":
+		return _kw("ATTACKS_ALONE", {}, [{"kind": "PUMP", "params": {"trigger_object": true, "power": 1, "toughness": 1, "duration": "END_OF_TURN"}}])
+	if low == "battle cry":
+		return _kw("ATTACKS", {}, [{"kind": "PUMP", "params": {"each": {"controller": "SOURCE_CONTROLLER", "attacking": true, "other": true, "type": "creature"}, "power": 1, "toughness": 0, "duration": "END_OF_TURN"}}])
+	m = _match("^afterlife (\\d+)$", low)
+	if m != null:
+		return _kw("DIES", {}, [{"kind": "CREATE_TOKEN", "params": {"count": int(m.get_string(1)), "spec": {"subtypes": ["Spirit"], "colors": ["W", "B"], "p": "1", "t": "1", "keywords": ["Flying"]}}}])
+	m = _match("^annihilator (\\d+)$", low)
+	if m != null:
+		return _kw("ATTACKS", {}, [{"kind": "SACRIFICE", "params": {"n": int(m.get_string(1)), "who": "EACH_OPPONENT"}}])
+	if low == "evolve":
+		return _kw("ENTERS_BATTLEFIELD", {"scope": "OTHER", "greater_pt": true, "filter": {"controller": "SOURCE_CONTROLLER", "type": "creature"}}, [{"kind": "PUT_COUNTER", "params": {"self": true, "name": "+1/+1", "n": 1}}])
+	if low == "undying":
+		return _kw("DIES", {"unless_counter": "+1/+1"}, [{"kind": "RETURN_SELF", "params": {"name": "+1/+1"}}])
+	if low == "persist":
+		return _kw("DIES", {"unless_counter": "-1/-1"}, [{"kind": "RETURN_SELF", "params": {"name": "-1/-1"}}])
+	m = _match("^renown (\\d+)$", low)
+	if m != null:
+		return _kw("COMBAT_DAMAGE_TO_PLAYER", {"unless_counter": "renowned"}, [
+			{"kind": "PUT_COUNTER", "params": {"self": true, "name": "+1/+1", "n": int(m.get_string(1))}},
+			{"kind": "PUT_COUNTER", "params": {"self": true, "name": "renowned", "n": 1}}])
+	m = _match("^fabricate (\\d+)$", low)
+	if m != null:
+		return _kw("ENTERS_BATTLEFIELD", {}, [{"kind": "FABRICATE", "params": {"n": int(m.get_string(1))}}])
+	if low == "cascade":
+		return _kw("SPELL_CAST", {"scope_self": true}, [{"kind": "CASCADE", "params": {}}])
+	return {}
+
+
+func _kw(on: String, extra: Dictionary, effects: Array) -> Dictionary:
+	var trig := {"on": on}
+	for k in extra.keys():
+		trig[k] = extra[k]
+	return {"kind": "TRIGGERED", "trigger": trig, "costs": [], "targets": [], "effects": effects, "restrictions": []}
+
+
+
 func _static_line(line: String) -> Dictionary:
 	var m: RegExMatch
 	# Equipment / auras that boost or grant.
@@ -556,6 +603,28 @@ func _read(def: CardDefinition) -> Dictionary:
 ## Returns true when the sentence was understood and its effects were queued.
 func _sentence(s: String) -> bool:
 	var m: RegExMatch
+
+	# Keyword actions as sentences: investigate, proliferate, explore, amass, bolster, populate.
+	if _match("^investigate$", s) != null:
+		_effects.append({"kind": "CREATE_TOKEN", "params": {"token": "clue", "count": 1}})
+		return true
+	if _match("^proliferate$", s) != null:
+		_effects.append({"kind": "PROLIFERATE", "params": {}})
+		return true
+	if _match("^(?:~|it) explores$|^explore$", s) != null:
+		_effects.append({"kind": "EXPLORE", "params": {}})
+		return true
+	m = _match("^amass (?:[a-z]+ )?(\\d+)$", s)
+	if m != null:
+		_effects.append({"kind": "AMASS", "params": {"n": int(m.get_string(1))}})
+		return true
+	m = _match("^bolster (\\d+)$", s)
+	if m != null:
+		_effects.append({"kind": "BOLSTER", "params": {"n": int(m.get_string(1))}})
+		return true
+	if _match("^populate$", s) != null:
+		_effects.append({"kind": "POPULATE", "params": {}})
+		return true
 
 	# CR 120.3: damage.
 	m = _match("^(?:~|it) deals (\\d+) damage to (.+)$", s)

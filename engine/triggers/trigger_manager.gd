@@ -25,6 +25,11 @@ func on_spell_cast(engine: RulesEngine, spell_obj: GameObject, caster_id: int) -
 		if not def.is_creature():
 			spell_types.append("noncreature")
 	var ctx := {object_id = spell_obj.object_id, player_id = caster_id}
+	## "When you cast this spell" (cascade): the spell's own abilities, while it is on the stack.
+	spell_obj.controller_id = caster_id
+	for own in _triggered(engine, spell_obj, "SPELL_CAST"):
+		if bool(own.trigger.get("scope_self", false)):
+			_put_trigger(engine, spell_obj, own, ctx)
 	for src in _battlefield(engine):
 		for ab in _triggered(engine, src, "SPELL_CAST"):
 			if _matches_spell_cast(ab, src, caster_id, spell_types, spell_obj):
@@ -32,6 +37,8 @@ func on_spell_cast(engine: RulesEngine, spell_obj: GameObject, caster_id: int) -
 
 
 func _matches_spell_cast(ab: Ability, source: GameObject, caster_id: int, spell_types: PackedStringArray, spell_obj: GameObject) -> bool:
+	if bool(ab.trigger.get("scope_self", false)):
+		return false
 	var filt: Variant = ab.trigger.get("filter", {})
 	if not (filt is Dictionary):
 		return true
@@ -124,6 +131,7 @@ func _on_zone_change(engine: RulesEngine, p: Dictionary) -> void:
 			player_id = ghost.controller_id,
 			power = int(lki.get("power", 0)),
 			toughness = int(lki.get("toughness", 0)),
+			counters = lki.get("counters", {}),
 		}
 		if to_z == EngineEnums.ZoneId.GRAVEYARD:
 			_fire(engine, "DIES", ghost, self_obj, ctx)
@@ -143,6 +151,10 @@ func _on_attack(engine: RulesEngine, e: GameEvent) -> void:
 		for ab in _triggered(engine, src, "ATTACKS"):
 			if str(ab.trigger.get("scope", "SELF")) == "YOU":
 				_put_trigger(engine, src, ab, {player_id = e.player_id})
+		## Exalted (CR 702.83): "whenever a creature you control attacks alone".
+		if attackers.size() == 1:
+			for ab2 in _triggered(engine, src, "ATTACKS_ALONE"):
+				_put_trigger(engine, src, ab2, {player_id = e.player_id, object_id = int(attackers[0])})
 
 
 func _on_step_begin(engine: RulesEngine, step: int, active: int) -> void:
@@ -193,11 +205,11 @@ func _fire(engine: RulesEngine, on: String, subject: GameObject, self_obj: GameO
 	for w in watchers:
 		var same: bool = self_obj != null and w.object_id == self_obj.object_id
 		for ab in _triggered(engine, w, on):
-			if _scope_ok(ab, w, subject, same):
+			if _scope_ok(engine, ab, w, subject, same):
 				_put_trigger(engine, w, ab, ctx)
 
 
-func _scope_ok(ab: Ability, watcher: GameObject, subject: GameObject, same: bool) -> bool:
+func _scope_ok(engine: RulesEngine, ab: Ability, watcher: GameObject, subject: GameObject, same: bool) -> bool:
 	var scope := str(ab.trigger.get("scope", "SELF"))
 	if scope == "SELF":
 		return same
@@ -205,6 +217,10 @@ func _scope_ok(ab: Ability, watcher: GameObject, subject: GameObject, same: bool
 		return false
 	if scope != "OTHER" and scope != "ANY":
 		return false
+	## Evolve (CR 702.100): the creature that entered has greater power or toughness than the watcher.
+	if bool(ab.trigger.get("greater_pt", false)):
+		if engine.power_of(subject) <= engine.power_of(watcher) and engine.toughness_of(subject) <= engine.toughness_of(watcher):
+			return false
 	var f: Variant = ab.trigger.get("filter", {})
 	if f is Dictionary and not (f as Dictionary).is_empty():
 		return Query._matches(subject, watcher, f)
@@ -257,6 +273,12 @@ func _abilities_of(engine: RulesEngine, src: GameObject) -> Array:
 ## TargetingManager.auto_pick (harmful at the opponent, helpful at you). A trigger whose required
 ## target has no legal choice is not put on the stack (CR 603.3d).
 func _put_trigger(engine: RulesEngine, source: GameObject, ab: Ability, ctx: Dictionary = {}) -> void:
+	## "Unless it has a ... counter" gates: renown (once ever), undying / persist (checked on what it had).
+	var unless := str(ab.trigger.get("unless_counter", ""))
+	if unless != "":
+		var had: Dictionary = ctx.get("counters", source.counters) if ab.trigger.get("on", "") == "DIES" else source.counters
+		if int(had.get(unless, 0)) > 0:
+			return
 	var entry := StackEntry.new()
 	entry.stack_id = engine.state.next_stack_id
 	entry.kind = StackEntry.Kind.TRIGGERED

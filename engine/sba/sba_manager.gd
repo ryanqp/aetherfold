@@ -75,7 +75,7 @@ func _check_creatures(engine: RulesEngine) -> void:
 
 func _check_life(st: GameState) -> void:
 	for p in st.players:
-		if p.life <= 0:
+		if p.life <= 0 or p.poison >= 10:
 			p.lost = true
 
 

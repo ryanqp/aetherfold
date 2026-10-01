@@ -9,4 +9,6 @@ var commander_ids: Array[int] = []
 var commander_cast_count: Dictionary = {}
 var commander_damage_from: Dictionary = {}
 var lost: bool = false
+## CR 704.5c: ten or more poison counters lose the game (infect, toxic).
+var poison: int = 0
 var mulligan_count: int = 0

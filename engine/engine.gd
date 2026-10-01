@@ -321,7 +321,7 @@ func put_library_bottom(object_id: int, player_id: int) -> GameObject:
 func cost_reduction(player_id: int, spell: GameObject) -> int:
 	if spell == null:
 		return 0
-	var total := _own_discount(player_id, spell)
+	var total := _own_discount(player_id, spell) + _affinity(player_id, spell)
 	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
 	if bf == null:
 		return 0
@@ -338,6 +338,25 @@ func cost_reduction(player_id: int, spell: GameObject) -> int:
 			if f is Dictionary and Query._matches(spell, src, f):
 				total += int(spec.get("amount", 1))
 	return total
+
+
+## Affinity for artifacts / creatures / lands ... (CR 702.41): costs {1} less for each such permanent you control.
+func _affinity(player_id: int, spell: GameObject) -> int:
+	if not (spell.definition is CardDefinition):
+		return 0
+	var m := RegEx.create_from_string("(?im)^affinity for ([a-z ]+?)s?$").search((spell.definition as CardDefinition).oracle_text)
+	if m == null:
+		return 0
+	var kind := m.get_string(1).strip_edges()
+	var n := 0
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return 0
+	for oid in bf.object_ids:
+		var o: GameObject = state.objects.get(oid)
+		if o != null and o.controller_id == player_id and o.definition is CardDefinition and (o.definition as CardDefinition).type_line.to_lower().contains(kind.to_lower()):
+			n += 1
+	return n
 
 
 ## "This spell costs {2} less to cast if it targets a Dinosaur you control." While you are casting it the
@@ -384,7 +403,7 @@ func effective_cost(player_id: int, spell: GameObject, extra_generic: int = 0) -
 
 
 func _lki(obj: GameObject) -> Dictionary:
-	return {power = power_of(obj), toughness = toughness_of(obj)}
+	return {power = power_of(obj), toughness = toughness_of(obj), counters = obj.counters.duplicate()}
 
 
 func resolve_top() -> void:
@@ -1020,7 +1039,7 @@ func _lethal_for(source: GameObject, target: GameObject) -> int:
 func damage_object(source: GameObject, target: GameObject, amount: int) -> void:
 	if amount <= 0 or target == null or target.zone != EngineEnums.ZoneId.BATTLEFIELD:
 		return
-	target.damage_marked += amount
+	_mark_damage(source, target, amount)
 	if source != null and has_keyword(source, "Deathtouch"):
 		target.deathtouch_damage = true
 	state.log.append(EngineEnums.EventType.DAMAGE, source.controller_id if source != null else 0, {
@@ -1032,8 +1051,24 @@ func damage_object(source: GameObject, target: GameObject, amount: int) -> void:
 		_apply_lifelink(source, amount)
 
 
+## Damage to a creature: marked damage, or -1/-1 counters when the source has infect (CR 702.90b).
+func _mark_damage(source: GameObject, target: GameObject, amount: int) -> void:
+	if source != null and has_keyword(source, "Infect"):
+		target.counters["-1/-1"] = int(target.counters.get("-1/-1", 0)) + amount
+	else:
+		target.damage_marked += amount
+
+
+## The N of a keyword line such as "Toxic 2" or "Afterlife 3" on the card, 0 if it has none.
+func keyword_n(obj: GameObject, keyword: String) -> int:
+	if obj == null or not (obj.definition is CardDefinition):
+		return 0
+	var m := RegEx.create_from_string("(?im)^" + keyword + " (\\d+)").search((obj.definition as CardDefinition).oracle_text)
+	return int(m.get_string(1)) if m != null else 0
+
+
 func _combat_damage_to_object(source: GameObject, target: GameObject, amount: int) -> void:
-	target.damage_marked += amount
+	_mark_damage(source, target, amount)
 	if has_keyword(source, "Deathtouch"):
 		target.deathtouch_damage = true
 	state.log.append(EngineEnums.EventType.DAMAGE, source.controller_id, {
@@ -1048,7 +1083,14 @@ func _combat_damage_to_object(source: GameObject, target: GameObject, amount: in
 func _combat_damage_to_player(source: GameObject, player_id: int, amount: int) -> void:
 	if player_id < 0 or player_id >= state.players.size():
 		return
-	state.players[player_id].life -= amount
+	## Infect (CR 702.90b): damage to a player is poison counters instead of life loss. Toxic N (CR 702.164)
+	## adds N poison counters on top of normal damage.
+	if has_keyword(source, "Infect"):
+		state.players[player_id].poison += amount
+	else:
+		state.players[player_id].life -= amount
+	if amount > 0:
+		state.players[player_id].poison += keyword_n(source, "toxic")
 	state.log.append(EngineEnums.EventType.DAMAGE, state.active_player_id, {
 		to_player = player_id,
 		amount = amount,
@@ -1301,6 +1343,13 @@ func _can_block(object_id: int, defender_id: int, attacker_id: int = -1) -> bool
 					shares = true
 			if not shares:
 				return false
+	## Shadow (CR 702.28) and horsemanship (CR 702.31): only blocked by, and only block, creatures that have it.
+	for kw in ["Shadow", "Horsemanship"]:
+		if has_keyword(attacker, kw) != has_keyword(obj, kw):
+			return false
+	## "~ can't be blocked." (a whole sentence; "can't be blocked by ..." and "except" are conditional).
+	if adef != null and RegEx.create_from_string("(?i)can't be blocked\\.").search(adef.oracle_text) != null:
+		return false
 	## Skulk (CR 702.118): can't be blocked by creatures with greater power.
 	if has_keyword(attacker, "Skulk") and power_of(obj) > power_of(attacker):
 		return false

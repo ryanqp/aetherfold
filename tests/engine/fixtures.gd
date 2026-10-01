@@ -197,6 +197,13 @@ static func memory_catalog() -> CatalogSource:
 	cat.add(_creature_row("Test Miller", "{2}{U}", 3, "Creature — Merfolk", "When this creature enters, each opponent mills three cards, then you surveil 2.", ["U"]))
 	cat.add(_keyword_creature("Test Fearful", "2", "2", ["Fear"]))
 	cat.add(_keyword_creature("Test Skulker", "2", "2", ["Skulk"]))
+	cat.add(_keyword_creature("Test Infector", "2", "2", ["Infect"]))
+	cat.add(_creature_row("Test Toxic", "{2}", 2, "Creature — Test", "Toxic 2", []))
+	cat.add(_creature_row("Test Exalter", "{1}{W}", 2, "Creature — Human", "Exalted", ["W"]))
+	cat.add(_creature_row("Test Afterlifer", "{2}{W}", 3, "Creature — Cleric", "Afterlife 2", ["W"]))
+	cat.add(_creature_row("Test Annihilator", "{6}", 6, "Creature — Eldrazi", "Annihilator 2", []))
+	cat.add(_creature_row("Test Undying", "{2}{G}", 3, "Creature — Beast", "Undying", ["G"]))
+	cat.add(_creature_row("Test Investigator", "{1}{U}", 2, "Creature — Human", "When this creature enters, investigate.", ["U"]))
 	## Vanilla keyword bodies for combat rules tests.
 	cat.add(_keyword_creature("Test Flyer", "2", "2", ["Flying"]))
 	cat.add(_keyword_creature("Test Reacher", "1", "4", ["Reach"]))

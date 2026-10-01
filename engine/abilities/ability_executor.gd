@@ -111,6 +111,24 @@ func _apply(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: Abil
 			_mill(engine, entry, fx)
 		"DISCARD":
 			_discard(engine, entry, fx)
+		"SACRIFICE":
+			_sacrifice(engine, entry, source, fx)
+		"PROLIFERATE":
+			_proliferate(engine, entry)
+		"EXPLORE":
+			_explore(engine, entry, source)
+		"AMASS":
+			_amass(engine, entry, source, fx)
+		"BOLSTER":
+			_bolster(engine, entry, source, fx)
+		"POPULATE":
+			_populate(engine, entry)
+		"FABRICATE":
+			_fabricate(engine, entry, source, fx)
+		"CASCADE":
+			_cascade(engine, entry, source)
+		"RETURN_SELF":
+			_return_self(engine, entry, source, fx)
 		"SURVEIL":
 			_surveil(engine, entry, fx)
 		"BECOME_MONARCH":
@@ -186,8 +204,14 @@ func _each(engine: RulesEngine, entry: StackEntry, source: GameObject, query: Va
 	for oid in bf.object_ids.duplicate():
 		var obj: GameObject = engine.state.objects.get(oid)
 		if obj != null and Query._matches(obj, ref, query):
+			if bool((query as Dictionary).get("attacking", false)) and not _is_attacking(engine, obj):
+				continue
 			out.append(obj)
 	return out
+
+
+func _is_attacking(engine: RulesEngine, obj: GameObject) -> bool:
+	return engine.state.combat is CombatState and (engine.state.combat as CombatState).attacker_ids.has(obj.object_id)
 
 
 ## What an effect acts on: the source itself ("self"), every object matching "each", or its target.
@@ -198,6 +222,10 @@ func _affected(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: A
 		return []
 	if fx.params.has("each"):
 		return _each(engine, entry, source, fx.params["each"])
+	## The creature that set the trigger off (exalted: the lone attacker).
+	if bool(fx.params.get("trigger_object", false)):
+		var trig: GameObject = engine.state.objects.get(int(entry.ctx.get("object_id", 0)))
+		return [trig] if trig != null and trig.zone == EngineEnums.ZoneId.BATTLEFIELD else []
 	var idx := int(fx.params.get("target", 0))
 	if idx < 0 or idx >= entry.targets.size():
 		return []
@@ -613,6 +641,220 @@ func _card_option(engine: RulesEngine, oid: int) -> Dictionary:
 func _name_of(engine: RulesEngine, oid: int) -> String:
 	var c: GameObject = engine.state.objects.get(oid)
 	return (c.definition as CardDefinition).name if c != null and c.definition is CardDefinition else "the card"
+
+
+# --- Keyword actions ------------------------------------------------------------------------
+
+func _spawn_token(engine: RulesEngine, pid: int, def: CardDefinition) -> GameObject:
+	var obj: GameObject = engine.state.zones.create(pid, EngineEnums.ZoneId.BATTLEFIELD, {definition = def, is_token = true, controller_id = pid})
+	if obj != null:
+		engine.state.log.append(EngineEnums.EventType.ZONE_CHANGE, pid, {
+			from_id = 0, to_id = obj.object_id, from_zone = -1, to_zone = EngineEnums.ZoneId.BATTLEFIELD, linked_from = 0,
+		})
+	return obj
+
+
+func _permanents_of(engine: RulesEngine, pid: int, kind: String = "") -> Array:
+	var out: Array = []
+	var bf: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return out
+	for oid in bf.object_ids:
+		var o: GameObject = engine.state.objects.get(oid)
+		if o == null or o.controller_id != pid or not (o.definition is CardDefinition):
+			continue
+		if kind != "" and not (o.definition as CardDefinition).type_line.to_lower().contains(kind.to_lower()):
+			continue
+		out.append(o)
+	return out
+
+
+## Sacrifice N (CR 701.17): each affected player picks their own. The rival gives up its cheapest first.
+func _sacrifice(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var n := int(fx.params.get("n", 1))
+	var plan := {}
+	for pid in _players_for(engine, entry, str(fx.params.get("who", "EACH_OPPONENT"))):
+		var mine := _permanents_of(engine, int(pid), str(fx.params.get("type", "")))
+		var chosen: Array = []
+		for i in mini(n, mine.size()):
+			var options: Array = []
+			for o in mine:
+				if not chosen.has(o.object_id):
+					options.append(_card_option(engine, o.object_id))
+			var ans := _ask(engine, entry, int(pid), "sac_%d_%d" % [pid, i], "Sacrifice a permanent (%d of %d)." % [i + 1, n], options)
+			if ans.s == "paused":
+				return
+			if ans.s == "picked":
+				chosen.append(int(ans.value))
+			else:
+				var worst: GameObject = null
+				var worst_score := 1000000
+				for o2 in mine:
+					if chosen.has(o2.object_id):
+						continue
+					var d2 := o2.definition as CardDefinition
+					var sc := -1 if o2.is_token else d2.cmc * 2 + engine.power_of(o2) + (6 if d2.is_land() else 0)
+					if sc < worst_score:
+						worst_score = sc
+						worst = o2
+				if worst != null:
+					chosen.append(worst.object_id)
+		plan[pid] = chosen
+	for pid in plan.keys():
+		for oid in plan[pid]:
+			var o3: GameObject = engine.state.objects.get(int(oid))
+			if o3 != null and o3.zone == EngineEnums.ZoneId.BATTLEFIELD:
+				engine.state.zones.move(o3.object_id, EngineEnums.ZoneId.GRAVEYARD, o3.owner_id)
+	if engine.sba != null:
+		engine.sba.check(engine)
+
+
+## Proliferate (CR 701.34): your good counters and your opponents' bad ones grow by one.
+func _proliferate(engine: RulesEngine, entry: StackEntry) -> void:
+	var bf: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf != null:
+		for oid in bf.object_ids:
+			var o: GameObject = engine.state.objects.get(oid)
+			if o == null:
+				continue
+			var mine := o.controller_id == entry.controller_id
+			for k in o.counters.keys():
+				if int(o.counters[k]) <= 0 or str(k) == "renowned":
+					continue
+				if mine != (str(k) == "-1/-1"):
+					o.counters[k] = int(o.counters[k]) + 1
+	for p in engine.state.players:
+		if p.player_id != entry.controller_id and p.poison > 0:
+			p.poison += 1
+
+
+## Explore (CR 701.44): reveal the top card. A land goes to your hand; otherwise the creature gets a
+## +1/+1 counter and you may put the card into your graveyard.
+func _explore(engine: RulesEngine, entry: StackEntry, source: GameObject) -> void:
+	if source == null or source.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
+	var pid := entry.controller_id
+	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
+	if lib == null or lib.is_empty():
+		return
+	var top_id := int(lib.object_ids[0])
+	var top: GameObject = engine.state.objects.get(top_id)
+	var def := top.definition as CardDefinition if top != null and top.definition is CardDefinition else null
+	if def == null:
+		return
+	if def.is_land():
+		engine.state.zones.move(top_id, EngineEnums.ZoneId.HAND, pid)
+		return
+	var ans := _ask_yes_no(engine, entry, pid, "explore_gy", "Explore: %s is not a land. Put it into your graveyard? (No leaves it on top.)" % def.name)
+	if ans.s == "paused":
+		return
+	source.counters["+1/+1"] = int(source.counters.get("+1/+1", 0)) + 1
+	if ans.s == "picked" and bool(ans.value):
+		engine.state.zones.move(top_id, EngineEnums.ZoneId.GRAVEYARD, pid)
+
+
+## Amass N (CR 701.47): +N counters on your Army, making a 0/0 Army token first if you have none.
+func _amass(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var n := _value(engine, entry, source, fx.params.get("n", 1))
+	var army: GameObject = null
+	for o in _permanents_of(engine, entry.controller_id, "Army"):
+		army = o
+		break
+	if army == null:
+		army = _spawn_token(engine, entry.controller_id, tokens.from_spec({"subtypes": ["Army"], "colors": ["B"], "p": "0", "t": "0"}))
+	if army != null:
+		army.counters["+1/+1"] = int(army.counters.get("+1/+1", 0)) + n
+
+
+## Bolster N (CR 701.39): +N counters on the creature you control with the least toughness.
+func _bolster(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var n := _value(engine, entry, source, fx.params.get("n", 1))
+	var weakest: GameObject = null
+	for o in _permanents_of(engine, entry.controller_id, "Creature"):
+		if weakest == null or engine.toughness_of(o) < engine.toughness_of(weakest):
+			weakest = o
+	if weakest != null:
+		weakest.counters["+1/+1"] = int(weakest.counters.get("+1/+1", 0)) + n
+
+
+## Populate (CR 701.36): a copy of your token with the most power.
+func _populate(engine: RulesEngine, entry: StackEntry) -> void:
+	var best: GameObject = null
+	for o in _permanents_of(engine, entry.controller_id, "Creature"):
+		if o.is_token and (best == null or engine.power_of(o) > engine.power_of(best)):
+			best = o
+	if best != null:
+		_spawn_token(engine, entry.controller_id, best.definition as CardDefinition)
+
+
+## Fabricate N (CR 702.123): N +1/+1 counters on it, or N 1/1 Servo artifact creatures.
+func _fabricate(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var n := int(fx.params.get("n", 1))
+	var pid := entry.controller_id
+	var nm := (source.definition as CardDefinition).name if source != null and source.definition is CardDefinition else "it"
+	var ans := _ask_yes_no(engine, entry, pid, "fabricate", "Fabricate %d: put %d +1/+1 counter(s) on %s? (No creates %d Servo token(s).)" % [n, n, nm, n])
+	if ans.s == "paused":
+		return
+	var counters := true if ans.s == "auto" else bool(ans.value)
+	if counters and source != null and source.zone == EngineEnums.ZoneId.BATTLEFIELD:
+		source.counters["+1/+1"] = int(source.counters.get("+1/+1", 0)) + n
+		return
+	for _i in n:
+		_spawn_token(engine, pid, tokens.from_spec({"subtypes": ["Servo"], "colors": [], "p": "1", "t": "1", "artifact": true}))
+
+
+## Cascade (CR 702.85): exile cards from the top until a nonland card with lesser mana value, cast it free.
+func _cascade(engine: RulesEngine, entry: StackEntry, source: GameObject) -> void:
+	var pid := entry.controller_id
+	var spell: GameObject = engine.state.objects.get(int(entry.ctx.get("object_id", 0)))
+	var limit := (spell.definition as CardDefinition).cmc if spell != null and spell.definition is CardDefinition else (source.definition as CardDefinition).cmc if source != null and source.definition is CardDefinition else 0
+	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
+	if lib == null:
+		return
+	if not entry.ctx.has("cas_done"):
+		var skipped: Array = []
+		var found_id := -1
+		var guard := 0
+		while not lib.object_ids.is_empty() and guard < 200:
+			guard += 1
+			var top: GameObject = engine.state.objects.get(lib.object_ids[0])
+			if top == null:
+				lib.object_ids.remove_at(0)
+				continue
+			var moved: GameObject = engine.state.zones.move(top.object_id, EngineEnums.ZoneId.EXILE, pid)
+			if moved == null:
+				break
+			var def := moved.definition as CardDefinition if moved.definition is CardDefinition else null
+			if def != null and not def.is_land() and def.cmc < limit:
+				found_id = moved.object_id
+				break
+			skipped.append(moved.object_id)
+		engine.state.rng.shuffle(skipped)
+		for oid in skipped:
+			engine.put_library_bottom(int(oid), pid)
+		entry.ctx["cas_done"] = true
+		entry.ctx["cas_found"] = found_id
+	var fid := int(entry.ctx.get("cas_found", -1))
+	var found: GameObject = engine.state.objects.get(fid)
+	if found == null or found.zone != EngineEnums.ZoneId.EXILE:
+		return
+	var ans := _ask_yes_no(engine, entry, pid, "cascade_cast", "Cascade: cast %s without paying its mana cost? (No puts it on the bottom of your library.)" % _name_of(engine, fid))
+	if ans.s == "paused":
+		return
+	var cast_it := true if ans.s == "auto" else bool(ans.value)
+	if cast_it and engine.cast_free(pid, fid):
+		return
+	engine.put_library_bottom(fid, pid)
+
+
+## Undying / persist (CR 702.93, 702.79): the creature that just died comes back with a counter.
+func _return_self(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	if source == null or source.zone != EngineEnums.ZoneId.GRAVEYARD or source.is_token:
+		return
+	var back: GameObject = engine.state.zones.move(source.object_id, EngineEnums.ZoneId.BATTLEFIELD, source.owner_id)
+	if back != null:
+		var cname := str(fx.params.get("name", "+1/+1"))
+		back.counters[cname] = int(back.counters.get(cname, 0)) + 1
 
 
 # --- Search, scry, fights, equipment -----------------------------------------------------

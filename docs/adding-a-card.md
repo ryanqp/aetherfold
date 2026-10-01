@@ -289,3 +289,20 @@ A load error from `IrLoader` (unknown key / unknown effect kind) means the JSON 
 | `surveil N` | `SURVEIL {n}` (spare lands go to the graveyard) |
 
 Fear, intimidate and skulk are enforced when blocking. Unread lines print as `UNIMPLEMENTED_MECHANIC: <Card> — <line>` in the Godot Output panel.
+
+### Keyword abilities that are read (BF-44)
+
+| Keyword line / sentence | What the engine does |
+| --- | --- |
+| `Exalted` | trigger `ATTACKS_ALONE`: the lone attacker gets +1/+1 |
+| `Battle cry` | on attack, each other attacking creature gets +1/+0 |
+| `Afterlife N`, `Annihilator N` | dies: N 1/1 Spirit fliers; attacks: defending player sacrifices N (they choose) |
+| `Evolve`, `Renown N`, `Fabricate N` | counters (fabricate asks counters or Servo tokens) |
+| `Undying`, `Persist` | returns from the graveyard with a +1/+1 / -1/-1 counter if it had none |
+| `Cascade` | exile to a cheaper nonland card, cast it free (you choose) |
+| `investigate`, `proliferate`, `explores`, `amass N`, `bolster N`, `populate` | sentences inside any trigger or spell |
+| `Infect`, `Toxic N`, poison | poison counters, ten lose (CR 704.5c); infect damage to creatures is -1/-1 counters |
+| `Shadow`, `Horsemanship`, "can't be blocked." | blocking restrictions |
+| `Changeling`, `Affinity for X` | every creature type; cost reduction |
+
+Still not implemented: ward, kicker, cycling, flashback, convoke, delve, crew, ninjutsu, suspend, morph, bushido, flanking, extort, enlist.

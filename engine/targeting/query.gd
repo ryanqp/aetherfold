@@ -40,7 +40,7 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 		sub = source.chosen_type if source != null else ""
 		if sub == "":
 			return false
-	if sub != "" and type_line.find(sub) == -1:
+	if sub != "" and type_line.find(sub) == -1 and not _is_changeling(def, type_line):
 		return false
 	var not_sub := str(spec.get("not_subtype", "")).strip_edges()
 	if not_sub != "" and _subtype_words(type_line).has(not_sub):
@@ -76,6 +76,13 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 	if bool(spec.get("tapped", false)) and not obj.tapped:
 		return false
 	return true
+
+
+## Changeling (CR 702.73): a creature with it is every creature type.
+static func _is_changeling(def: CardDefinition, type_line: String) -> bool:
+	if def == null or not type_line.contains("Creature"):
+		return false
+	return def.keywords.has("Changeling") or def.oracle_text.to_lower().begins_with("changeling")
 
 
 static func _subtype_words(type_line: String) -> PackedStringArray:
