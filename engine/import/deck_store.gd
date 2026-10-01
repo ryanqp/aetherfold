@@ -25,11 +25,12 @@ func list_decks() -> Array:
 	return out
 
 
-## Test runs used to leave "Mono Red Test" decks behind in the saved deck list. Removes them.
+## Removes every saved "Mono Red" deck (test runs used to leave "Mono Red Test" copies behind).
 func purge_test_decks() -> int:
 	var n := 0
 	for rec in list_decks():
-		if str(rec.get("name", "")) == "Mono Red Test" and delete_path(str(rec.get("_path", ""))):
+		var nm := str(rec.get("name", "")).to_lower().replace("-", " ").strip_edges()
+		if nm.begins_with("mono red") and delete_path(str(rec.get("_path", ""))):
 			n += 1
 	return n
 
