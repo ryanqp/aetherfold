@@ -14,6 +14,8 @@ var triggers: TriggerManager
 var sba: SbaManager
 var layers: LayerManager
 var _cast_source: int = 0
+## Log position up to which zone changes have been checked for enters-the-battlefield triggers.
+var _zone_seq: int = 0
 var _payment: ManaCost
 var _cast_queries: Array = []
 var _cast_targets: Array = []
@@ -94,6 +96,7 @@ func setup(rules: FormatRules, seed: int = 1) -> void:
 		seed = seed,
 		starting_life = rules.starting_life,
 	})
+	_zone_seq = state.log.seq()
 
 
 func setup_demo(demo: DemoSetup, rules: FormatRules = null, seed: int = 1) -> void:
@@ -217,6 +220,7 @@ func submit(action: GameAction) -> SubmitResult:
 				priority.note_action(state, action.player_id)
 		_:
 			r.error = "not implemented"
+	process_zone_events()
 	r.mode = state.mode if state else 0
 	r.awaiting = state.awaiting if state else {}
 	if r.ok and state and state.log:
@@ -318,9 +322,46 @@ func finish_top_resolution() -> void:
 	var done: bool = (state.stack as MagicStack).resolve_top(self)
 	if not done:
 		return
+	process_zone_events()
 	if sba != null and sba.check(self):
 		return
 	priority.give(state, state.active_player_id)
+
+
+## Looks at zone changes since the last check: permanents that entered the battlefield fire their
+## "when ~ enters" triggers (CR 603.6a), and a permanent that left returns what it exiled "until it
+## leaves the battlefield" (CR 610.3). Run after every action and every resolution.
+func process_zone_events() -> void:
+	if state == null or state.log == null:
+		return
+	var guard := 0
+	while guard < 20:
+		guard += 1
+		var events: Array = state.log.since(_zone_seq)
+		if events.is_empty():
+			return
+		_zone_seq = state.log.seq()
+		for ev in events:
+			var e := ev as GameEvent
+			if e == null or e.type != EngineEnums.EventType.ZONE_CHANGE:
+				continue
+			var p: Dictionary = e.payload
+			if int(p.get("from_zone", -1)) == EngineEnums.ZoneId.BATTLEFIELD:
+				_release_exiled_with(int(p.get("from_id", 0)))
+			if int(p.get("to_zone", -1)) == EngineEnums.ZoneId.BATTLEFIELD and triggers != null:
+				triggers.on_enter_battlefield(self, state.objects.get(int(p.get("to_id", 0))))
+
+
+## Cards a permanent exiled until it leaves the battlefield come back under their owner's control.
+func _release_exiled_with(source_id: int) -> void:
+	if not state.exile_links.has(source_id):
+		return
+	var ids: Array = state.exile_links[source_id]
+	state.exile_links.erase(source_id)
+	for oid in ids:
+		var obj: GameObject = state.objects.get(int(oid))
+		if obj != null and obj.zone == EngineEnums.ZoneId.EXILE:
+			state.zones.move(obj.object_id, EngineEnums.ZoneId.BATTLEFIELD, obj.owner_id)
 
 
 func _submit_pass(action: GameAction) -> SubmitResult:

@@ -10,6 +10,8 @@ enum MatchStart {
 	MULLIGAN_DECISION,
 	PUT_BACK,
 	MAIN_GAME,
+	## Before the opening hands: call heads or tails to decide who goes first (CR 103.1).
+	COIN_FLIP,
 }
 
 var engine: RulesEngine
@@ -34,6 +36,12 @@ var awaiting_blocks: bool = false
 var choosing_attackers: bool = false
 ## When true you click your library to take the draw-step card instead of getting it automatically.
 var manual_draw: bool = false
+## When on, a coin flip decides who goes first before the opening hands are drawn.
+var coin_flip: bool = false
+var first_player: int = 0
+var flip_called: bool = false
+var coin_heads: bool = true
+var you_called_heads: bool = true
 ## Play-by-play shown in the History panel.
 var history := GameHistory.new()
 
@@ -87,6 +95,17 @@ func start_with_demo(demo: DemoSetup, seed: int = -1) -> void:
 	else:
 		dbg("Card source: in-memory volunteer fallback")
 	dbg("Rival library: %d + commander" % lib1)
+	first_player = 0
+	flip_called = false
+	if coin_flip and not skip_ai:
+		match_start = MatchStart.COIN_FLIP
+		rebuild_view()
+		return
+	_deal_opening_hands()
+
+
+## Seven cards each, then the keep-or-mulligan step.
+func _deal_opening_hands() -> void:
 	match_start = MatchStart.DRAWING_OPENING_HAND
 	engine.draw_n(0, 7)
 	engine.draw_n(1, 7)
@@ -96,6 +115,32 @@ func start_with_demo(demo: DemoSetup, seed: int = -1) -> void:
 	kept[1] = not skip_ai
 	match_start = MatchStart.MULLIGAN_DECISION
 	rebuild_view()
+
+
+## You call heads or tails; the coin decides who goes first (CR 103.1).
+func call_coin(heads: bool) -> void:
+	if match_start != MatchStart.COIN_FLIP or flip_called:
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = last_seed ^ 0x51ED
+	coin_heads = rng.randf() < 0.5
+	you_called_heads = heads
+	first_player = you_seat if coin_heads == heads else (1 if you_seat == 0 else 0)
+	flip_called = true
+	dbg("Coin: %s, you called %s, %s goes first" % ["heads" if coin_heads else "tails", "heads" if heads else "tails", "you" if first_player == you_seat else "Talrand"])
+	rebuild_view()
+
+
+## After the flip is shown: the winner takes the first turn, then the opening hands are drawn.
+func finish_coin_flip() -> void:
+	if match_start != MatchStart.COIN_FLIP or not flip_called:
+		return
+	if first_player != 0:
+		var st := engine.state
+		st.active_player_id = first_player
+		st.priority_player_id = first_player
+		st.awaiting = {player_id = first_player, type = &"priority"}
+	_deal_opening_hands()
 
 
 func submit(action: GameAction) -> SubmitResult:
@@ -184,6 +229,11 @@ func _mark_kept(player_id: int) -> void:
 	if bool(kept.get(0, false)) and bool(kept.get(1, false)):
 		match_start = MatchStart.MAIN_GAME
 		dbg("GAME_READY. Hand %d, library %d" % [engine.hand_size(0), engine.library_size(0)])
+		## The rival won the flip: it plays its first turn before you get yours.
+		if first_player != you_seat and not skip_ai and engine.state.active_player_id == first_player:
+			history.add_note("Talrand won the flip and goes first.", "info")
+			rebuild_view()
+			_finish_bot_turn(first_player)
 	rebuild_view()
 
 
@@ -316,31 +366,12 @@ func _pending_is_hostile() -> bool:
 			continue
 		if not activating and ab.kind != &"SPELL":
 			continue
-		for fx in ab.effects:
-			var f := fx as AbilityEffect
-			if f == null:
-				continue
-			if f.kind == &"GAIN_LIFE" or f.kind == &"UNTAP" or f.kind == &"PUT_COUNTER":
-				return false
-			if f.kind == &"PUMP" and int(f.params.get("power", 0)) >= 0 and int(f.params.get("toughness", 0)) >= 0:
-				return false
+		return TargetingManager.effects_hostile(ab.effects)
 	return true
 
 
 func _target_score(tid: int, me: int, hostile: bool) -> int:
-	var pid := TargetingManager.decode_player(tid)
-	if pid >= 0:
-		return 50 if (pid != me) == hostile else -50
-	var entries: Array = (engine.state.stack as MagicStack).entries if engine.state.stack is MagicStack else []
-	for e in entries:
-		var entry := e as StackEntry
-		if entry != null and entry.stack_id == tid:
-			return 60 if (entry.controller_id != me) == hostile else -60
-	var obj: GameObject = engine.state.objects.get(tid)
-	if obj == null:
-		return -1000
-	var power := engine.power_of(obj)
-	return (30 + power * 2) if (obj.controller_id != me) == hostile else (-30 + power)
+	return TargetingManager.auto_score(engine, tid, me, hostile)
 
 
 func activate_ability(object_id: int, ability_id: StringName) -> SubmitResult:

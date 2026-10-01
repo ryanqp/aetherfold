@@ -8,6 +8,48 @@ static func encode_player(player_id: int) -> int:
 	return PLAYER_ID_BASE + player_id
 
 
+## Picks a target for a trigger or ability when no player chooses: harmful effects go at `me`'s
+## opponents (their player first, then their biggest creature), helpful ones at `me`. -1 if none.
+func auto_pick(engine: RulesEngine, slot: Dictionary, source_id: int, me: int, hostile: bool) -> int:
+	var best := -1
+	var best_score := -1000000
+	for tid in legal_ids(engine, slot, source_id):
+		var sc := auto_score(engine, int(tid), me, hostile)
+		if sc > best_score:
+			best_score = sc
+			best = int(tid)
+	return best
+
+
+static func auto_score(engine: RulesEngine, tid: int, me: int, hostile: bool) -> int:
+	var pid := decode_player(tid)
+	if pid >= 0:
+		return 50 if (pid != me) == hostile else -50
+	if engine.state.stack is MagicStack:
+		for e in (engine.state.stack as MagicStack).entries:
+			var entry := e as StackEntry
+			if entry != null and entry.stack_id == tid:
+				return 60 if (entry.controller_id != me) == hostile else -60
+	var obj: GameObject = engine.state.objects.get(tid)
+	if obj == null:
+		return -1000
+	var power := engine.power_of(obj)
+	return (30 + power * 2) if (obj.controller_id != me) == hostile else (-30 + power)
+
+
+## False when any effect is clearly helpful to its target (gain life, a pump that doesn't shrink).
+static func effects_hostile(effects: Array) -> bool:
+	for fx in effects:
+		var f := fx as AbilityEffect
+		if f == null:
+			continue
+		if f.kind == &"GAIN_LIFE" or f.kind == &"UNTAP" or f.kind == &"PUT_COUNTER":
+			return false
+		if f.kind == &"PUMP" and int(f.params.get("power", 0)) >= 0 and int(f.params.get("toughness", 0)) >= 0:
+			return false
+	return true
+
+
 static func decode_player(target_id: int) -> int:
 	if target_id < PLAYER_ID_BASE:
 		return -1

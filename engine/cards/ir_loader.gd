@@ -26,6 +26,7 @@ const EFFECT_PARAM_KEYS := {
 	"GAIN_LIFE": ["n", "target"],
 	"DESTROY": ["target"],
 	"PUMP": ["target", "power", "toughness", "keywords", "duration"],
+	"EXILE_UNTIL_LEAVES": ["target"],
 }
 const ABILITY_KINDS := ["SPELL", "ACTIVATED", "TRIGGERED", "STATIC", "REPLACEMENT", "MANA"]
 const COST_KINDS := ["MANA", "TAP", "UNTAP", "ADDITIONAL_MANA"]

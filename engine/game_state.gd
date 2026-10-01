@@ -30,6 +30,8 @@ var replacement = null
 var pending_decision = null
 ## The active player must draw for the turn before the turn can go on (manual draw seats only).
 var draw_pending: bool = false
+## Permanents that exiled cards "until it leaves the battlefield": source object id -> exiled object ids.
+var exile_links: Dictionary = {}
 
 
 func _init() -> void:

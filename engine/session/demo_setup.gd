@@ -36,14 +36,20 @@ static func krenko_vs_talrand(p_db: CardDatabase) -> DemoSetup:
 	return d
 
 
-static func table_demo(seed: int = 1) -> DemoSetup:
-
+## `extra_rows` are catalog rows for imported decks; they are added so those cards exist in the database.
+static func table_demo(seed: int = 1, extra_rows: Array = []) -> DemoSetup:
 	var cat := _scryfall()
 	if cat != null and bool(cat.get("loaded")) and cat.has_method("pick_commander_rows"):
-		var built := from_scryfall(cat, seed)
+		var built := from_scryfall(cat, seed, extra_rows)
 		if built != null:
 			return built
-	var db := memory_db()
+	var mem := CatalogSource.Memory.new()
+	_fill_catalog(mem)
+	for row in extra_rows:
+		if row is Dictionary:
+			mem.add(row)
+	var db := CardDatabase.new()
+	db.setup(mem)
 	return krenko_vs_talrand(db)
 
 
@@ -56,11 +62,14 @@ static func _scryfall() -> Object:
 	return null
 
 
-static func from_scryfall(cat: Object, seed: int) -> DemoSetup:
+static func from_scryfall(cat: Object, seed: int, extra_rows: Array = []) -> DemoSetup:
 	if cat == null or not cat.has_method("find_by_name") or not cat.has_method("pick_commander_rows"):
 		return null
 	var mem := CatalogSource.Memory.new()
 	_fill_catalog(mem)
+	for extra in extra_rows:
+		if extra is Dictionary:
+			mem.add(extra)
 	var exclude := {}
 	exclude[KRENKO] = true
 	exclude[TALRAND] = true

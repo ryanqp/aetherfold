@@ -22,6 +22,11 @@ var game_over: bool = false
 var winners: Array = []
 var prompt: String = ""
 var history: Array = []
+var coin_flip: bool = false
+var flip_called: bool = false
+var coin_heads: bool = true
+var you_called_heads: bool = true
+var first_is_you: bool = true
 var match_start: int = 0
 ## You are choosing blockers against the opponent's attack.
 var blocking_mode: bool = false
@@ -95,6 +100,11 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 		v.you_drew_this_turn = not session.pending_draw_anim
 		v.prompt = session.prompt_text()
 		v.history = session.history.lines
+		v.coin_flip = session.match_start == GameSession.MatchStart.COIN_FLIP
+		v.flip_called = session.flip_called
+		v.coin_heads = session.coin_heads
+		v.you_called_heads = session.you_called_heads
+		v.first_is_you = session.first_player == session.you_seat
 		v.match_start = session.match_start
 		v.blocking_mode = session.awaiting_blocks
 		v.attack_mode = session.choosing_attackers

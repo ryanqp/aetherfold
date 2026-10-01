@@ -58,6 +58,8 @@ func _apply(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: Abil
 				})
 		"MOVE_ZONE":
 			_move_zone(engine, entry, fx)
+		"EXILE_UNTIL_LEAVES":
+			_exile_until_leaves(engine, entry, source, fx)
 		"COUNTER_SPELL":
 			_counter_spell(engine, entry, fx)
 		"ADD_MANA":
@@ -97,6 +99,25 @@ func _move_zone(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> vo
 	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
 		return
 	engine.state.zones.move(target_id, dest, obj.owner_id)
+
+
+## CR 610.3: exile the target until the source leaves the battlefield. If the source is already gone
+## when this resolves, nothing is exiled.
+func _exile_until_leaves(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var idx := int(fx.params.get("target", 0))
+	if idx < 0 or idx >= entry.targets.size():
+		return
+	if source == null or source.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
+	var obj: GameObject = engine.state.objects.get(int(entry.targets[idx]))
+	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
+	var moved: GameObject = engine.state.zones.move(obj.object_id, EngineEnums.ZoneId.EXILE, obj.owner_id)
+	if moved == null:
+		return
+	var linked: Array = engine.state.exile_links.get(source.object_id, [])
+	linked.append(moved.object_id)
+	engine.state.exile_links[source.object_id] = linked
 
 
 func _counter_spell(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:

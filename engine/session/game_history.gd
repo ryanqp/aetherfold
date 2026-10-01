@@ -93,10 +93,12 @@ func _event(engine: RulesEngine, e: GameEvent, you_seat: int) -> void:
 			else:
 				_add("Talrand draws a card.", "rival")
 		EngineEnums.EventType.SPELL_CAST:
-			_add("%s cast %s." % [who, _name(int(p.get("object_id", 0)))], kind)
+			_add(("You cast %s." if e.player_id == you_seat else "Talrand casts %s.") % _name(int(p.get("object_id", 0))), kind)
 		EngineEnums.EventType.ABILITY_ACTIVATED:
 			## Tapping a land for mana is also logged; only stack abilities are worth showing.
-			if p.has("stack_id"):
+			if bool(p.get("trigger", false)):
+				_add("%s triggers." % _name(int(p.get("object_id", 0))), kind)
+			elif p.has("stack_id"):
 				_add("%s activate %s." % [who, _name(int(p.get("object_id", 0)))] if e.player_id == you_seat else "Talrand activates %s." % _name(int(p.get("object_id", 0))), kind)
 		EngineEnums.EventType.ZONE_CHANGE:
 			_zone_change(p, e.player_id, you_seat)

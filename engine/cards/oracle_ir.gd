@@ -62,6 +62,23 @@ static func translate_permanent(def: CardDefinition) -> Array:
 	var n := 0
 	for raw in text.split("\n"):
 		var line := str(raw).strip_edges()
+		## "When ~ enters, <effects>." (CR 603.6a)
+		var tm := _match("^when(?:ever)? ~ enters(?: the battlefield)?,? (.+)$", line)
+		if tm != null:
+			var tr := OracleIr.new()
+			if tr._read_effects(tm.get_string(1)):
+				n += 1
+				out.append({
+					"ability_id": "%s_etb%d" % [_snake(def.name), n],
+					"kind": "TRIGGERED",
+					"trigger": {"on": "ENTERS_BATTLEFIELD"},
+					"costs": [],
+					"targets": tr._targets,
+					"effects": tr._effects,
+					"restrictions": [],
+					"text": line,
+				})
+			continue
 		var m := _match("^((?:\\{[^}]+\\}|, )+): (.+)$", line)
 		if m == null:
 			continue
@@ -69,13 +86,7 @@ static func translate_permanent(def: CardDefinition) -> Array:
 		var costs := reader._costs(m.get_string(1))
 		if costs.is_empty():
 			continue
-		var understood := true
-		for sentence in m.get_string(2).split(". "):
-			var s := str(sentence).strip_edges().trim_suffix(".").strip_edges()
-			if s != "" and not reader._sentence(s):
-				understood = false
-				break
-		if not understood or reader._effects.is_empty():
+		if not reader._read_effects(m.get_string(2)):
 			continue
 		n += 1
 		out.append({
@@ -94,6 +105,15 @@ static func translate_permanent(def: CardDefinition) -> Array:
 	if not loader.errors.is_empty():
 		return []
 	return abilities
+
+
+## Reads each sentence of an ability's effect text. False if any is not understood or nothing was read.
+func _read_effects(effect_text: String) -> bool:
+	for sentence in effect_text.split(". "):
+		var s := str(sentence).strip_edges().trim_suffix(".").strip_edges()
+		if s != "" and not _sentence(s):
+			return false
+	return not _effects.is_empty()
 
 
 ## "{1}, {T}" -> [MANA {1}, TAP]. Empty when the cost has anything else in it (sacrifice, discard, X).
@@ -206,6 +226,14 @@ func _sentence(s: String) -> bool:
 		if not _add_target("PLAYER", {"opponent": true}):
 			return false
 		_effects.append({"kind": "DEAL_DAMAGE", "params": {"n": int(m.get_string(1)), "target": 0}})
+		return true
+
+	# CR 610.3: "for each opponent, exile up to one target nonland permanent that player controls until ~ leaves."
+	m = _match("^for each opponent, exile up to one target (nonland permanent|permanent|creature|artifact|enchantment|land) that player controls until ~ leaves the battlefield$", s)
+	if m != null:
+		if not _add_permanent(m.get_string(1), true):
+			return false
+		_effects.append({"kind": "EXILE_UNTIL_LEAVES", "params": {"target": 0}})
 		return true
 
 	# CR 119.3: gain life.

@@ -52,6 +52,19 @@ func _matches_spell_cast(ab: Ability, source: GameObject, caster_id: int, spell_
 	return true
 
 
+## "When ~ enters": the new permanent's own ENTERS_BATTLEFIELD abilities go on the stack (CR 603.6a).
+func on_enter_battlefield(engine: RulesEngine, obj: GameObject) -> void:
+	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
+	for a in _abilities_of(engine, obj):
+		var ab := a as Ability
+		if ab == null or ab.kind != &"TRIGGERED" or ab.unparsed:
+			continue
+		if str(ab.trigger.get("on", "")) != "ENTERS_BATTLEFIELD":
+			continue
+		_put_trigger(engine, obj, ab)
+
+
 func on_combat_damage_to_player(engine: RulesEngine, source: GameObject, _defender_id: int, amount: int) -> void:
 	if source == null or amount <= 0:
 		return
@@ -97,4 +110,16 @@ func _put_trigger(engine: RulesEngine, source: GameObject, ab: Ability) -> void:
 	entry.controller_id = source.controller_id
 	entry.ability_id = ab.ability_id
 	entry.effects = ab.effects.duplicate()
+	## No target picker for triggers yet: harmful ones go at the opponent, helpful ones at the controller.
+	var hostile := TargetingManager.effects_hostile(ab.effects)
+	for slot in ab.targets:
+		if slot is Dictionary and engine.targeting != null:
+			var tid := engine.targeting.auto_pick(engine, slot, source.object_id, source.controller_id, hostile)
+			if tid >= 0:
+				entry.targets.append(tid)
 	(engine.state.stack as MagicStack).push(entry)
+	engine.state.log.append(EngineEnums.EventType.ABILITY_ACTIVATED, source.controller_id, {
+		object_id = source.object_id,
+		stack_id = entry.stack_id,
+		trigger = true,
+	})

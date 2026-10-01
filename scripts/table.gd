@@ -1,7 +1,7 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 34
+const BUILD := 35
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
 const RivalAI := preload("res://scripts/rival_ai.gd")
@@ -74,6 +74,12 @@ var turn_owner_label: Label
 var hint_label: Label
 var next_turn_btn: Button
 var history_panel: PanelContainer
+var coin_overlay: ColorRect
+var coin_face: Label
+var coin_status: Label
+var coin_call_row: HBoxContainer
+var coin_continue: Button
+var _coin_state := 0
 var history_text: RichTextLabel
 var _history_shown := 0
 var declare_btn: Button
@@ -129,6 +135,7 @@ func _ready() -> void:
 	if USE_ENGINE:
 		session = GameSession.new()
 		session.manual_draw = true
+		session.coin_flip = true
 		session.debug_enabled = DEBUG_MATCH
 		_start_from_app_state()
 	else:
@@ -163,6 +170,7 @@ func _start_from_app_state() -> void:
 	if session == null:
 		session = GameSession.new()
 		session.manual_draw = true
+		session.coin_flip = true
 		session.debug_enabled = DEBUG_MATCH
 	if app != null:
 		session.difficulty = int(app.difficulty)
@@ -308,6 +316,7 @@ func _build() -> void:
 	_build_quit_confirm()
 	_build_draw_preview()
 	_build_mulligan_overlay()
+	_build_coin_overlay()
 	_build_debug_label()
 	_paint_turn_border()
 
@@ -1168,6 +1177,7 @@ func _card_chip(card: Dictionary, compact: bool = false, from_hand: bool = false
 	var selected: bool = str(card.get("id", "")) == str(_board().selected_id)
 	var st := StyleBoxFlat.new()
 	st.bg_color = Color(0, 0, 0, 0)
+	st.draw_center = false
 	st.set_corner_radius_all(6)
 	st.set_border_width_all(2)
 	st.border_color = SELECT_BLUE if selected else Color(0, 0, 0, 0.55)
@@ -1192,14 +1202,23 @@ func _card_chip(card: Dictionary, compact: bool = false, from_hand: bool = false
 	st.content_margin_right = 0
 	st.content_margin_top = 0
 	st.content_margin_bottom = 0
-	b.add_theme_stylebox_override("normal", st)
-	b.add_theme_stylebox_override("hover", st)
-	b.add_theme_stylebox_override("pressed", st)
+	var plain := StyleBoxEmpty.new()
+	b.add_theme_stylebox_override("normal", plain)
+	b.add_theme_stylebox_override("hover", plain)
+	b.add_theme_stylebox_override("pressed", plain)
+	b.add_theme_stylebox_override("focus", plain)
 	b.text = ""
 	var face := _make_card_face(card, b.custom_minimum_size)
 	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	b.add_child(face)
+	## The border is drawn on top of the card art. As the button's own style it sat underneath the art
+	## and only a thin sliver showed.
+	var frame := Panel.new()
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.add_theme_stylebox_override("panel", st)
+	b.add_child(frame)
 	var cid := str(card.get("id", ""))
 	b.mouse_entered.connect(_on_hover_card.bind(card.duplicate()))
 	b.mouse_exited.connect(_on_unhover_card)
@@ -1293,6 +1312,7 @@ func _refresh() -> void:
 	_paint_match_buttons()
 	_refresh_ability_panel()
 	_refresh_mulligan()
+	_refresh_coin()
 	_refresh_debug()
 	var app := get_node_or_null("/root/AppState")
 	var net := get_node_or_null("/root/GameNet")
@@ -2289,6 +2309,141 @@ func _refresh_debug() -> void:
 	debug_label.offset_bottom = 560
 
 
+## Before the opening hands: call heads or tails to see who goes first (CR 103.1).
+func _build_coin_overlay() -> void:
+	coin_overlay = ColorRect.new()
+	coin_overlay.color = Color(0.02, 0.03, 0.04, 0.92)
+	coin_overlay.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	coin_overlay.offset_top = 44
+	coin_overlay.z_index = 90
+	coin_overlay.visible = false
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	coin_overlay.add_child(center)
+	var panel := PanelContainer.new()
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.08, 0.09, 0.10, 0.98)
+	st.set_corner_radius_all(12)
+	st.set_border_width_all(2)
+	st.border_color = GOLD
+	st.content_margin_left = 40
+	st.content_margin_right = 40
+	st.content_margin_top = 24
+	st.content_margin_bottom = 24
+	panel.add_theme_stylebox_override("panel", st)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 14)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	var title := Label.new()
+	title.text = "Coin flip"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", GOLD)
+	col.add_child(title)
+	coin_status = Label.new()
+	coin_status.text = "Call it. The winner goes first."
+	coin_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	coin_status.add_theme_font_size_override("font_size", 16)
+	coin_status.add_theme_color_override("font_color", MUTED)
+	col.add_child(coin_status)
+	var coin := PanelContainer.new()
+	coin.custom_minimum_size = Vector2(150, 150)
+	coin.size_flags_horizontal = SIZE_SHRINK_CENTER
+	var cst := StyleBoxFlat.new()
+	cst.bg_color = Color(0.86, 0.68, 0.16)
+	cst.set_corner_radius_all(75)
+	cst.set_border_width_all(8)
+	cst.border_color = Color(1.0, 0.9, 0.5)
+	coin.add_theme_stylebox_override("panel", cst)
+	coin_face = Label.new()
+	coin_face.text = "?"
+	coin_face.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	coin_face.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	coin_face.add_theme_font_size_override("font_size", 30)
+	coin_face.add_theme_color_override("font_color", Color(0.25, 0.16, 0.02))
+	coin.add_child(coin_face)
+	col.add_child(coin)
+	coin_call_row = HBoxContainer.new()
+	coin_call_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	coin_call_row.add_theme_constant_override("separation", 16)
+	for side in [["HEADS", true], ["TAILS", false]]:
+		var b := Button.new()
+		b.text = str(side[0])
+		b.custom_minimum_size = Vector2(150, 46)
+		b.add_theme_font_size_override("font_size", 18)
+		var bst := StyleBoxFlat.new()
+		bst.bg_color = TURN_GREEN.darkened(0.1)
+		bst.set_corner_radius_all(8)
+		b.add_theme_stylebox_override("normal", bst)
+		b.add_theme_color_override("font_color", Color(0.06, 0.12, 0.05))
+		b.pressed.connect(_on_coin_call.bind(bool(side[1])))
+		coin_call_row.add_child(b)
+	col.add_child(coin_call_row)
+	coin_continue = Button.new()
+	coin_continue.text = "Draw opening hands"
+	coin_continue.custom_minimum_size = Vector2(240, 46)
+	coin_continue.add_theme_font_size_override("font_size", 18)
+	coin_continue.visible = false
+	coin_continue.pressed.connect(_on_coin_continue)
+	col.add_child(coin_continue)
+	panel.add_child(col)
+	center.add_child(panel)
+	add_child(coin_overlay)
+
+
+func _refresh_coin() -> void:
+	if coin_overlay == null or session == null:
+		return
+	var show: bool = USE_ENGINE and session.match_start == GameSession.MatchStart.COIN_FLIP
+	coin_overlay.visible = show
+	if not show:
+		_coin_state = 0
+		return
+	if _coin_state == 0:
+		coin_face.text = "?"
+		coin_status.text = "Call it. The winner goes first."
+		coin_call_row.visible = true
+		coin_continue.visible = false
+
+
+func _on_coin_call(heads: bool) -> void:
+	if session == null or _coin_state != 0:
+		return
+	_coin_state = 1
+	session.call_coin(heads)
+	coin_call_row.visible = false
+	coin_status.text = "You called %s…" % ("heads" if heads else "tails")
+	_tap_sfx("dice")
+	var tw := create_tween()
+	var delay := 0.06
+	for i in 14:
+		var face_text := "HEADS" if i % 2 == 0 else "TAILS"
+		tw.tween_callback(func() -> void: coin_face.text = face_text)
+		tw.tween_interval(delay)
+		delay += 0.025
+	tw.tween_callback(_coin_landed)
+
+
+func _coin_landed() -> void:
+	if session == null:
+		return
+	coin_face.text = "HEADS" if session.coin_heads else "TAILS"
+	var wins: bool = session.first_player == session.you_seat
+	coin_status.text = ("It's %s. You go first!" if wins else "It's %s. Talrand goes first.") % ("heads" if session.coin_heads else "tails")
+	coin_continue.visible = true
+	_coin_state = 2
+
+
+func _on_coin_continue() -> void:
+	if session == null or _coin_state != 2:
+		return
+	session.finish_coin_flip()
+	_coin_state = 0
+	_refresh()
+	if session.first_player != session.you_seat:
+		_set_status("Talrand won the flip and goes first.")
+
+
 func _build_mulligan_overlay() -> void:
 	mulligan_overlay = ColorRect.new()
 	mulligan_overlay.color = Color(0.02, 0.03, 0.04, 0.88)
@@ -2573,6 +2728,7 @@ func _on_play_imported(deck: NormalizedDeck, rows: Dictionary) -> void:
 	if session == null:
 		session = GameSession.new()
 		session.manual_draw = true
+		session.coin_flip = true
 		session.debug_enabled = DEBUG_MATCH
 	session.start_imported(deck, rows)
 	_refresh()
@@ -2585,6 +2741,7 @@ func _on_new_game() -> void:
 	if USE_ENGINE:
 		session = GameSession.new()
 		session.manual_draw = true
+		session.coin_flip = true
 		session.difficulty = d
 		session.debug_enabled = DEBUG_MATCH
 		session.start_table_demo()
