@@ -21,7 +21,18 @@ func legal_ids(engine: RulesEngine, query: Dictionary, source_id: int = -1) -> A
 	if src <= 0 and engine != null:
 		src = engine._cast_source
 	if kind == "PLAYER" or kind == "ANY_TARGET":
+		## "target opponent": the source's controller is not a legal choice.
+		var opponents_only := false
+		var pq: Variant = query.get("query", {})
+		if pq is Dictionary:
+			opponents_only = bool((pq as Dictionary).get("opponent", false))
+		var src_ctrl := -1
+		var src_obj0: GameObject = engine.state.objects.get(src) if src > 0 else null
+		if src_obj0 != null:
+			src_ctrl = src_obj0.controller_id
 		for i in engine.state.players.size():
+			if opponents_only and i == src_ctrl:
+				continue
 			out.append(encode_player(i))
 		if kind == "PLAYER":
 			return out

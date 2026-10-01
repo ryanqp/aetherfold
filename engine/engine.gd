@@ -941,6 +941,11 @@ func _submit_declare_attackers(action: GameAction) -> SubmitResult:
 		cs.defending_player_id = int(cs.defenders[cs.attacker_ids[0]])
 	else:
 		cs.defending_player_id = requested_defender
+	if not ids.is_empty():
+		state.log.append(EngineEnums.EventType.ATTACK, action.player_id, {
+			attackers = ids.duplicate(),
+			to_player = cs.defending_player_id,
+		})
 	r.ok = true
 	return r
 
@@ -1011,6 +1016,17 @@ func _submit_declare_blockers(action: GameAction) -> SubmitResult:
 			return r
 	cs.blockers = next_blocks
 	cs.blocks_declared = true
+	var any_block := false
+	for akey in next_blocks.keys():
+		var group_v: Variant = next_blocks[akey]
+		if group_v is Array:
+			for bid in (group_v as Array):
+				any_block = true
+				state.log.append(EngineEnums.EventType.BLOCK, action.player_id, {
+					blocker_id = int(bid), attacker_id = int(akey),
+				})
+	if not any_block:
+		state.log.append(EngineEnums.EventType.BLOCK, action.player_id, {blocker_id = 0, attacker_id = 0})
 	r.ok = true
 	return r
 

@@ -64,4 +64,6 @@ enum EventType {
 	STEP_BEGIN,
 	STEP_END,
 	GAME_OVER,
+	ATTACK,
+	BLOCK,
 }

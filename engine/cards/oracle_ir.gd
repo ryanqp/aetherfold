@@ -46,6 +46,73 @@ static func translate(def: CardDefinition) -> Array:
 	return abilities
 
 
+## Activated abilities on permanents: "{1}, {T}: ~ deals 1 damage to target opponent." Each ability
+## line is read on its own; a line that isn't understood is skipped (the card keeps its other abilities,
+## and keywords still come from the catalog). Lands are left to the mana-ability inference.
+static func translate_permanent(def: CardDefinition) -> Array:
+	if def == null or def.is_land() or _applies(def):
+		return []
+	if def.type_line.contains("Instant") or def.type_line.contains("Sorcery"):
+		return []
+	var text := def.oracle_text.replace("\r", "")
+	text = RegEx.create_from_string("\\([^)]*\\)").sub(text, "", true)
+	if def.name != "":
+		text = text.replace(def.name, "~")
+	var out: Array = []
+	var n := 0
+	for raw in text.split("\n"):
+		var line := str(raw).strip_edges()
+		var m := _match("^((?:\\{[^}]+\\}|, )+): (.+)$", line)
+		if m == null:
+			continue
+		var reader := OracleIr.new()
+		var costs := reader._costs(m.get_string(1))
+		if costs.is_empty():
+			continue
+		var understood := true
+		for sentence in m.get_string(2).split(". "):
+			var s := str(sentence).strip_edges().trim_suffix(".").strip_edges()
+			if s != "" and not reader._sentence(s):
+				understood = false
+				break
+		if not understood or reader._effects.is_empty():
+			continue
+		n += 1
+		out.append({
+			"ability_id": "%s_act%d" % [_snake(def.name), n],
+			"kind": "ACTIVATED",
+			"costs": costs,
+			"targets": reader._targets,
+			"effects": reader._effects,
+			"restrictions": [],
+			"text": line,
+		})
+	if out.is_empty():
+		return []
+	var loader := IrLoader.new()
+	var abilities := loader.from_dict({"abilities": out})
+	if not loader.errors.is_empty():
+		return []
+	return abilities
+
+
+## "{1}, {T}" -> [MANA {1}, TAP]. Empty when the cost has anything else in it (sacrifice, discard, X).
+func _costs(cost_text: String) -> Array:
+	var costs: Array = []
+	var mana := ""
+	for part in cost_text.split(", "):
+		var p := str(part).strip_edges()
+		if p == "{T}":
+			costs.append({"kind": "TAP"})
+			continue
+		if _match("^(\\{[0-9WUBRGC]+\\})+$", p) == null:
+			return []
+		mana += p
+	if mana != "":
+		costs.push_front({"kind": "MANA", "mana": mana})
+	return costs
+
+
 ## Only spells that are cast and then resolve once. Permanents need triggers and static abilities.
 static func _applies(def: CardDefinition) -> bool:
 	if def.is_land() or def.is_creature():
@@ -131,6 +198,14 @@ func _sentence(s: String) -> bool:
 	m = _match("^draw (a|an|one|two|three|four|five) cards?$", s)
 	if m != null:
 		_effects.append({"kind": "DRAW", "params": {"n": int(NUMBER_WORDS[m.get_string(1).to_lower()])}})
+		return true
+
+	# Activated abilities such as "{1}, {T}: ~ deals 1 damage to target opponent."
+	m = _match("^~ deals (\\d+) damage to target opponent$", s)
+	if m != null:
+		if not _add_target("PLAYER", {"opponent": true}):
+			return false
+		_effects.append({"kind": "DEAL_DAMAGE", "params": {"n": int(m.get_string(1)), "target": 0}})
 		return true
 
 	# CR 119.3: gain life.

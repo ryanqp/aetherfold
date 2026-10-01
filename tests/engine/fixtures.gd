@@ -189,6 +189,10 @@ static func memory_catalog() -> CatalogSource:
 	cat.add(_keyword_creature("Test Champion", "2", "2", ["Double strike"]))
 	cat.add(_keyword_creature("Test Stalwart", "2", "2", ["Indestructible"]))
 	cat.add(_keyword_creature("Test Bear", "2", "2", []))
+	## A creature with an activated ability, read from Oracle text by OracleIr.translate_permanent.
+	var pinger := _keyword_creature("Test Pinger", "1", "3", ["Reach"])
+	pinger["oracle_text"] = "Reach\n{1}, {T}: Test Pinger deals 1 damage to target opponent."
+	cat.add(pinger)
 	cat.add(_keyword_creature("Test Ogre", "3", "3", []))
 	cat.add(_keyword_creature("Test Shapeless", "*", "*", []))
 	return cat

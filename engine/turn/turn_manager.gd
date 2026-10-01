@@ -68,6 +68,7 @@ func _enter_current_step() -> void:
 	st.log.append(EngineEnums.EventType.STEP_BEGIN, st.active_player_id, {
 		step = st.step,
 		phase = st.phase,
+		turn = st.turn_number,
 	})
 	_start_tba(eng, st)
 	if _receives_priority(st.step):
@@ -101,6 +102,7 @@ func _finish_step_and_enter_next() -> void:
 		st.log.append(EngineEnums.EventType.STEP_BEGIN, st.active_player_id, {
 			step = st.step,
 			phase = st.phase,
+			turn = st.turn_number,
 		})
 		_start_tba(eng, st)
 		if _receives_priority(st.step):

@@ -21,6 +21,7 @@ var step_name: String = "Main"
 var game_over: bool = false
 var winners: Array = []
 var prompt: String = ""
+var history: Array = []
 var match_start: int = 0
 ## You are choosing blockers against the opponent's attack.
 var blocking_mode: bool = false
@@ -93,6 +94,7 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 		v.difficulty = session.difficulty
 		v.you_drew_this_turn = not session.pending_draw_anim
 		v.prompt = session.prompt_text()
+		v.history = session.history.lines
 		v.match_start = session.match_start
 		v.blocking_mode = session.awaiting_blocks
 		v.attack_mode = session.choosing_attackers

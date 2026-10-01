@@ -34,6 +34,8 @@ func _from_row(row: Dictionary) -> CardDefinition:
 	if abs.is_empty():
 		## No hand-written IR: read the simple instants and sorceries straight from Oracle text.
 		abs = OracleIr.translate(d)
+	if abs.is_empty():
+		abs = OracleIr.translate_permanent(d)
 	if not abs.is_empty():
 		d.abilities = abs
 	else:

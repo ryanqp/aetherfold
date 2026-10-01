@@ -54,6 +54,28 @@ func test_creatures_are_not_read() -> void:
 	assert_true(db.definition_for("Test Bear").abilities.is_empty())
 
 
+# --- Activated abilities on permanents ------------------------------------------------
+
+func test_reads_activated_ping() -> void:
+	var def := db.definition_for("Test Pinger")
+	assert_eq(def.abilities.size(), 1)
+	var ab := def.abilities[0] as Ability
+	assert_true(ab.is_activated())
+	assert_true(ab.has_tap_cost())
+	assert_eq(ab.targets.size(), 1)
+	assert_eq(str(ab.effects[0].kind), "DEAL_DAMAGE")
+	assert_eq(int(ab.effects[0].params.get("n")), 1)
+
+
+func test_ping_can_only_target_the_opponent() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var pinger := Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Pinger")
+	var ab := db.definition_for("Test Pinger").abilities[0] as Ability
+	var ids: Array = engine.targeting.legal_ids(engine, ab.targets[0], pinger.object_id)
+	assert_eq(ids.size(), 1)
+	assert_eq(TargetingManager.decode_player(int(ids[0])), 1)
+
+
 # --- Playing them ------------------------------------------------------------------
 
 func test_smite_kills_ogre_but_not_wall() -> void:

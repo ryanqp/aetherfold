@@ -34,6 +34,8 @@ var awaiting_blocks: bool = false
 var choosing_attackers: bool = false
 ## When true you click your library to take the draw-step card instead of getting it automatically.
 var manual_draw: bool = false
+## Play-by-play shown in the History panel.
+var history := GameHistory.new()
 
 
 func dbg(msg: String) -> void:
@@ -66,6 +68,7 @@ func start_with_demo(demo: DemoSetup, seed: int = -1) -> void:
 	db = demo.db
 	engine = RulesEngine.new()
 	match_start = MatchStart.SHUFFLING
+	history.clear()
 	engine.manual_draw_seats = [you_seat] if manual_draw else []
 	engine.setup_demo(demo, FormatRules.commander_1v1_table(), seed)
 	selected_id = ""
@@ -110,6 +113,7 @@ func submit(action: GameAction) -> SubmitResult:
 
 func rebuild_view() -> void:
 	pending_draw_anim = draw_waiting()
+	history.pump(engine, you_seat, match_start == MatchStart.MAIN_GAME)
 	view = TableView.from_engine(engine, self)
 
 
@@ -253,13 +257,10 @@ func cast_auto(player_id: int, object_id: int) -> SubmitResult:
 	if not r.ok:
 		return r
 	if engine.state.mode == EngineEnums.EngineMode.CASTING:
-		var picked := false
-		for act in engine.legal_actions(player_id):
-			if (act as GameAction).kind == GameAction.Kind.CHOOSE_TARGETS:
-				(act as GameAction).extra = {auto_pay = true}
-				r = submit(act)
-				picked = true
-				break
+		var chosen: SubmitResult = _choose_target_auto(player_id)
+		var picked := chosen != null
+		if picked:
+			r = chosen
 		if not picked:
 			var cancel_t := GameAction.new()
 			cancel_t.kind = GameAction.Kind.CANCEL_CAST
@@ -281,6 +282,67 @@ func cast_auto(player_id: int, object_id: int) -> SubmitResult:
 	return r
 
 
+## There is no target picker on the table yet, so the game picks for you: harmful spells and
+## abilities go at the rival (their player, else their biggest creature), helpful ones at you.
+## Returns null when there is no legal target.
+func _choose_target_auto(player_id: int) -> SubmitResult:
+	var hostile := _pending_is_hostile()
+	var best: GameAction = null
+	var best_score := -1000000
+	for act in engine.legal_actions(player_id):
+		var ga := act as GameAction
+		if ga == null or ga.kind != GameAction.Kind.CHOOSE_TARGETS or ga.targets.is_empty():
+			continue
+		var sc := _target_score(int(ga.targets[0]), player_id, hostile)
+		if sc > best_score:
+			best_score = sc
+			best = ga
+	if best == null:
+		return null
+	best.extra = {auto_pay = true}
+	return submit(best)
+
+
+func _pending_is_hostile() -> bool:
+	var obj: GameObject = engine.state.objects.get(engine._cast_source)
+	if obj == null or not (obj.definition is CardDefinition):
+		return true
+	var activating: bool = engine._act_ability_id != &""
+	for a in (obj.definition as CardDefinition).abilities:
+		var ab := a as Ability
+		if ab == null:
+			continue
+		if activating and ab.ability_id != engine._act_ability_id:
+			continue
+		if not activating and ab.kind != &"SPELL":
+			continue
+		for fx in ab.effects:
+			var f := fx as AbilityEffect
+			if f == null:
+				continue
+			if f.kind == &"GAIN_LIFE" or f.kind == &"UNTAP" or f.kind == &"PUT_COUNTER":
+				return false
+			if f.kind == &"PUMP" and int(f.params.get("power", 0)) >= 0 and int(f.params.get("toughness", 0)) >= 0:
+				return false
+	return true
+
+
+func _target_score(tid: int, me: int, hostile: bool) -> int:
+	var pid := TargetingManager.decode_player(tid)
+	if pid >= 0:
+		return 50 if (pid != me) == hostile else -50
+	var entries: Array = (engine.state.stack as MagicStack).entries if engine.state.stack is MagicStack else []
+	for e in entries:
+		var entry := e as StackEntry
+		if entry != null and entry.stack_id == tid:
+			return 60 if (entry.controller_id != me) == hostile else -60
+	var obj: GameObject = engine.state.objects.get(tid)
+	if obj == null:
+		return -1000
+	var power := engine.power_of(obj)
+	return (30 + power * 2) if (obj.controller_id != me) == hostile else (-30 + power)
+
+
 func activate_ability(object_id: int, ability_id: StringName) -> SubmitResult:
 	if not can_play():
 		var bad := SubmitResult.new()
@@ -300,6 +362,24 @@ func activate_ability(object_id: int, ability_id: StringName) -> SubmitResult:
 			last_error = r.error
 			rebuild_view()
 			return r
+		if engine.state.mode == EngineEnums.EngineMode.CASTING and _awaiting_id() == 0:
+			## Targeted ability: pick the target for you (see _choose_target_auto).
+			var picked: SubmitResult = _choose_target_auto(0)
+			if picked == null:
+				var cancel_t := GameAction.new()
+				cancel_t.kind = GameAction.Kind.CANCEL_CAST
+				cancel_t.player_id = 0
+				submit(cancel_t)
+				r.ok = false
+				r.error = "No legal target."
+				last_error = r.error
+				rebuild_view()
+				return r
+			r = picked
+			if not r.ok:
+				last_error = r.error
+				rebuild_view()
+				return r
 		if engine.state.mode == EngineEnums.EngineMode.PAYING_COSTS or engine.state.mode == EngineEnums.EngineMode.CASTING:
 			if _awaiting_id() == 0:
 				var cancel := GameAction.new()
