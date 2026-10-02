@@ -6,119 +6,25 @@ signal play_imported(deck: NormalizedDeck, rows: Dictionary)
 signal deck_saved(deck: NormalizedDeck, rows: Dictionary)
 
 const GOLD := Color(0.93, 0.78, 0.28)
-const INK := Color(0.93, 0.93, 0.90)
-const MUTED := Color(0.72, 0.74, 0.70)
-const TURN_GREEN := Color(0.18, 0.78, 0.32)
 
-var input_box: TextEdit
-var progress_label: Label
-var preview_label: Label
-var source_link: LinkButton
-var unresolved_label: Label
-var import_btn: Button
-var confirm_btn: Button
-var update_btn: Button
-var save_new_btn: Button
-var retry_btn: Button
-var ignore_btn: Button
-var preview_row: HBoxContainer
+@onready var input_box: TextEdit = %InputBox
+@onready var progress_label: Label = %ProgressLabel
+@onready var preview_label: Label = %PreviewLabel
+@onready var source_link: LinkButton = %SourceLink
+@onready var unresolved_label: Label = %UnresolvedLabel
+@onready var import_btn: Button = %ImportBtn
+@onready var confirm_btn: Button = %ConfirmBtn
+@onready var update_btn: Button = %UpdateBtn
+@onready var save_new_btn: Button = %SaveNewBtn
+@onready var retry_btn: Button = %RetryBtn
+@onready var ignore_btn: Button = %IgnoreBtn
+@onready var preview_row: HBoxContainer = %PreviewRow
+
 var last_result: Dictionary = {}
 var existing_path: String = ""
 var busy := false
 var auto_play := true
 var _source_url := ""
-
-
-func _ready() -> void:
-	color = Color(0.02, 0.03, 0.04, 0.92)
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	visible = false
-	z_index = 90
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
-	var panel := PanelContainer.new()
-	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.08, 0.09, 0.10, 0.98)
-	st.set_corner_radius_all(12)
-	st.set_border_width_all(2)
-	st.border_color = GOLD
-	st.content_margin_left = 18
-	st.content_margin_right = 18
-	st.content_margin_top = 14
-	st.content_margin_bottom = 14
-	panel.add_theme_stylebox_override("panel", st)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 8)
-	col.custom_minimum_size = Vector2(720, 0)
-	var title := Label.new()
-	title.text = "IMPORT DECK"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 24)
-	title.add_theme_color_override("font_color", GOLD)
-	col.add_child(title)
-	var hint := Label.new()
-	hint.text = "Paste a Moxfield / Archidekt / TappedOut / Deckstats URL, or a decklist."
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_color_override("font_color", MUTED)
-	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(hint)
-	input_box = TextEdit.new()
-	input_box.custom_minimum_size = Vector2(680, 120)
-	input_box.placeholder_text = "https://www.moxfield.com/decks/...\n\nor\n\n1 Sol Ring\n1 Command Tower\nCommander\n1 Krenko, Mob Boss"
-	col.add_child(input_box)
-	progress_label = Label.new()
-	progress_label.add_theme_color_override("font_color", GOLD)
-	progress_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(progress_label)
-	preview_row = HBoxContainer.new()
-	preview_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	preview_row.add_theme_constant_override("separation", 8)
-	col.add_child(preview_row)
-	preview_label = Label.new()
-	preview_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	preview_label.add_theme_font_size_override("font_size", 13)
-	col.add_child(preview_label)
-	source_link = LinkButton.new()
-	source_link.visible = false
-	source_link.underline = LinkButton.UNDERLINE_MODE_ON_HOVER
-	source_link.add_theme_color_override("font_color", GOLD)
-	source_link.pressed.connect(_on_source_link_pressed)
-	col.add_child(source_link)
-	unresolved_label = Label.new()
-	unresolved_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	unresolved_label.add_theme_color_override("font_color", Color(0.95, 0.55, 0.35))
-	col.add_child(unresolved_label)
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 10)
-	import_btn = _btn("IMPORT", TURN_GREEN.darkened(0.1), Color(0.06, 0.12, 0.05), _on_import)
-	row.add_child(import_btn)
-	retry_btn = _btn("Retry", Color(0.16, 0.17, 0.18), INK, _on_import)
-	retry_btn.visible = false
-	row.add_child(retry_btn)
-	ignore_btn = _btn("Ignore unresolved", Color(0.16, 0.17, 0.18), INK, _on_ignore)
-	ignore_btn.visible = false
-	row.add_child(ignore_btn)
-	col.add_child(row)
-	var row2 := HBoxContainer.new()
-	row2.alignment = BoxContainer.ALIGNMENT_CENTER
-	row2.add_theme_constant_override("separation", 10)
-	confirm_btn = _btn("IMPORT DECK", GOLD.darkened(0.15), Color(0.12, 0.10, 0.04), _on_confirm_new)
-	confirm_btn.visible = false
-	row2.add_child(confirm_btn)
-	update_btn = _btn("Update existing deck", Color(0.16, 0.17, 0.18), INK, _on_update)
-	update_btn.visible = false
-	row2.add_child(update_btn)
-	save_new_btn = _btn("Save as new deck", Color(0.16, 0.17, 0.18), INK, _on_confirm_new)
-	save_new_btn.visible = false
-	row2.add_child(save_new_btn)
-	var cancel := _btn("CANCEL", Color(0.16, 0.17, 0.18), INK, _on_cancel)
-	row2.add_child(cancel)
-	col.add_child(row2)
-	panel.add_child(col)
-	center.add_child(panel)
 
 
 func open() -> void:
@@ -139,19 +45,6 @@ func open() -> void:
 	retry_btn.visible = false
 	ignore_btn.visible = false
 	_clear_preview()
-
-
-func _btn(text: String, bg: Color, fg: Color, cb: Callable) -> Button:
-	var b := Button.new()
-	b.text = text
-	b.custom_minimum_size = Vector2(150, 36)
-	var st := StyleBoxFlat.new()
-	st.bg_color = bg
-	st.set_corner_radius_all(8)
-	b.add_theme_stylebox_override("normal", st)
-	b.add_theme_color_override("font_color", fg)
-	b.pressed.connect(cb)
-	return b
 
 
 func _on_cancel() -> void:

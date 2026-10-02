@@ -1,0 +1,207 @@
+[gd_scene load_steps=6 format=3 uid="uid://dimportoverlay"]
+
+[ext_resource type="Script" path="res://scripts/import_overlay.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.08, 0.09, 0.1, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.93, 0.78, 0.28, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+content_margin_left = 18.0
+content_margin_top = 14.0
+content_margin_right = 18.0
+content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_import_btn"]
+bg_color = Color(0.162, 0.702, 0.288, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gray_btn"]
+bg_color = Color(0.16, 0.17, 0.18, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_confirm_btn"]
+bg_color = Color(0.7905, 0.663, 0.238, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="ImportOverlay" type="ColorRect"]
+color = Color(0.02, 0.03, 0.04, 0.92)
+mouse_filter = 1
+z_index = 90
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="CenterContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Col" type="VBoxContainer" parent="CenterContainer/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+custom_minimum_size = Vector2(720, 0)
+
+[node name="Title" type="Label" parent="CenterContainer/Panel/Col"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+text = "IMPORT DECK"
+
+[node name="Hint" type="Label" parent="CenterContainer/Panel/Col"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.74, 0.7, 1)
+horizontal_alignment = 1
+autowrap_mode = 3
+text = "Paste a Moxfield / Archidekt / TappedOut / Deckstats URL, or a decklist."
+
+[node name="InputBox" type="TextEdit" parent="CenterContainer/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(680, 120)
+placeholder_text = "https://www.moxfield.com/decks/...
+
+or
+
+1 Sol Ring
+1 Command Tower
+Commander
+1 Krenko, Mob Boss"
+
+[node name="ProgressLabel" type="Label" parent="CenterContainer/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+autowrap_mode = 3
+
+[node name="PreviewRow" type="HBoxContainer" parent="CenterContainer/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="PreviewLabel" type="Label" parent="CenterContainer/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 3
+
+[node name="SourceLink" type="LinkButton" parent="CenterContainer/Panel/Col"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.93, 0.78, 0.28, 1)
+underline_mode = 1
+
+[node name="UnresolvedLabel" type="Label" parent="CenterContainer/Panel/Col"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.55, 0.35, 1)
+autowrap_mode = 3
+
+[node name="Row1" type="HBoxContainer" parent="CenterContainer/Panel/Col"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="ImportBtn" type="Button" parent="CenterContainer/Panel/Col/Row1"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(150, 36)
+theme_override_styles/normal = SubResource("StyleBoxFlat_import_btn")
+theme_override_colors/font_color = Color(0.06, 0.12, 0.05, 1)
+text = "IMPORT"
+
+[node name="RetryBtn" type="Button" parent="CenterContainer/Panel/Col/Row1"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(150, 36)
+theme_override_styles/normal = SubResource("StyleBoxFlat_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Retry"
+
+[node name="IgnoreBtn" type="Button" parent="CenterContainer/Panel/Col/Row1"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(150, 36)
+theme_override_styles/normal = SubResource("StyleBoxFlat_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Ignore unresolved"
+
+[node name="Row2" type="HBoxContainer" parent="CenterContainer/Panel/Col"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="ConfirmBtn" type="Button" parent="CenterContainer/Panel/Col/Row2"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(150, 36)
+theme_override_styles/normal = SubResource("StyleBoxFlat_confirm_btn")
+theme_override_colors/font_color = Color(0.12, 0.1, 0.04, 1)
+text = "IMPORT DECK"
+
+[node name="UpdateBtn" type="Button" parent="CenterContainer/Panel/Col/Row2"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(150, 36)
+theme_override_styles/normal = SubResource("StyleBoxFlat_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Update existing deck"
+
+[node name="SaveNewBtn" type="Button" parent="CenterContainer/Panel/Col/Row2"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(150, 36)
+theme_override_styles/normal = SubResource("StyleBoxFlat_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "Save as new deck"
+
+[node name="CancelBtn" type="Button" parent="CenterContainer/Panel/Col/Row2"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(150, 36)
+theme_override_styles/normal = SubResource("StyleBoxFlat_gray_btn")
+theme_override_colors/font_color = Color(0.93, 0.93, 0.9, 1)
+text = "CANCEL"
+
+[connection signal="pressed" from="CenterContainer/Panel/Col/SourceLink" to="." method="_on_source_link_pressed"]
+[connection signal="pressed" from="CenterContainer/Panel/Col/Row1/ImportBtn" to="." method="_on_import"]
+[connection signal="pressed" from="CenterContainer/Panel/Col/Row1/RetryBtn" to="." method="_on_import"]
+[connection signal="pressed" from="CenterContainer/Panel/Col/Row1/IgnoreBtn" to="." method="_on_ignore"]
+[connection signal="pressed" from="CenterContainer/Panel/Col/Row2/ConfirmBtn" to="." method="_on_confirm_new"]
+[connection signal="pressed" from="CenterContainer/Panel/Col/Row2/UpdateBtn" to="." method="_on_update"]
+[connection signal="pressed" from="CenterContainer/Panel/Col/Row2/SaveNewBtn" to="." method="_on_confirm_new"]
+[connection signal="pressed" from="CenterContainer/Panel/Col/Row2/CancelBtn" to="." method="_on_cancel"]
