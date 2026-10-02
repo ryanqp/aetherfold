@@ -592,6 +592,8 @@ func _build_mp() -> void:
 	mp_ready_btn = _btn("Ready", _on_mp_ready, 220, true)
 	ready_row.add_child(mp_ready_btn)
 	ready_row.add_child(_btn("Leave room", _on_mp_leave, 180))
+	ready_row.add_child(_btn("Copy address", _on_mp_copy_address, 170))
+	ready_row.add_child(_btn("Copy code", _on_mp_copy, 140))
 	mp_lobby_box.add_child(ready_row)
 	mp_status = _sub(c, "Not connected.")
 	_back_row(c)

@@ -574,6 +574,9 @@ func receive_view(data: Dictionary) -> void:
 	var tmp: Dictionary = v.you
 	v.you = v.rival
 	v.rival = tmp
+	var kept_tmp := v.you_kept
+	v.you_kept = v.rival_kept
+	v.rival_kept = kept_tmp
 	v.active_is_you = not v.active_is_you
 	v.your_priority = not v.your_priority
 	last_view = v

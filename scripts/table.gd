@@ -1,7 +1,7 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 52
+const BUILD := 53
 const Mats := preload("res://engine/session/playmat_catalog.gd")
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
@@ -113,6 +113,7 @@ var debug_label: Label
 var draw_preview: Control
 var draw_preview_host: CenterContainer
 var _mulligan_sig := ""
+var _mulligan_wait_shown := false
 var import_overlay: ImportOverlay
 var you_cmdr_label: Label
 var rival_cmdr_label: Label
@@ -204,6 +205,9 @@ func _leave_to_menu() -> void:
 
 func apply_net_action(kind: String, payload: Dictionary, player_id: int) -> void:
 	if session == null:
+		return
+	## Only keeping or mulliganing is allowed until both players have kept their hands.
+	if kind != "keep" and kind != "mulligan" and session.match_start != GameSession.MatchStart.MAIN_GAME:
 		return
 	match kind:
 		"keep":
@@ -1450,16 +1454,16 @@ func _apply_tap_visual(chip: Control, card: Dictionary) -> void:
 
 ## Each player's field gets the playmat for their commander's color identity.
 func _apply_mats() -> void:
-	if session == null or session.engine == null:
-		return
-	_set_mat(you_zones, int(session.you_seat))
-	_set_mat(rival_zones, 1 - int(session.you_seat))
+	## The mats come from the view's commander colors, so a guest (who has no engine of its own) gets them too.
+	var b = _board()
+	_set_mat(you_zones, b.you.get("identity", []))
+	_set_mat(rival_zones, b.rival.get("identity", []))
 
-func _set_mat(zones: Dictionary, seat: int) -> void:
+func _set_mat(zones: Dictionary, identity: Array) -> void:
 	var mat := zones.get("__mat") as TextureRect
 	if mat == null:
 		return
-	var file := Mats.file_for(session.engine.commander_identity(seat))
+	var file := Mats.file_for(identity)
 	if str(mat.get_meta("file", "")) == file:
 		return
 	mat.set_meta("file", file)
@@ -3068,25 +3072,40 @@ func _refresh_mulligan() -> void:
 	if mulligan_overlay == null:
 		return
 	var board = _board()
+	## A guest has no session of its own: everything comes from the host's view (see GameNet.receive_view).
+	var app := get_node_or_null("/root/AppState")
+	var guest: bool = app != null and app.is_mp_client()
 	var st := -1
-	if USE_ENGINE and session != null:
+	var you_kept := false
+	var rival_kept := true
+	if USE_ENGINE and session != null and not guest:
 		st = session.match_start
+		you_kept = bool(session.kept.get(session.you_seat, false))
+		rival_kept = bool(session.kept.get(1 - int(session.you_seat), true))
 	elif board is TableView:
 		st = int(board.match_start)
+		you_kept = bool(board.you_kept)
+		rival_kept = bool(board.rival_kept)
 	if st < 0:
 		mulligan_overlay.visible = false
 		return
-	var show := st == GameSession.MatchStart.MULLIGAN_DECISION or st == GameSession.MatchStart.PUT_BACK
+	var deciding := st == GameSession.MatchStart.MULLIGAN_DECISION or st == GameSession.MatchStart.PUT_BACK
+	## Once you have kept (and put cards back), the screen is yours again while you wait for the other player.
+	var show := deciding and not you_kept
 	mulligan_overlay.visible = show
+	if deciding and you_kept and not rival_kept:
+		if not _mulligan_wait_shown:
+			_mulligan_wait_shown = true
+			_set_status("Hand kept. Waiting for the other player to keep or mulligan.")
+	else:
+		_mulligan_wait_shown = false
 	if not show:
 		return
 	var you: Dictionary = board.you if board != null else {}
 	var hand: Array = you.get("hand", [])
 	var lib_n := int(you.get("library", 0))
-	var mcount := 0
-	if session != null and session.engine != null:
-		mcount = session.engine.state.players[session.you_seat].mulligan_count
-	if st == GameSession.MatchStart.PUT_BACK:
+	var mcount := int(you.get("mulligans", 0))
+	if st == GameSession.MatchStart.PUT_BACK and session != null and not guest:
 		mulligan_title.text = "Put %d card(s) on the bottom" % session.put_back_remaining
 		mulligan_sub.text = "Click a card. Library %d. Mulligans: %d" % [lib_n, mcount]
 		keep_btn.visible = false
@@ -3131,7 +3150,7 @@ func _on_mulligan_card(card_id: String) -> void:
 		_refresh()
 		if session.can_play():
 			_set_status("Hand kept. Library %d. Your turn." % session.engine.library_size(0))
-		elif session.match_start == GameSession.MatchStart.PUT_BACK:
+		elif session.put_back_remaining > 0:
 			_set_status("Put %d more on the bottom." % session.put_back_remaining)
 
 
