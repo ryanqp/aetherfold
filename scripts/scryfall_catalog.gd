@@ -26,7 +26,12 @@ func _ready() -> void:
 	_http.timeout = 30.0
 	add_child(_http)
 	_http.request_completed.connect(_on_image_downloaded)
-	load_catalog()
+	## Headless runs (tests, tools) need the cards immediately; the game loads them in the background.
+	if DisplayServer.get_name() == "headless":
+		load_catalog()
+		catalog_ready.emit()
+	else:
+		load_catalog_async()
 
 func data_dir() -> String:
 	var override := OS.get_environment("AETHERFOLD_SCRYFALL_DIR").strip_edges()
@@ -39,29 +44,53 @@ func data_dir() -> String:
 		return shipped
 	return DATA_DIR
 
+## Emitted once the catalog is available (right away in headless runs, after a background load in the game).
+signal catalog_ready
+var is_loading := false
+
+
+## Loads the catalog now and waits for it. Tests and tools use this.
 func load_catalog() -> bool:
-	loaded = false
-	load_error = ""
-	cards_by_name.clear()
-	cards_by_id.clear()
-	card_count = 0
+	_apply_result(_parse_catalog())
+	return loaded
+
+
+## Loads the catalog on a worker thread so the window doesn't freeze at startup (T-009). Screens that need cards wait
+## for `catalog_ready`.
+func load_catalog_async() -> void:
+	is_loading = true
+	WorkerThreadPool.add_task(func() -> void:
+		var res := _parse_catalog()
+		_finish_async.call_deferred(res)
+	)
+
+
+func _finish_async(res: Dictionary) -> void:
+	_apply_result(res)
+	is_loading = false
+	catalog_ready.emit()
+
+
+## Reads the catalog file into fresh dictionaries without touching this node's state, so it is safe off the main thread.
+func _parse_catalog() -> Dictionary:
+	var res := {"ok": false, "error": "", "meta": {}, "by_name": {}, "by_id": {}, "count": 0, "path": ""}
 	var dir := data_dir()
 	var meta_path := dir.path_join(META_FILE)
 	var catalog_path := dir.path_join(CATALOG_FILE)
+	res.path = catalog_path
 	if not FileAccess.file_exists(catalog_path):
-		load_error = "Catalog missing at %s. Run tools/fetch_scryfall.py." % catalog_path
-		push_warning(load_error)
-		return false
+		res.error = "Catalog missing at %s. Run tools/fetch_scryfall.py." % catalog_path
+		return res
 	if FileAccess.file_exists(meta_path):
-		var meta_text := FileAccess.get_file_as_string(meta_path)
-		var parsed: Variant = JSON.parse_string(meta_text)
+		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(meta_path))
 		if typeof(parsed) == TYPE_DICTIONARY:
-			meta = parsed
+			res.meta = parsed
 	var file := FileAccess.open(catalog_path, FileAccess.READ)
 	if file == null:
-		load_error = "Could not open %s (%s)" % [catalog_path, FileAccess.get_open_error()]
-		push_warning(load_error)
-		return false
+		res.error = "Could not open %s (%s)" % [catalog_path, FileAccess.get_open_error()]
+		return res
+	var by_name: Dictionary = res.by_name
+	var by_id: Dictionary = res.by_id
 	var loaded_cards: Array = []
 	while not file.eof_reached():
 		var line := file.get_line().strip_edges()
@@ -72,38 +101,50 @@ func load_catalog() -> bool:
 			continue
 		var cid := str(card.get("id", ""))
 		if cid != "":
-			cards_by_id[cid] = card
+			by_id[cid] = card
 		loaded_cards.append(card)
-		card_count += 1
 	file.close()
 	for card in loaded_cards:
-		_index_name(str(card.get("name", "")), card, true)
+		_index_name(by_name, str(card.get("name", "")), card, true)
 	for card in loaded_cards:
 		var faces: Variant = card.get("faces", [])
 		if faces is Array:
 			for face in faces:
 				if _normalize(str(face)) == _normalize(str(card.get("name", ""))):
 					continue
-				_index_name(str(face), card, false)
-	loaded = card_count > 0
-	if loaded:
-		print("Scryfall catalog loaded: %d cards from %s" % [card_count, catalog_path])
-	else:
-		load_error = "Catalog at %s was empty." % catalog_path
-	return loaded
+				_index_name(by_name, str(face), card, false)
+	res.count = loaded_cards.size()
+	res.ok = loaded_cards.size() > 0
+	if not res.ok:
+		res.error = "Catalog at %s was empty." % catalog_path
+	return res
 
-func _index_name(raw: String, card: Dictionary, allow_replace: bool) -> void:
+
+func _apply_result(res: Dictionary) -> void:
+	cards_by_name = res.by_name
+	cards_by_id = res.by_id
+	card_count = int(res.count)
+	meta = res.meta
+	loaded = bool(res.ok)
+	load_error = str(res.error)
+	if loaded:
+		print("Scryfall catalog loaded: %d cards from %s" % [card_count, res.path])
+	else:
+		push_warning(load_error)
+
+
+func _index_name(target: Dictionary, raw: String, card: Dictionary, allow_replace: bool) -> void:
 	var key := _normalize(raw)
 	if key == "":
 		return
-	if not cards_by_name.has(key):
-		cards_by_name[key] = card
+	if not target.has(key):
+		target[key] = card
 		return
 	if not allow_replace:
 		return
-	var existing: Dictionary = cards_by_name[key]
+	var existing: Dictionary = target[key]
 	if _name_score(card, key) > _name_score(existing, key):
-		cards_by_name[key] = card
+		target[key] = card
 
 func _name_score(card: Dictionary, key: String) -> int:
 	var score := 0

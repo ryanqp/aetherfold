@@ -32,6 +32,11 @@ var skip_ai: bool = false
 var you_seat: int = 0
 ## True while an online guest's action runs as that seat (see as_seat): the host's history is left alone then.
 var _swapped := false
+## Online: the seat that must declare blockers now (-1 = nobody), and whose prompt (target / land) is open.
+var blocks_seat: int = -1
+## Online: cards a guest still has to put on the bottom after a mulligan (seat -> count).
+var put_back_need: Dictionary = {}
+var prompt_seat: int = 0
 ## Who calls the coin: you against the bot, the guest in an online match.
 var flip_caller: int = 0
 ## True while the bot's attack is paused for you to declare blockers.
@@ -115,10 +120,11 @@ func start_with_demo(demo: DemoSetup, seed: int = -1) -> void:
 	debug_lines = PackedStringArray()
 	db = demo.db
 	engine = RulesEngine.new()
-	engine.interactive_seats = [0]  ## you answer your own choices on screen; the rival decides for itself
+	engine.interactive_seats = [0, 1] if skip_ai else [0]  ## people answer their own choices on screen; the bot decides for itself
 	match_start = MatchStart.SHUFFLING
 	history.clear()
-	engine.manual_draw_seats = [you_seat] if manual_draw else []
+	## Everyone at the table clicks their own library for the draw step; online that includes the guest (seat 1).
+	engine.manual_draw_seats = ([0, 1] if skip_ai else [you_seat]) if manual_draw else []
 	engine.setup_demo(demo, FormatRules.commander_1v1_table(), seed)
 	_note_unread_cards()
 	selected_id = ""
@@ -213,12 +219,18 @@ func _other_seat() -> int:
 ## that plays your own turn plays theirs. The host's own view and history are rebuilt afterwards.
 func as_seat(seat: int, fn: Callable) -> void:
 	var saved := you_seat
+	var was_swapped := _swapped
 	you_seat = seat
 	_swapped = true
 	fn.call()
-	_swapped = false
+	_swapped = was_swapped
 	you_seat = saved
 	rebuild_view()
+
+
+## A person decides for this seat: you, and in an online match (skip_ai) the other player too.
+func _is_human(pid: int) -> bool:
+	return pid == you_seat or skip_ai
 
 
 func rebuild_view() -> void:
@@ -234,7 +246,10 @@ func draw_waiting() -> bool:
 
 
 func keep_hand(player_id: int) -> void:
-	if match_start != MatchStart.MULLIGAN_DECISION:
+	## Online, the other player may still be deciding while this one is putting cards back.
+	if match_start != MatchStart.MULLIGAN_DECISION and not (skip_ai and match_start == MatchStart.PUT_BACK):
+		return
+	if int(put_back_need.get(player_id, 0)) > 0 or bool(kept.get(player_id, false)):
 		return
 	var n := 0
 	if player_id >= 0 and player_id < engine.state.players.size():
@@ -246,12 +261,19 @@ func keep_hand(player_id: int) -> void:
 			dbg("Keep after %d mulligan(s): put %d on bottom" % [n, n])
 			rebuild_view()
 			return
+		if skip_ai:
+			## An online guest picks their own cards to put on the bottom (see put_back_for).
+			put_back_need[player_id] = n
+			rebuild_view()
+			return
 		_auto_put_back(player_id, n)
 	_mark_kept(player_id)
 
 
 func take_mulligan(player_id: int) -> void:
-	if match_start != MatchStart.MULLIGAN_DECISION:
+	if match_start != MatchStart.MULLIGAN_DECISION and not (skip_ai and match_start == MatchStart.PUT_BACK):
+		return
+	if bool(kept.get(player_id, false)) or int(put_back_need.get(player_id, 0)) > 0:
 		return
 	if player_id < 0 or player_id >= engine.state.players.size():
 		return
@@ -280,6 +302,23 @@ func put_back_card(object_id: int) -> void:
 		rebuild_view()
 
 
+## Online guest: put a chosen card on the bottom of the library after a mulligan; when enough are back, the hand is kept.
+func put_back_for(seat: int, object_id: int) -> void:
+	if int(put_back_need.get(seat, 0)) <= 0:
+		return
+	var obj: GameObject = engine.state.objects.get(object_id)
+	if obj == null or obj.zone != EngineEnums.ZoneId.HAND or obj.owner_id != seat:
+		return
+	if engine.put_library_bottom(object_id, seat) == null:
+		return
+	put_back_need[seat] = int(put_back_need[seat]) - 1
+	if int(put_back_need[seat]) <= 0:
+		put_back_need.erase(seat)
+		_mark_kept(seat)
+	else:
+		rebuild_view()
+
+
 func _auto_put_back(player_id: int, n: int) -> void:
 	var hand: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, player_id)
 	if hand == null:
@@ -301,6 +340,85 @@ func _mark_kept(player_id: int) -> void:
 			rebuild_view()
 			_finish_bot_turn(first_player)
 	rebuild_view()
+
+
+## The open question for `seat` as plain data, or {} when there is none: {kind, title, sub, options, cancel, faces, sig}.
+## Kinds: "land" (reveal / pay life), "target" (the target picker) and "decision" (an engine choice). The table draws
+## it as a pick screen; an online guest's table draws the same data from its view (TableView.you_prompt).
+func prompt_for(seat: int) -> Dictionary:
+	if engine == null or engine.state == null:
+		return {}
+	var cat = TableView._catalog()
+	if not land_prompt.is_empty() and prompt_seat == seat:
+		var q: Dictionary = land_prompt
+		return {
+			"kind": "land", "title": str(q.get("text", "")), "sub": "", "cancel": "", "faces": [],
+			"options": [{"value": true, "label": str(q.get("yes", "Yes"))}, {"value": false, "label": str(q.get("no", "No"))}],
+			"sig": "land:%s" % str(q.get("object_id")),
+		}
+	if not target_prompt.is_empty() and prompt_seat == seat:
+		var tp: Dictionary = target_prompt
+		var topts: Array = []
+		for o in tp.get("options", []):
+			topts.append({"value": int(o.get("id")), "label": o.get("label", ""), "detail": o.get("detail", ""), "mine": o.get("mine", true)})
+		var ttitle := str(tp.get("title", "Choose a target"))
+		var tsub := str(tp.get("sub", ""))
+		return {"kind": "target", "title": ttitle, "sub": tsub, "options": topts, "cancel": "Cancel", "faces": [],
+			"sig": "target:%s:%d" % [ttitle + tsub, topts.size()]}
+	if engine.state.mode == EngineEnums.EngineMode.AWAITING_DECISION and int(engine.state.awaiting.get("player_id", -1)) == seat \
+			and engine.state.pending_decision is PlayerDecision:
+		var dec := engine.state.pending_decision as PlayerDecision
+		var faces: Array = []
+		for sid in dec.show_ids:
+			var so: GameObject = engine.state.objects.get(int(sid))
+			if so != null:
+				faces.append(TableView._card_dict(engine, so, cat))
+		var dopts: Array = []
+		var cancel := ""
+		if dec.kind == &"OPTIONAL_YES_NO":
+			dopts = [{"value": true, "label": "Yes"}, {"value": false, "label": "No"}]
+		else:
+			for cand in dec.candidates:
+				var info: Dictionary = dec.info.get(str(cand), {})
+				var opt := {"value": cand, "label": str(info.get("label", cand)), "detail": str(info.get("detail", ""))}
+				var co: GameObject = engine.state.objects.get(int(cand)) if (cand is int) else null
+				if co != null and co.definition is CardDefinition:
+					opt["card"] = TableView._card_dict(engine, co, cat)
+				dopts.append(opt)
+			if dec.optional:
+				cancel = "Skip"
+		return {"kind": "decision", "title": dec.prompt if dec.prompt != "" else "Choose", "sub": "", "options": dopts,
+			"cancel": cancel, "faces": faces, "sig": "decision:%d:%s:%s" % [dec.decision_id, dec.link, dec.prompt]}
+	return {}
+
+
+## An answer to prompt_for(): `value` is the picked option, or null to cancel / skip. Runs as `seat`.
+func answer_prompt(seat: int, kind: String, value: Variant) -> void:
+	as_seat(seat, func() -> void:
+		match kind:
+			"land":
+				answer_land(bool(value))
+			"target":
+				if value == null:
+					cancel_target()
+				else:
+					choose_target(int(value))
+			"decision":
+				if engine.state.mode != EngineEnums.EngineMode.AWAITING_DECISION or int(engine.state.awaiting.get("player_id", -1)) != seat:
+					return
+				var dec := engine.state.pending_decision as PlayerDecision
+				var a := GameAction.new()
+				a.player_id = seat
+				if value == null:
+					a.kind = GameAction.Kind.DECLINE_DECISION
+				elif dec != null and dec.kind == &"OPTIONAL_YES_NO":
+					a.kind = GameAction.Kind.SUBMIT_DECISION if bool(value) else GameAction.Kind.DECLINE_DECISION
+				else:
+					a.kind = GameAction.Kind.SUBMIT_DECISION
+					a.extra = {choice = value}
+				if submit(a).ok:
+					resolve_stack_then_yield()
+	)
 
 
 func prompt_text() -> String:
@@ -348,10 +466,11 @@ func play_land(object_id: int, etb_choice: int = -1) -> SubmitResult:
 		last_error = bad.error
 		return bad
 	## Lands with "you may reveal a card / pay N life, otherwise it enters tapped": ask first.
-	if etb_choice < 0 and you_seat == 0:
+	if etb_choice < 0:
 		var q := _land_question(object_id)
 		if not q.is_empty():
 			land_prompt = q
+			prompt_seat = you_seat
 			var wait := SubmitResult.new()
 			wait.ok = true
 			target_pending = true
@@ -377,7 +496,7 @@ func _land_question(object_id: int) -> Dictionary:
 	var kind := str(rule.get("kind", ""))
 	if kind == "REVEAL":
 		var hand: Array = []
-		for oid in engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, 0).object_ids:
+		for oid in engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, you_seat).object_ids:
 			if int(oid) != object_id:
 				hand.append(engine.state.objects.get(oid))
 		if not EtbRules._any_has(hand, rule.get("types", [])):
@@ -387,10 +506,10 @@ func _land_question(object_id: int) -> Dictionary:
 			"yes": "Reveal", "no": "Enter tapped"}
 	if kind == "PAY_LIFE":
 		var n := int(rule.get("n", 0))
-		if int(engine.state.players[0].life) <= n:
+		if int(engine.state.players[you_seat].life) <= n:
 			return {}
 		return {"object_id": object_id, "name": def.name, "kind": kind,
-			"text": "Pay %d life so %s enters untapped? (You have %d.)" % [n, def.name, int(engine.state.players[0].life)],
+			"text": "Pay %d life so %s enters untapped? (You have %d.)" % [n, def.name, int(engine.state.players[you_seat].life)],
 			"yes": "Pay %d life" % n, "no": "Enter tapped"}
 	return {}
 
@@ -461,20 +580,20 @@ func card_menu(object_id: int) -> Array:
 	if obj == null:
 		return out
 	var castable_now := false
-	for act in engine.legal_actions(0):
+	for act in engine.legal_actions(you_seat):
 		var ga := act as GameAction
 		if ga != null and ga.kind == GameAction.Kind.CAST_SPELL and ga.object_id == object_id:
 			castable_now = true
 	if castable_now:
-		for o in engine.kw.affordable_options(0, obj):
+		for o in engine.kw.affordable_options(you_seat, obj):
 			var od: Dictionary = o
 			out.append({"label": str(od.label), "detail": str(od.detail), "kind": "cast", "extra": od.extra})
-	for act2 in engine.kw.special_actions(0):
+	for act2 in engine.kw.special_actions(you_seat):
 		var sa := act2 as GameAction
 		if sa != null and sa.object_id == object_id:
 			out.append({"label": str(sa.extra.get("label", "Action")), "detail": str(sa.extra.get("detail", "")), "kind": "special", "action": sa})
 	if obj.zone == EngineEnums.ZoneId.BATTLEFIELD:
-		for act3 in engine.legal_actions(0):
+		for act3 in engine.legal_actions(you_seat):
 			var aa := act3 as GameAction
 			if aa != null and aa.kind == GameAction.Kind.ACTIVATE_ABILITY and aa.object_id == object_id:
 				var ab: Ability = engine._ability_on(obj, aa.ability_id)
@@ -486,7 +605,7 @@ func card_menu(object_id: int) -> Array:
 func run_card_entry(object_id: int, entry: Dictionary) -> SubmitResult:
 	match str(entry.get("kind", "")):
 		"cast":
-			return cast_auto(0, object_id, entry.get("extra", {}))
+			return cast_auto(you_seat, object_id, entry.get("extra", {}))
 		"special":
 			var r: SubmitResult = submit(entry.action as GameAction)
 			if r.ok:
@@ -558,7 +677,7 @@ func _choose_target_auto(player_id: int) -> SubmitResult:
 		if best == null:
 			return null
 		## You choose your own targets; with a single legal one there is nothing to choose.
-		if player_id == 0 and cand_ids.size() > 1:
+		if player_id == you_seat and cand_ids.size() > 1:
 			_open_target_prompt(cand_ids, slot, slot_hostile)
 			var wait := SubmitResult.new()
 			wait.ok = true
@@ -574,7 +693,7 @@ func _open_target_prompt(cand_ids: Array, slot: int, hostile: bool) -> void:
 	var src: GameObject = engine.state.objects.get(engine._cast_source)
 	var src_name := (src.definition as CardDefinition).name if src != null and src.definition is CardDefinition else "the ability"
 	var options: Array = []
-	cand_ids.sort_custom(func(a, b) -> bool: return _target_score(int(a), 0, hostile) > _target_score(int(b), 0, hostile))
+	cand_ids.sort_custom(func(a, b) -> bool: return _target_score(int(a), you_seat, hostile) > _target_score(int(b), you_seat, hostile))
 	for tid in cand_ids:
 		options.append(_target_option(int(tid)))
 	var total: int = engine._cast_queries.size()
@@ -584,20 +703,21 @@ func _open_target_prompt(cand_ids: Array, slot: int, hostile: bool) -> void:
 		"options": options,
 	}
 	target_pending = true
+	prompt_seat = you_seat
 
 
 func _target_option(tid: int) -> Dictionary:
 	var pid := TargetingManager.decode_player(tid)
 	if pid >= 0:
-		var you := pid == 0
-		return {"id": tid, "label": "You" if you else "Talrand (rival)", "detail": "Player · %d life" % int(engine.state.players[pid].life), "kind": "player", "mine": you}
+		var you := pid == you_seat
+		return {"id": tid, "label": "You" if you else str(engine.state.players[pid].name), "detail": "Player · %d life" % int(engine.state.players[pid].life), "kind": "player", "mine": you}
 	if engine.state.stack is MagicStack:
 		for e in (engine.state.stack as MagicStack).entries:
 			var entry := e as StackEntry
 			if entry != null and entry.stack_id == tid:
 				var so: GameObject = engine.state.objects.get(entry.object_id)
 				var nm := (so.definition as CardDefinition).name if so != null and so.definition is CardDefinition else "Spell"
-				return {"id": tid, "label": nm, "detail": "Spell on the stack", "kind": "spell", "mine": entry.controller_id == 0}
+				return {"id": tid, "label": nm, "detail": "Spell on the stack", "kind": "spell", "mine": entry.controller_id == you_seat}
 	var obj: GameObject = engine.state.objects.get(tid)
 	if obj == null or not (obj.definition is CardDefinition):
 		return {"id": tid, "label": "Unknown", "detail": "", "kind": "card", "mine": false}
@@ -607,7 +727,7 @@ func _target_option(tid: int) -> Dictionary:
 		detail += "  %d/%d" % [engine.power_of(obj), engine.toughness_of(obj)]
 	if obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
 		detail += "  (in a graveyard)"
-	return {"id": tid, "label": def.name, "detail": detail, "kind": "card", "mine": obj.controller_id == 0, "object_id": obj.object_id}
+	return {"id": tid, "label": def.name, "detail": detail, "kind": "card", "mine": obj.controller_id == you_seat, "object_id": obj.object_id}
 
 
 ## The player clicked a target in the picker.
@@ -616,7 +736,7 @@ func choose_target(tid: int) -> SubmitResult:
 	target_pending = false
 	var a := GameAction.new()
 	a.kind = GameAction.Kind.CHOOSE_TARGETS
-	a.player_id = 0
+	a.player_id = you_seat
 	a.object_id = engine._cast_source
 	a.targets = [tid]
 	a.extra = {auto_pay = true}
@@ -627,7 +747,7 @@ func choose_target(tid: int) -> SubmitResult:
 		rebuild_view()
 		return r
 	if engine.state.mode == EngineEnums.EngineMode.CASTING:
-		_choose_target_auto(0)
+		_choose_target_auto(you_seat)
 		if target_pending:
 			rebuild_view()
 			return r
@@ -652,7 +772,7 @@ func cancel_target() -> void:
 func _cancel_pending_cast() -> void:
 	var c := GameAction.new()
 	c.kind = GameAction.Kind.CANCEL_CAST
-	c.player_id = 0
+	c.player_id = you_seat
 	submit(c)
 
 
@@ -868,7 +988,8 @@ func pass_once() -> void:
 		if _awaiting_id() == you_seat:
 			rebuild_view()
 			return
-		_ai_respond()
+		if not _ai_respond():
+			return
 	rebuild_view()
 
 
@@ -906,7 +1027,8 @@ func resolve_stack_then_yield() -> void:
 		if pid == you_seat:
 			pass_priority(you_seat)
 			continue
-		_ai_respond()
+		if not _ai_respond():
+			return
 	rebuild_view()
 
 
@@ -929,7 +1051,8 @@ func _advance_to_attackers() -> void:
 		if _awaiting_id() == you_seat:
 			pass_priority(you_seat)
 		else:
-			_ai_respond()
+			if not _ai_respond():
+				return
 
 
 func _pass_through_combat() -> void:
@@ -951,23 +1074,36 @@ func _pass_through_combat() -> void:
 		if _awaiting_id() == you_seat:
 			pass_priority(you_seat)
 		else:
-			_ai_respond()
+			if not _ai_respond():
+				return
 
 
-func _ai_respond() -> void:
+## The seat across the table acts when it holds priority. Returns false when the game has to wait for a person:
+## an online opponent who must declare blockers, or who has an instant-speed answer to what is on the stack.
+func _ai_respond() -> bool:
 	var pid: int = _awaiting_id()
 	if pid != _other_seat():
 		pass_priority(pid)
-		return
-	## The other player is a person (online match) and has no block prompt yet: they declare no blockers.
-	if skip_ai and blocks_needed(pid):
-		var none := GameAction.new()
-		none.kind = GameAction.Kind.DECLARE_BLOCKERS
-		none.player_id = pid
-		none.extra = {blockers = {}}
-		submit(none)
-		return
-	if not skip_ai and blocks_needed(pid):
+		return true
+	if skip_ai:
+		if blocks_needed(pid):
+			blocks_seat = pid
+			awaiting_blocks = pid == 0
+			rebuild_view()
+			return false
+		if engine.state.mode == EngineEnums.EngineMode.PAYING_COSTS or engine.state.mode == EngineEnums.EngineMode.CASTING:
+			var cancel_p := GameAction.new()
+			cancel_p.kind = GameAction.Kind.CANCEL_CAST
+			cancel_p.player_id = pid
+			submit(cancel_p)
+			return true
+		var stack_busy := engine.state.stack != null and not (engine.state.stack as MagicStack).is_empty()
+		if stack_busy and _can_respond(pid):
+			rebuild_view()
+			return false
+		pass_priority(pid)
+		return true
+	if blocks_needed(pid):
 		var blocks := GameAction.new()
 		blocks.kind = GameAction.Kind.DECLARE_BLOCKERS
 		blocks.player_id = pid
@@ -977,13 +1113,13 @@ func _ai_respond() -> void:
 			dbg("Bot block rejected: %s" % br.error)
 			blocks.extra = {blockers = {}}
 			submit(blocks)
-		return
+		return true
 	if engine.state.mode == EngineEnums.EngineMode.PAYING_COSTS or engine.state.mode == EngineEnums.EngineMode.CASTING:
 		var cancel := GameAction.new()
 		cancel.kind = GameAction.Kind.CANCEL_CAST
 		cancel.player_id = pid
 		submit(cancel)
-		return
+		return true
 	var empty := engine.state.stack == null or (engine.state.stack as MagicStack).is_empty()
 	if not empty:
 		var legal: Array = engine.legal_actions(_other_seat())
@@ -997,10 +1133,20 @@ func _ai_respond() -> void:
 			if nm == "Counterspell" or nm == "Cancel":
 				var cr: SubmitResult = cast_auto(_other_seat(), ga.object_id)
 				if cr.ok:
-					return
+					return true
 		pass_priority(_other_seat())
-		return
+		return true
 	pass_priority(_other_seat())
+	return true
+
+
+## True when `pid` could cast a spell or use a non-mana ability right now (what a person would want to respond with).
+func _can_respond(pid: int) -> bool:
+	for act in engine.legal_actions(pid):
+		var ga := act as GameAction
+		if ga.kind == GameAction.Kind.CAST_SPELL or ga.kind == GameAction.Kind.ACTIVATE_ABILITY:
+			return true
+	return false
 
 
 ## You click your library: take the draw-step card (CR 504.1). Returns the card, or {} if there is nothing to take.
@@ -1069,7 +1215,7 @@ func _stop_for_human_decision() -> bool:
 		return false
 	if engine.state.mode != EngineEnums.EngineMode.AWAITING_DECISION:
 		return false
-	return _awaiting_id() == 0
+	return _is_human(_awaiting_id())
 
 
 func _ai_answer_decision() -> bool:
@@ -1093,7 +1239,7 @@ func _ai_answer_decision() -> bool:
 func _resolve_choice_if_needed() -> bool:
 	var st := engine.state
 	if st.mode == EngineEnums.EngineMode.AWAITING_DECISION:
-		if _awaiting_id() == 0:
+		if _is_human(_awaiting_id()):
 			return false
 		return _ai_answer_decision()
 	if st.mode == EngineEnums.EngineMode.CHOOSING_REPLACEMENT:
@@ -1171,6 +1317,7 @@ func ai_take_turn(player_id: int) -> void:
 		if pid != player_id:
 			if pid == you_seat and blocks_needed(you_seat):
 				awaiting_blocks = true
+				blocks_seat = you_seat
 				rebuild_view()
 				return
 			pass_priority(pid)
@@ -1286,7 +1433,7 @@ func blocks_needed(player_id: int) -> bool:
 func declare_blocks(blocks: Dictionary) -> SubmitResult:
 	var r := SubmitResult.new()
 	r.ok = false
-	if not awaiting_blocks:
+	if not awaiting_blocks and blocks_seat != you_seat:
 		r.error = "Nothing to block right now."
 		last_error = r.error
 		return r
@@ -1300,7 +1447,13 @@ func declare_blocks(blocks: Dictionary) -> SubmitResult:
 		rebuild_view()
 		return r
 	awaiting_blocks = false
-	_finish_bot_turn(1 if you_seat == 0 else 0)
+	blocks_seat = -1
+	if skip_ai:
+		## Online: the attacker's combat carries on, played out from the attacker's seat.
+		var attacker := engine.state.active_player_id
+		as_seat(attacker, func() -> void: _pass_through_combat())
+	else:
+		_finish_bot_turn(1 if you_seat == 0 else 0)
 	rebuild_view()
 	return r
 

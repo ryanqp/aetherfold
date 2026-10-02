@@ -55,6 +55,8 @@ var hand_row: HBoxContainer
 var pile_labels: Dictionary = {}
 var menu_overlay: ColorRect
 var menu_diff_buttons: Array = []
+## Menu controls that only make sense against the bot: hidden in online matches (new game, import, difficulty).
+var menu_solo_nodes: Array = []
 var turn_border: Panel
 var hover_wrap: CenterContainer
 var hover_art: TextureRect
@@ -114,6 +116,8 @@ var draw_preview: Control
 var draw_preview_host: CenterContainer
 var _mulligan_sig := ""
 var _mulligan_wait_shown := false
+## Online guest: choosing attackers on this screen (the host only hears the final list).
+var _guest_attack := false
 var import_overlay: ImportOverlay
 var you_cmdr_label: Label
 var rival_cmdr_label: Label
@@ -122,6 +126,7 @@ var gameover_title: Label
 var gameover_sub: Label
 var gameover_again: Button
 var _gameover_shown := false
+var _peer_left := false
 
 func _ready() -> void:
 	clip_contents = true
@@ -220,13 +225,47 @@ func apply_net_action(kind: String, payload: Dictionary, player_id: int) -> void
 		session.keep_hand(player_id)
 		_refresh()
 		return
+	if kind == "put_back":
+		session.put_back_for(player_id, int(payload.get("id", 0)))
+		_refresh()
+		return
 	if kind == "mulligan":
 		session.take_mulligan(player_id)
+		_refresh()
+		return
+	if kind == "draw":
+		if session.engine.state.draw_pending and session.engine.state.active_player_id == player_id:
+			session.last_error = ""
+			session.as_seat(player_id, func() -> void: session.ack_draw())
+			_notice_if_failed(player_id)
+		_refresh()
+		return
+	if kind == "answer":
+		session.last_error = ""
+		session.answer_prompt(player_id, str(payload.get("kind", "")), null if bool(payload.get("cancel", false)) else payload.get("value", null))
+		_notice_if_failed(player_id)
+		_refresh()
+		return
+	if kind == "blocks":
+		if session.blocks_seat == player_id:
+			session.last_error = ""
+			session.as_seat(player_id, func() -> void: session.declare_blocks(payload.get("blocks", {})))
+			_notice_if_failed(player_id)
+		_refresh()
+		return
+	if kind == "menu" or kind == "menu_pick":
+		if int(session.engine.state.awaiting.get("player_id", -1)) != player_id:
+			return
+		session.last_error = ""
+		var moid := int(payload.get("id", 0))
+		session.as_seat(player_id, func() -> void: _net_card_menu(kind, moid, int(payload.get("index", -1)), player_id))
+		_notice_if_failed(player_id)
 		_refresh()
 		return
 	## Everything else needs priority: a guest can't act in the host's turn.
 	if int(session.engine.state.awaiting.get("player_id", -1)) != player_id:
 		return
+	session.last_error = ""
 	session.as_seat(player_id, func() -> void:
 		match kind:
 			"pass":
@@ -235,6 +274,8 @@ func apply_net_action(kind: String, payload: Dictionary, player_id: int) -> void
 				session.end_you_turn()
 			"attack":
 				session.attack_all()
+			"attack_with":
+				session.attack_with(payload.get("ids", []))
 			"play":
 				var oid := int(payload.get("id", 0))
 				var zone := str(payload.get("zone", "hand"))
@@ -245,6 +286,7 @@ func apply_net_action(kind: String, payload: Dictionary, player_id: int) -> void
 				else:
 					session.cast_auto(player_id, oid)
 	)
+	_notice_if_failed(player_id)
 	_refresh()
 
 func _set_status(text: String) -> void:
@@ -373,6 +415,8 @@ func _build_header() -> Control:
 	next_turn_btn.tooltip_text = "Skip the rest of your turn. The rival plays, then it is your turn again."
 	row.add_child(next_turn_btn)
 	mute_button = _header_button("Mute", Color(0.16, 0.17, 0.18), INK, _on_mute, 72)
+	if music != null and music.muted:
+		mute_button.text = "Music"
 	row.add_child(mute_button)
 	row.add_child(_volume_slider())
 	history_button = _header_button("Hide history", Color(0.16, 0.17, 0.18), INK, _toggle_history, 110)
@@ -624,15 +668,18 @@ func _on_declare_attack() -> void:
 	if sid == "":
 		return
 	if not _in_attack_mode():
-		if not session.can_play():
-			_set_status("Keep or Mulligan first.")
-			return
 		_pending_attackers.clear()
-		var r: SubmitResult = session.begin_attack()
-		if not r.ok:
-			_refresh()
-			_set_status(r.error)
-			return
+		if _is_guest():
+			_guest_attack = true
+		else:
+			if not session.can_play():
+				_set_status("Keep or Mulligan first.")
+				return
+			var r: SubmitResult = session.begin_attack()
+			if not r.ok:
+				_refresh()
+				_set_status(r.error)
+				return
 	if not _pending_attackers.has(sid):
 		_on_attack_click(sid)
 	else:
@@ -924,6 +971,7 @@ func _build_menu() -> void:
 	title.add_theme_font_size_override("font_size", 22)
 	title.add_theme_color_override("font_color", GOLD)
 	col.add_child(title)
+	menu_solo_nodes.append(title)
 	menu_diff_buttons.clear()
 	for i in 4:
 		var b := Button.new()
@@ -932,6 +980,7 @@ func _build_menu() -> void:
 		b.pressed.connect(_on_pick_difficulty.bind(i))
 		menu_diff_buttons.append(b)
 		col.add_child(b)
+		menu_solo_nodes.append(b)
 	var actions := HBoxContainer.new()
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	actions.add_theme_constant_override("separation", 12)
@@ -948,7 +997,9 @@ func _build_menu() -> void:
 	close.custom_minimum_size = Vector2(120, 32)
 	close.pressed.connect(_hide_menu)
 	actions.add_child(restart)
+	menu_solo_nodes.append(restart)
 	actions.add_child(import_b)
+	menu_solo_nodes.append(import_b)
 	actions.add_child(close)
 	col.add_child(actions)
 	panel.add_child(col)
@@ -1008,6 +1059,8 @@ func _build_gameover() -> void:
 
 func _refresh_gameover() -> void:
 	if gameover_overlay == null:
+		return
+	if _peer_left:
 		return
 	var b = _board()
 	if not bool(b.game_over):
@@ -1288,6 +1341,12 @@ func _build_chat() -> void:
 	var net := get_node_or_null("/root/GameNet")
 	if net != null and not net.chat_received.is_connected(_on_chat_received):
 		net.chat_received.connect(_on_chat_received)
+	if net != null and not net.menu_received.is_connected(_on_menu_received):
+		net.menu_received.connect(_on_menu_received)
+	if net != null and not net.peer_left.is_connected(_on_peer_left):
+		net.peer_left.connect(_on_peer_left)
+	if net != null and not net.notice_received.is_connected(_set_status):
+		net.notice_received.connect(_set_status)
 
 
 func _on_chat_submit(text: String) -> void:
@@ -1563,7 +1622,10 @@ func _sync_guest() -> void:
 		return
 	var v: TableView = net.last_view
 	session.match_start = v.match_start
-	session.pending_draw_anim = false
+	session.view = v
+	if not bool(v.active_is_you):
+		_guest_attack = false
+	session.pending_draw_anim = bool(v.draw_waiting_you)
 	v.selected_id = session.selected_id
 
 
@@ -1695,11 +1757,21 @@ func _on_select(card_id: String) -> void:
 	_refresh()
 
 
+func _is_guest() -> bool:
+	var app := get_node_or_null("/root/AppState")
+	return app != null and app.is_mp_client()
+
+
 func _in_blocking_mode() -> bool:
+	if _is_guest():
+		var v = _board()
+		return v != null and bool(v.blocks_for_you)
 	return USE_ENGINE and session != null and session.awaiting_blocks
 
 
 func _in_attack_mode() -> bool:
+	if _is_guest():
+		return _guest_attack
 	return USE_ENGINE and session != null and session.choosing_attackers
 
 
@@ -1733,6 +1805,13 @@ func _confirm_attack() -> void:
 	var ids: Array = []
 	for cid in _pending_attackers:
 		ids.append(int(cid))
+	if _is_guest():
+		## The host plays the combat out; the new board comes back as a view.
+		_client_net("attack_with", {"ids": ids})
+		_pending_attackers.clear()
+		_guest_attack = false
+		_set_status("No attack." if ids.is_empty() else "Attacking with %d creature(s)…" % ids.size())
+		return
 	var life_bot := int(session.view.rival.get("life", 40))
 	var r: SubmitResult = session.attack_with(ids)
 	_pending_attackers.clear()
@@ -1800,7 +1879,7 @@ func _on_block_click(card_id: String) -> void:
 			return
 		var blocker: Dictionary = v.find_card(_block_pick)
 		var blocker_name := str(blocker.get("name", "Your creature"))
-		if not session.engine.can_block_attacker(int(_block_pick), int(card_id)):
+		if session.engine != null and not session.engine.can_block_attacker(int(_block_pick), int(card_id)):
 			_set_status("%s can't block %s (it may need flying or reach)." % [blocker_name, nm])
 			return
 		_unassign_blocker(_block_pick)
@@ -1841,6 +1920,12 @@ func _confirm_blocks() -> void:
 		for bid in _pending_blocks[aid]:
 			ids.append(int(bid))
 		payload[int(aid)] = ids
+	if _is_guest():
+		_client_net("blocks", {"blocks": payload})
+		_pending_blocks.clear()
+		_block_pick = ""
+		_set_status("Blocks declared.")
+		return
 	var r: SubmitResult = session.declare_blocks(payload)
 	if not r.ok:
 		if r.error == "menace needs two blockers":
@@ -1933,7 +2018,12 @@ func _on_hand_card(card_id: String) -> void:
 func _engine_play_card(card_id: String) -> void:
 	var b = _board()
 	var before: Dictionary = b.find_card(card_id) if b != null else {}
-	if _client_net("play", {id = int(card_id), zone = str(before.get("zone", "hand")), kind = str(before.get("kind", ""))}):
+	var play_zone := str(before.get("zone", "hand"))
+	var play_kind := str(before.get("kind", ""))
+	if _is_guest() and play_kind != "land" and (play_zone == "hand" or play_zone == "command" or play_zone == "battlefield"):
+		_client_net("menu", {"id": int(card_id)})
+		return
+	if _client_net("play", {id = int(card_id), zone = play_zone, kind = play_kind}):
 		return
 	if session == null or session.view == null:
 		return
@@ -2051,7 +2141,21 @@ func _paint_match_buttons() -> void:
 func _on_attack() -> void:
 	if _mp_wait():
 		return
-	if _client_net("attack"):
+	if _is_guest():
+		if _in_blocking_mode():
+			_confirm_blocks()
+			return
+		if _guest_attack:
+			_confirm_attack()
+			return
+		var gv = _board()
+		if gv == null or not bool(gv.can_attack):
+			_set_status("None of your creatures can attack right now.")
+			return
+		_guest_attack = true
+		_pending_attackers.clear()
+		_set_status("Declare attackers: click your creatures, then click the rival (top right). Press Attack with none picked to skip combat.")
+		_refresh()
 		return
 	if not USE_ENGINE or session == null:
 		return
@@ -2075,6 +2179,8 @@ func _on_attack() -> void:
 
 ## The green button: step to the next part of the turn.
 func _on_next_phase() -> void:
+	if _mp_wait():
+		return
 	if not USE_ENGINE or session == null or session.view == null:
 		_on_next_stage()
 		return
@@ -2236,6 +2342,10 @@ func _on_click_library() -> void:
 			return
 		if not session.pending_draw_anim:
 			_set_status("You have already drawn this turn.")
+			return
+		## Online guest: the host takes the card (and asks about dredge); the new hand comes back in the view.
+		if _client_net("draw"):
+			_set_status("Drawing…")
 			return
 		var drawn: Dictionary = session.ack_draw()
 		if drawn.is_empty():
@@ -2642,6 +2752,9 @@ func _on_menu_picked(value: Variant) -> void:
 	var oid := _menu_oid
 	_menu_entries = []
 	_close_choice()
+	if _is_guest():
+		_client_net("menu_pick", {"id": oid, "index": idx})
+		return
 	if session == null or idx < 0 or idx >= entries.size():
 		return
 	var entry: Dictionary = entries[idx]
@@ -2663,55 +2776,28 @@ func _on_click_pile(zone_id: int, title: String) -> void:
 	_open_card_menu(0, entries, "Cast from %s" % title)
 
 
-func _update_prompts() -> void:
+## The open pick screen for this player: the session's for the host (or a solo game), the host's view for a guest.
+func _current_prompt() -> Dictionary:
+	if _is_guest():
+		var v = _board()
+		return v.you_prompt if v != null else {}
 	if session == null or session.engine == null:
-		return
-	var want_sig := ""
-	var title := ""
-	var sub := ""
-	var options: Array = []
-	var cancel_text := ""
-	var kind := ""
+		return {}
+	return session.prompt_for(session.you_seat)
+
+
+func _update_prompts() -> void:
+	var data: Dictionary = _current_prompt()
+	var want_sig := str(data.get("sig", ""))
+	var kind := str(data.get("kind", ""))
+	var title := str(data.get("title", ""))
+	var sub := str(data.get("sub", ""))
+	var options: Array = data.get("options", [])
+	var cancel_text := str(data.get("cancel", ""))
 	var faces: Array = []
-	var eng: RulesEngine = session.engine
-	if not session.land_prompt.is_empty():
-		kind = "land"
-		var q: Dictionary = session.land_prompt
-		title = str(q.get("text", ""))
-		options = [{"value": true, "label": str(q.get("yes", "Yes"))}, {"value": false, "label": str(q.get("no", "No"))}]
-		want_sig = "land:%s" % str(q.get("object_id"))
-	elif not session.target_prompt.is_empty():
-		kind = "target"
-		var tp: Dictionary = session.target_prompt
-		title = str(tp.get("title", "Choose a target"))
-		sub = str(tp.get("sub", ""))
-		for o in tp.get("options", []):
-			options.append({"value": int(o.get("id")), "label": o.get("label", ""), "detail": o.get("detail", ""), "mine": o.get("mine", true)})
-		cancel_text = "Cancel"
-		want_sig = "target:%s:%d" % [title + sub, options.size()]
-	elif eng.state.mode == EngineEnums.EngineMode.AWAITING_DECISION and int(eng.state.awaiting.get("player_id", -1)) == 0 \
-			and eng.state.pending_decision is PlayerDecision:
-		kind = "decision"
-		var dec := eng.state.pending_decision as PlayerDecision
-		title = dec.prompt if dec.prompt != "" else "Choose"
-		want_sig = "decision:%d:%s:%s" % [dec.decision_id, dec.link, dec.prompt]
-		## Show the cards the question is about, face up, so you can read what they do.
-		for sid in dec.show_ids:
-			var so: GameObject = eng.state.objects.get(int(sid))
-			if so != null:
-				faces.append(_make_card_face(TableView._card_dict(eng, so, _catalog()), Vector2(210, 294)))
-		if dec.kind == &"OPTIONAL_YES_NO":
-			options = [{"value": true, "label": "Yes"}, {"value": false, "label": "No"}]
-		else:
-			for cand in dec.candidates:
-				var info: Dictionary = dec.info.get(str(cand), {})
-				var opt := {"value": cand, "label": str(info.get("label", cand)), "detail": str(info.get("detail", ""))}
-				var co: GameObject = eng.state.objects.get(int(cand)) if (cand is int) else null
-				if co != null and co.definition is CardDefinition:
-					opt["card"] = TableView._card_dict(eng, co, _catalog())
-				options.append(opt)
-			if dec.optional:
-				cancel_text = "Skip"
+	## Show the cards the question is about, face up, so you can read what they do.
+	for fd in data.get("faces", []):
+		faces.append(_make_card_face(fd, Vector2(210, 294)))
 	if want_sig == "" and not _menu_entries.is_empty():
 		return
 	if want_sig == "":
@@ -2747,6 +2833,8 @@ func _close_choice() -> void:
 
 func _on_choice_picked(value: Variant, kind: String) -> void:
 	_close_choice()
+	if _client_net("answer", {"kind": kind, "value": value}):
+		return
 	if session == null:
 		return
 	match kind:
@@ -2768,6 +2856,8 @@ func _on_choice_picked(value: Variant, kind: String) -> void:
 
 func _on_choice_cancelled(kind: String) -> void:
 	_close_choice()
+	if _client_net("answer", {"kind": kind, "cancel": true}):
+		return
 	if session == null:
 		return
 	match kind:
@@ -2981,12 +3071,13 @@ func _coin_landed_mp() -> void:
 	_coin_state = 2
 	## The host deals the opening hands a moment after the result has been shown to both players.
 	if app != null and app.mp_role == "host":
-		get_tree().create_timer(2.0).timeout.connect(func() -> void:
-			if session != null and session.match_start == GameSession.MatchStart.COIN_FLIP and session.flip_called:
-				session.finish_coin_flip()
-				_coin_state = 0
-				_refresh()
-		)
+		## A timer node owned by the table: it goes away with the table if the host leaves first (T-012).
+		var tm := Timer.new()
+		tm.one_shot = true
+		tm.wait_time = 2.0
+		add_child(tm)
+		tm.timeout.connect(_finish_coin_mp)
+		tm.start()
 
 
 func _refresh_coin() -> void:
@@ -3272,7 +3363,13 @@ func _refresh_mulligan() -> void:
 	var hand: Array = you.get("hand", [])
 	var lib_n := int(you.get("library", 0))
 	var mcount := int(you.get("mulligans", 0))
-	if st == GameSession.MatchStart.PUT_BACK and session != null and not guest:
+	var guest_put: int = int(board.putback_you) if guest and board is TableView else 0
+	if guest_put > 0:
+		mulligan_title.text = "Put %d card(s) on the bottom" % guest_put
+		mulligan_sub.text = "Click a card. Library %d. Mulligans: %d" % [lib_n, mcount]
+		keep_btn.visible = false
+		mulligan_btn.visible = false
+	elif st == GameSession.MatchStart.PUT_BACK and session != null and not guest:
 		mulligan_title.text = "Put %d card(s) on the bottom" % session.put_back_remaining
 		mulligan_sub.text = "Click a card. Library %d. Mulligans: %d" % [lib_n, mcount]
 		keep_btn.visible = false
@@ -3311,6 +3408,11 @@ func _refresh_mulligan() -> void:
 
 func _on_mulligan_card(card_id: String) -> void:
 	if session == null:
+		return
+	if _is_guest():
+		var gb = _board()
+		if gb != null and int(gb.putback_you) > 0:
+			_client_net("put_back", {"id": int(card_id)})
 		return
 	if session.match_start == GameSession.MatchStart.PUT_BACK:
 		session.put_back_card(int(card_id))
@@ -3354,6 +3456,9 @@ func _build_quit_confirm() -> void:
 
 
 func _on_menu() -> void:
+	var app_m := get_node_or_null("/root/AppState")
+	for node in menu_solo_nodes:
+		(node as Control).visible = not (app_m != null and app_m.is_mp())
 	menu_overlay.visible = true
 	_paint_difficulty_buttons()
 
@@ -3429,3 +3534,67 @@ func _mp_wait() -> bool:
 		return false
 	_set_status("Waiting for %s…" % str(b.rival.get("name", "the other player")))
 	return true
+
+
+## Tells the guest why their action didn't work (the host's session recorded the reason).
+func _notice_if_failed(player_id: int) -> void:
+	var net := get_node_or_null("/root/GameNet")
+	if net != null and session != null and session.last_error != "" and player_id != 0:
+		net.send_notice(player_id, session.last_error)
+
+
+## Online: the other player left or lost their connection. The match can't go on, so say so and offer the way out.
+func _on_peer_left(player_name: String) -> void:
+	if gameover_overlay == null:
+		return
+	if _gameover_shown:
+		return  ## the game was already decided; leaving afterwards is normal
+	_peer_left = true
+	gameover_title.text = "MATCH ENDED"
+	gameover_title.add_theme_color_override("font_color", MUTED)
+	gameover_sub.text = "%s left the match." % player_name
+	gameover_again.visible = false
+	gameover_overlay.visible = true
+
+
+func _finish_coin_mp() -> void:
+	if session != null and session.match_start == GameSession.MatchStart.COIN_FLIP and session.flip_called:
+		session.finish_coin_flip()
+		_coin_state = 0
+		_refresh()
+
+
+## A guest clicked a card ("menu") or chose one of its ways to be played ("menu_pick"). Runs as the guest's seat.
+## One plain way plays at once; several are sent to the guest as a pick screen, like the host's own table shows.
+func _net_card_menu(kind: String, oid: int, index: int, player_id: int) -> void:
+	var menu: Array = session.card_menu(oid)
+	if kind == "menu_pick":
+		if index >= 0 and index < menu.size():
+			session.run_card_entry(oid, menu[index])
+		return
+	var obj: GameObject = session.engine.state.objects.get(oid)
+	var zone_battlefield: bool = obj != null and obj.zone == EngineEnums.ZoneId.BATTLEFIELD
+	var plain_only: bool = menu.size() == 1 and str((menu[0] as Dictionary).kind) == "cast" and (menu[0] as Dictionary).extra.is_empty()
+	var ask: bool = menu.size() > 1 or (menu.size() == 1 and not plain_only and not zone_battlefield)
+	if ask:
+		var entries: Array = []
+		for en in menu:
+			entries.append({"label": str(en.label), "detail": str(en.detail)})
+		var name_s := "Card"
+		if obj != null and obj.definition is CardDefinition:
+			name_s = (obj.definition as CardDefinition).name
+		var net := get_node_or_null("/root/GameNet")
+		if net != null:
+			net.send_menu(player_id, oid, name_s, entries)
+		return
+	if zone_battlefield and menu.size() == 1:
+		session.run_card_entry(oid, menu[0])
+	elif zone_battlefield:
+		session.activate_auto(oid)
+	else:
+		session.cast_auto(player_id, oid)
+
+
+## Guest: the host sent the ways to play the card that was clicked.
+func _on_menu_received(oid: int, title: String, entries: Array) -> void:
+	_open_card_menu(oid, entries, title, "Choose how to play it")

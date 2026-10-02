@@ -33,6 +33,18 @@ var match_start: int = 0
 ## Whether each side has kept its opening hand (the match starts when both have).
 var you_kept: bool = false
 var rival_kept: bool = false
+## The open pick screen (target, land question or engine choice) for each side, as plain data (see GameSession.prompt_for).
+var you_prompt: Dictionary = {}
+var rival_prompt: Dictionary = {}
+## Online: this side picks its attackers client-side and must declare blockers (the host sets both).
+var blocks_for_you: bool = false
+var blocks_for_rival: bool = false
+## Whose turn it is to click the library for the draw step (each side, as the host sees it).
+var draw_waiting_you: bool = false
+var draw_waiting_rival: bool = false
+## Online: cards each side still has to put on the bottom after a mulligan.
+var putback_you: int = 0
+var putback_rival: int = 0
 ## You are choosing blockers against the opponent's attack.
 var blocking_mode: bool = false
 ## You are picking attackers.
@@ -114,6 +126,15 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 		v.match_start = session.match_start
 		v.you_kept = bool(session.kept.get(seat, false))
 		v.rival_kept = bool(session.kept.get(1 - seat if seat < 2 else 0, false))
+		v.you_prompt = session.prompt_for(seat)
+		v.blocks_for_you = session.blocks_seat == seat
+		v.putback_you = int(session.put_back_need.get(seat, 0))
+		v.putback_rival = int(session.put_back_need.get(1 - seat if seat < 2 else 0, 0))
+		v.draw_waiting_you = engine.state.draw_pending and engine.state.active_player_id == seat
+		v.draw_waiting_rival = engine.state.draw_pending and engine.state.active_player_id == (1 - seat if seat < 2 else 0)
+		v.blocks_for_rival = session.skip_ai and session.blocks_seat == (1 - seat if seat < 2 else 0)
+		if session.skip_ai:
+			v.rival_prompt = session.prompt_for(1 - seat if seat < 2 else 0)
 		v.blocking_mode = session.awaiting_blocks
 		v.attack_mode = session.choosing_attackers
 	var cat := _catalog()
@@ -153,6 +174,14 @@ func to_plain() -> Dictionary:
 		first_is_you = first_is_you,
 		caller_is_you = caller_is_you,
 		you_kept = you_kept,
+		you_prompt = you_prompt,
+		rival_prompt = rival_prompt,
+		blocks_for_you = blocks_for_you,
+		blocks_for_rival = blocks_for_rival,
+		draw_waiting_you = draw_waiting_you,
+		putback_you = putback_you,
+		putback_rival = putback_rival,
+		draw_waiting_rival = draw_waiting_rival,
 		rival_kept = rival_kept,
 		blocking_mode = blocking_mode,
 		attack_mode = attack_mode,
@@ -170,6 +199,7 @@ func to_plain() -> Dictionary:
 func to_plain_for_remote() -> Dictionary:
 	var d := to_plain()
 	d.you = _redacted_player(you)
+	d.you_prompt = {}  ## the host's own question (it may show hidden cards) never goes to the guest
 	return d
 
 
@@ -212,6 +242,14 @@ static func from_plain(d: Dictionary) -> TableView:
 	v.first_is_you = bool(d.get("first_is_you", true))
 	v.caller_is_you = bool(d.get("caller_is_you", true))
 	v.you_kept = bool(d.get("you_kept", false))
+	v.you_prompt = d.get("you_prompt", {})
+	v.rival_prompt = d.get("rival_prompt", {})
+	v.blocks_for_you = bool(d.get("blocks_for_you", false))
+	v.blocks_for_rival = bool(d.get("blocks_for_rival", false))
+	v.draw_waiting_you = bool(d.get("draw_waiting_you", false))
+	v.putback_you = int(d.get("putback_you", 0))
+	v.putback_rival = int(d.get("putback_rival", 0))
+	v.draw_waiting_rival = bool(d.get("draw_waiting_rival", false))
 	v.rival_kept = bool(d.get("rival_kept", false))
 	v.blocking_mode = bool(d.get("blocking_mode", false))
 	v.attack_mode = bool(d.get("attack_mode", false))

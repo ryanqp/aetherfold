@@ -42,10 +42,18 @@ func _ready() -> void:
 		})
 
 
+var _since_draw := 0.0
+
+
 func _process(delta: float) -> void:
-	if not is_visible_in_tree():
-		return
+	if not is_visible_in_tree() or not get_window().has_focus():
+		return  ## nothing to animate when hidden or when the window is in the background (T-016)
 	_t += delta
+	_since_draw += delta
+	## Full speed on the title screen, 30 frames a second behind the other menu pages.
+	if wheel_strength < 1.0 and _since_draw < 1.0 / 30.0:
+		return
+	_since_draw = 0.0
 	queue_redraw()
 
 

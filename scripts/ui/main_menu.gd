@@ -48,6 +48,20 @@ func _ready() -> void:
 	page_dim.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	page_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(page_dim)
+	## The card catalog loads in the background at startup (T-009): show the sky and wait for it before building pages.
+	var cat_gate := get_node_or_null("/root/ScryfallCatalog")
+	if cat_gate != null and bool(cat_gate.get("is_loading")):
+		var loading := Label.new()
+		loading.text = "Loading cards…"
+		loading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		loading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		loading.add_theme_font_size_override("font_size", 28)
+		loading.add_theme_color_override("font_color", GOLD)
+		loading.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+		add_child(loading)
+		await cat_gate.catalog_ready
+		loading.queue_free()
+	DeckStore.new().purge_test_decks()  ## once per launch; the deck lists only read (T-010)
 	_install_precons()
 	_build_hub()
 	_build_vs()
@@ -97,6 +111,9 @@ func _show(name: String) -> void:
 		_backdrop.wheel_strength = 1.0 if name == "hub" else 0.45
 	for k in pages.keys():
 		pages[k].visible = (str(k) == name)
+	if name == "settings" and settings_music != null:
+		var mus := get_node_or_null("/root/Music")
+		settings_music.text = "Music: Off" if (mus != null and mus.muted) else "Music: On"
 	if name == "gallery":
 		_refresh_gallery()
 	if name == "vs":

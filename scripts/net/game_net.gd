@@ -8,11 +8,18 @@ signal match_begin
 signal address_changed
 signal countdown_changed(seconds: int)
 signal chat_received(sender: String, text: String, mine: bool)
+signal notice_received(text: String)
+## The other player left (or dropped out of) the room. Emitted with their name.
+signal peer_left(player_name: String)
+## Host -> guest: the ways to play a card they clicked (labels only; they answer with the index).
+signal menu_received(object_id: int, title: String, entries: Array)
 
 const GAME_PORT := 27777
 const BEACON_PORT := 27778
 const BEACON_PREFIX := "AETHERFOLD|"
-const MAX_TOTAL_PLAYERS := 6
+## Only two seats exist at the table (host = seat 0, guest = seat 1), so a room holds two. Raising it to 8 is pinned
+## until the table can draw and route more than two players (T-004).
+const MAX_TOTAL_PLAYERS := 2
 
 var peer: ENetMultiplayerPeer
 var udp: PacketPeerUDP
@@ -33,6 +40,10 @@ var port_open: bool = false
 var upnp_tried: bool = false
 var _upnp: UPNP = null
 var _connect_token := 0
+const UPNP_LEASE := 3600
+const UPNP_RENEW_EVERY := 1800.0
+var _renew_acc := 0.0
+var _last_view_hash := 0
 
 
 func generate_code() -> String:
@@ -89,7 +100,7 @@ func _upnp_worker() -> void:
 	var ok := false
 	var ext := ""
 	if found == UPNP.UPNP_RESULT_SUCCESS and u.get_gateway() != null and u.get_gateway().is_valid_gateway():
-		ok = u.add_port_mapping(GAME_PORT, GAME_PORT, "Aetherfold", "UDP", 3600) == UPNP.UPNP_RESULT_SUCCESS
+		ok = u.add_port_mapping(GAME_PORT, GAME_PORT, "Aetherfold", "UDP", UPNP_LEASE) == UPNP.UPNP_RESULT_SUCCESS
 		ext = u.query_external_address()
 	_upnp_done.call_deferred(u, ok, ext)
 
@@ -174,7 +185,9 @@ func join_room(wanted_code: String, ip: String = "") -> void:
 
 func leave() -> void:
 	_connect_token += 1
+	_last_view_hash = 0
 	_lobby.clear()
+	_unverified.clear()
 	roster = []
 	countdown = -1
 	_count_left = -1.0
@@ -394,6 +407,7 @@ func _start_now() -> void:
 		app.mp_code = code
 		app.you_seat = 0
 		app.skip_ai = true
+	_last_view_hash = 0
 	begin_match.rpc(str(host_e.name), str(guest_e.name))
 	match_begin.emit()
 
@@ -410,6 +424,12 @@ func broadcast_view(view) -> void:
 	var plain := {}
 	if view != null and view.has_method("to_plain_for_remote"):
 		plain = view.to_plain_for_remote()
+		plain["selected_id"] = ""  ## the host's own selection means nothing to the guest and would defeat the change check
+	## Nothing changed since the last send: skip it (T-013). A newly seated guest resets this so it gets the board.
+	var h := plain.hash()
+	if h == _last_view_hash:
+		return
+	_last_view_hash = h
 	# Every connected guest currently gets the same 2-seat (host vs.
 	# seat 1) view until #19/#20 add real per-seat routing for 3+
 	# networked players; guests past the first are spectating seat 1.
@@ -425,6 +445,13 @@ func _process(delta: float) -> void:
 			_send_beacon()
 	if role == "client" and udp != null and peer == null:
 		_poll_beacon()
+	## Keep the router's port mapping alive: UPnP leases are asked for 1 hour and renewed every 30 minutes (T-008).
+	if role == "host" and port_open and _upnp != null:
+		_renew_acc += delta
+		if _renew_acc >= UPNP_RENEW_EVERY:
+			_renew_acc = 0.0
+			var u := _upnp
+			WorkerThreadPool.add_task(func() -> void: u.add_port_mapping(GAME_PORT, GAME_PORT, "Aetherfold", "UDP", UPNP_LEASE))
 	if role == "host" and _count_left >= 0.0:
 		_count_left -= delta
 		var shown := int(ceil(_count_left))
@@ -510,7 +537,56 @@ func _connect_timeout(token: int, address: String) -> void:
 	_set_status("No answer from %s. Check the address, that the host is in a room, and that UDP port %d is open on their router (or use a VPN)." % [address, GAME_PORT])
 
 
+## Bump this whenever an RPC signature or the lobby / match flow changes: host and guest must match (see T-001).
+const PROTOCOL_VERSION := 4
+const VERSION_WAIT := 5.0
+
+## Peers that connected but have not yet said which version they run (host only).
+var _unverified: Dictionary = {}
+
+
 func _on_peer_connected(id: int) -> void:
+	## A guest is only seated once it has told us its version; one that never does is running an older build.
+	_unverified[id] = true
+	get_tree().create_timer(VERSION_WAIT).timeout.connect(func() -> void:
+		if role == "host" and _unverified.has(id):
+			_unverified.erase(id)
+			_set_status("A player connected with an older version of the game and was turned away. You both need the latest version.")
+			if peer != null:
+				peer.disconnect_peer(id)
+	)
+
+
+@rpc("any_peer", "reliable")
+func announce_version(version: int) -> void:
+	if role != "host":
+		return
+	var id := multiplayer.get_remote_sender_id()
+	if not _unverified.has(id):
+		return
+	_unverified.erase(id)
+	if version != PROTOCOL_VERSION:
+		_set_status("A player on a different version (theirs %d, yours %d) was turned away. You both need the latest version." % [version, PROTOCOL_VERSION])
+		reject_version.rpc_id(id, "Your game is a different version from the host's (yours %d, host %d). Update to the latest version and try again." % [version, PROTOCOL_VERSION])
+		get_tree().create_timer(0.5).timeout.connect(func() -> void:
+			if peer != null:
+				peer.disconnect_peer(id)
+		)
+		return
+	_accept_peer(id)
+
+
+@rpc("authority", "reliable")
+func reject_version(text: String) -> void:
+	if role != "client":
+		return
+	leave()
+	_set_status(text)
+	lobby_changed.emit()
+
+
+func _accept_peer(id: int) -> void:
+	_last_view_hash = 0
 	if not connected_peer_ids.has(id):
 		connected_peer_ids.append(id)
 	ready_peer_ids.erase(id)
@@ -521,15 +597,21 @@ func _on_peer_connected(id: int) -> void:
 
 
 func _on_peer_disconnected(id: int) -> void:
+	_unverified.erase(id)
+	if not _lobby.has(id):
+		return  ## never seated (turned away or still unverified)
+	var gone_name := str((_lobby[id] as Dictionary).get("name", "The other player"))
 	connected_peer_ids.erase(id)
 	ready_peer_ids.erase(id)
 	guest_decks.erase(id)
 	_lobby.erase(id)
 	_set_status("A player left room %s (%d/%d).\n%s" % [code, player_count(), MAX_TOTAL_PLAYERS, share_text()])
 	_lobby_updated()
+	peer_left.emit(gone_name)
 
 
 func _on_connected_ok() -> void:
+	announce_version.rpc_id(1, PROTOCOL_VERSION)
 	if not connected_peer_ids.has(1):
 		connected_peer_ids.append(1)
 	_set_status("Joined room %s." % code)
@@ -538,14 +620,19 @@ func _on_connected_ok() -> void:
 
 
 func _on_connection_failed() -> void:
-	_set_status("Join failed. Check the code / IP and that the host is online.")
+	_set_status("Join failed. Check the code or address, that the host is online with a room open, and that the table is not already full.")
 
 
 func _on_server_gone() -> void:
+	var host_name := "The host"
+	for r in roster:
+		if int((r as Dictionary).get("id", 0)) == 1:
+			host_name = str((r as Dictionary).get("name", "The host"))
 	_set_status("Host disconnected.")
 	connected_peer_ids.clear()
 	ready_peer_ids.clear()
 	lobby_changed.emit()
+	peer_left.emit(host_name)
 
 
 func _set_status(text: String) -> void:
@@ -578,6 +665,18 @@ func receive_view(data: Dictionary) -> void:
 	var kept_tmp := v.you_kept
 	v.you_kept = v.rival_kept
 	v.rival_kept = kept_tmp
+	var prompt_tmp := v.you_prompt
+	v.you_prompt = v.rival_prompt
+	v.rival_prompt = prompt_tmp
+	var blocks_tmp := v.blocks_for_you
+	v.blocks_for_you = v.blocks_for_rival
+	v.blocks_for_rival = blocks_tmp
+	var draw_tmp := v.draw_waiting_you
+	v.draw_waiting_you = v.draw_waiting_rival
+	v.draw_waiting_rival = draw_tmp
+	var putback_tmp := v.putback_you
+	v.putback_you = v.putback_rival
+	v.putback_rival = putback_tmp
 	v.first_is_you = not v.first_is_you
 	v.caller_is_you = not v.caller_is_you
 	v.active_is_you = not v.active_is_you
@@ -646,3 +745,29 @@ func receive_chat(sender: String, text: String, id: int) -> void:
 	if role != "client":
 		return
 	chat_received.emit(sender, text, id == my_id())
+
+
+## Host -> the guest sitting in `seat`: a short message, e.g. why their action was refused.
+func send_notice(seat: int, text: String) -> void:
+	if role != "host" or seat != 1 or connected_peer_ids.is_empty():
+		return
+	receive_notice.rpc_id(connected_peer_ids[0], text)
+
+
+@rpc("authority", "reliable")
+func receive_notice(text: String) -> void:
+	if role == "client":
+		notice_received.emit(text)
+
+
+## Host -> the guest in `seat`: the ways to play a card ({label, detail} each); the guest answers with menu_pick.
+func send_menu(seat: int, object_id: int, title: String, entries: Array) -> void:
+	if role != "host" or seat != 1 or connected_peer_ids.is_empty():
+		return
+	receive_menu.rpc_id(connected_peer_ids[0], object_id, title, entries)
+
+
+@rpc("authority", "reliable")
+func receive_menu(object_id: int, title: String, entries: Array) -> void:
+	if role == "client":
+		menu_received.emit(object_id, title, entries)

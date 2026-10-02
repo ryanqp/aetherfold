@@ -17,6 +17,9 @@ var volume := DEFAULT_VOLUME
 
 func _ready() -> void:
 	volume = _load_volume()
+	var saved := ConfigFile.new()
+	if saved.load(CONFIG) == OK:
+		muted = bool(saved.get_value("audio", "muted", false))
 	_apply_volume()
 	var track: AudioStream = null
 	if ResourceLoader.exists(TRACK):
@@ -31,15 +34,23 @@ func _ready() -> void:
 		(track as AudioStreamOggVorbis).loop = true
 	stream = track
 	play()
+	stream_paused = muted
 
 
 func set_volume(v: float, save: bool = true) -> void:
 	volume = clampf(v, 0.0, 1.0)
 	_apply_volume()
 	if save:
-		var cfg := ConfigFile.new()
-		cfg.set_value("audio", "volume", volume)
-		cfg.save(CONFIG)
+		_save()
+
+
+## Volume and mute are remembered between launches (T-011).
+func _save() -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(CONFIG)
+	cfg.set_value("audio", "volume", volume)
+	cfg.set_value("audio", "muted", muted)
+	cfg.save(CONFIG)
 
 
 func _apply_volume() -> void:
@@ -56,6 +67,7 @@ func _load_volume() -> float:
 func set_muted(on: bool) -> void:
 	muted = on
 	stream_paused = on
+	_save()
 
 
 func toggle_mute() -> bool:

@@ -29,7 +29,6 @@ static func builtins() -> Array:
 static func all_choices() -> Array:
 	var out: Array = builtins()
 	var store := DeckStore.new()
-	store.purge_test_decks()  ## the Vs. AI lists come from here, not only the gallery
 	for rec in store.list_decks():
 		var d: Dictionary = rec
 		d["id"] = str(d.get("_path", d.get("id", "")))
