@@ -5,6 +5,7 @@ signal peer_ready
 signal lobby_changed
 signal view_received
 signal match_begin
+signal address_changed
 
 const GAME_PORT := 27777
 const BEACON_PORT := 27778
@@ -24,6 +25,12 @@ var _beacon_acc := 0.0
 var _listen_ip: String = ""
 var remote_deck_id: String = ""
 var remote_name: String = ""
+## How to reach this host from the internet: the public IP, and whether the router opened the port (UPnP).
+var public_ip: String = ""
+var port_open: bool = false
+var upnp_tried: bool = false
+var _upnp: UPNP = null
+var _connect_token := 0
 
 
 func generate_code() -> String:
@@ -52,7 +59,95 @@ func host_room(wanted_code: String = "") -> String:
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	_start_beacon()
 	_set_status("Room %s — waiting for players (1/%d)…" % [code, MAX_TOTAL_PLAYERS])
+	_open_to_internet()
 	return code
+
+
+# --- Playing over the internet -------------------------------------------------------------------------
+## A friend outside your network connects to your public IP on GAME_PORT (UDP). Most routers can open that port
+## for you with UPnP; if yours can't, forward UDP 27777 by hand or put both players on a VPN (Tailscale, Radmin).
+
+## Asks the router to forward GAME_PORT (off the main thread: discovery can take a couple of seconds), then looks
+## up the public IP.
+func _open_to_internet() -> void:
+	public_ip = ""
+	port_open = false
+	upnp_tried = false
+	WorkerThreadPool.add_task(_upnp_worker)
+	_fetch_public_ip()
+
+
+func _upnp_worker() -> void:
+	var u := UPNP.new()
+	var found := u.discover(2000, 2, "InternetGatewayDevice")
+	var ok := false
+	var ext := ""
+	if found == UPNP.UPNP_RESULT_SUCCESS and u.get_gateway() != null and u.get_gateway().is_valid_gateway():
+		ok = u.add_port_mapping(GAME_PORT, GAME_PORT, "Aetherfold", "UDP", 3600) == UPNP.UPNP_RESULT_SUCCESS
+		ext = u.query_external_address()
+	_upnp_done.call_deferred(u, ok, ext)
+
+
+func _upnp_done(u: UPNP, ok: bool, ext: String) -> void:
+	_upnp = u
+	upnp_tried = true
+	port_open = ok
+	if role != "host":
+		_close_port()
+		return
+	if ext != "" and public_ip == "":
+		public_ip = ext
+	_refresh_share()
+
+
+func _fetch_public_ip() -> void:
+	var http := HTTPRequest.new()
+	http.timeout = 8.0
+	add_child(http)
+	http.request_completed.connect(func(_result: int, code_: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+		var ip := body.get_string_from_utf8().strip_edges()
+		if code_ == 200 and ip.is_valid_ip_address() and role == "host":
+			public_ip = ip
+			_refresh_share()
+		http.queue_free()
+	)
+	if http.request("https://api.ipify.org") != OK:
+		http.queue_free()
+
+
+## The address to give a friend: "203.0.113.5" (the port is the default one), or "" until it is known.
+func share_address() -> String:
+	return public_ip
+
+
+## What the host should tell the friend, shown under the room status.
+func share_text() -> String:
+	if role != "host":
+		return ""
+	var lines := PackedStringArray()
+	if public_ip != "":
+		lines.append("Online address for your friend: %s" % public_ip)
+	else:
+		lines.append("Looking up your online address…")
+	if upnp_tried and not port_open:
+		lines.append("Your router didn't open port %d automatically. Forward UDP %d to this PC, or play over a VPN such as Tailscale (use that IP)." % [GAME_PORT, GAME_PORT])
+	elif port_open:
+		lines.append("Port %d opened on your router." % GAME_PORT)
+	return "\n".join(lines)
+
+
+func _refresh_share() -> void:
+	address_changed.emit()
+	if role == "host":
+		_set_status("Room %s — %d/%d players joined.\n%s" % [code, player_count(), MAX_TOTAL_PLAYERS, share_text()])
+
+
+func _close_port() -> void:
+	if _upnp != null and port_open:
+		var u := _upnp
+		WorkerThreadPool.add_task(func() -> void: u.delete_port_mapping(GAME_PORT, "UDP"))
+	_upnp = null
+	port_open = false
 
 
 func join_room(wanted_code: String, ip: String = "") -> void:
@@ -72,6 +167,16 @@ func join_room(wanted_code: String, ip: String = "") -> void:
 
 
 func leave() -> void:
+	_connect_token += 1
+	_close_port()
+	public_ip = ""
+	upnp_tried = false
+	if multiplayer.connected_to_server.is_connected(_on_connected_ok):
+		multiplayer.connected_to_server.disconnect(_on_connected_ok)
+	if multiplayer.connection_failed.is_connected(_on_connection_failed):
+		multiplayer.connection_failed.disconnect(_on_connection_failed)
+	if multiplayer.server_disconnected.is_connected(_on_server_gone):
+		multiplayer.server_disconnected.disconnect(_on_server_gone)
 	if udp != null:
 		udp.close()
 		udp = null
@@ -217,24 +322,50 @@ func _poll_beacon() -> void:
 		return
 
 
-func _connect_to(ip: String) -> void:
+## "203.0.113.5", "203.0.113.5:27777" or "my.host.name" -> {host, port}.
+static func parse_address(text: String) -> Dictionary:
+	var t := text.strip_edges()
+	var port := GAME_PORT
+	var colon := t.rfind(":")
+	if colon > 0 and t.find(":") == colon:
+		var p := t.substr(colon + 1)
+		if p.is_valid_int() and int(p) > 0 and int(p) < 65536:
+			port = int(p)
+		t = t.substr(0, colon)
+	return {"host": t, "port": port}
+
+
+func _connect_to(address: String) -> void:
+	var a := parse_address(address)
+	var host := str(a.host)
 	peer = ENetMultiplayerPeer.new()
-	var err := peer.create_client(ip, GAME_PORT)
+	var err := peer.create_client(host, int(a.port))
 	if err != OK:
-		_set_status("Could not connect to %s." % ip)
+		peer = null
+		_set_status("Could not connect to %s." % address)
 		return
 	multiplayer.multiplayer_peer = peer
-	multiplayer.connected_to_server.connect(_on_connected_ok)
-	multiplayer.connection_failed.connect(_on_connection_failed)
-	multiplayer.server_disconnected.connect(_on_server_gone)
-	_set_status("Connecting to %s…" % ip)
+	if not multiplayer.connected_to_server.is_connected(_on_connected_ok):
+		multiplayer.connected_to_server.connect(_on_connected_ok)
+		multiplayer.connection_failed.connect(_on_connection_failed)
+		multiplayer.server_disconnected.connect(_on_server_gone)
+	_set_status("Connecting to %s…" % address)
+	## A host that can't be reached just stays silent; say so after a while.
+	_connect_token += 1
+	get_tree().create_timer(12.0).timeout.connect(_connect_timeout.bind(_connect_token, address))
+
+
+func _connect_timeout(token: int, address: String) -> void:
+	if token != _connect_token or role != "client" or is_connected_peer():
+		return
+	_set_status("No answer from %s. Check the address, that the host is in a room, and that UDP port %d is open on their router (or use a VPN)." % [address, GAME_PORT])
 
 
 func _on_peer_connected(id: int) -> void:
 	if not connected_peer_ids.has(id):
 		connected_peer_ids.append(id)
 	ready_peer_ids.erase(id)
-	_set_status("Room %s — %d/%d players joined." % [code, player_count(), MAX_TOTAL_PLAYERS])
+	_set_status("Room %s — %d/%d players joined.\n%s" % [code, player_count(), MAX_TOTAL_PLAYERS, share_text()])
 	peer_ready.emit()
 	lobby_changed.emit()
 
@@ -243,7 +374,7 @@ func _on_peer_disconnected(id: int) -> void:
 	connected_peer_ids.erase(id)
 	ready_peer_ids.erase(id)
 	guest_decks.erase(id)
-	_set_status("A player left room %s (%d/%d)." % [code, player_count(), MAX_TOTAL_PLAYERS])
+	_set_status("A player left room %s (%d/%d).\n%s" % [code, player_count(), MAX_TOTAL_PLAYERS, share_text()])
 	lobby_changed.emit()
 
 

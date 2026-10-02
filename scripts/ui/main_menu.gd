@@ -198,7 +198,7 @@ const HUB_ENTRIES := [
 	{"id": "mp", "text": "Multiplayer", "tip": "Host or join a table on your network", "gold": false},
 	{"id": "library", "text": "Library", "tip": "Import, build and browse your decks", "gold": false},
 	{"id": "settings", "text": "Settings", "tip": "Music, volume and fullscreen", "gold": false},
-	{"id": "exit", "text": "Leave the Multiverse", "tip": "Quit", "gold": false},
+	{"id": "exit", "text": "Exit Game", "tip": "Quit", "gold": false},
 ]
 
 const Backdrop := preload("res://scripts/ui/magic_backdrop.gd")
@@ -516,14 +516,14 @@ func _build_mp() -> void:
 	pages["mp"] = p
 	var c := _col(p)
 	_title(c, "Multiplayer", 32)
-	_sub(c, "Peer-to-peer. Create a room code or join one on the same network.")
+	_sub(c, "Play on the same network with a room code, or over the internet: host a room, send your friend the online address shown, and they type it in below.")
 	mp_code_edit = LineEdit.new()
 	mp_code_edit.placeholder_text = "Room code (leave blank to generate)"
 	mp_code_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mp_code_edit.max_length = 8
 	c.add_child(mp_code_edit)
 	mp_ip_edit = LineEdit.new()
-	mp_ip_edit.placeholder_text = "Host IP (optional — LAN discovery uses the code)"
+	mp_ip_edit.placeholder_text = "Host's online address, e.g. 203.0.113.5 (blank = same network, uses the room code)"
 	mp_ip_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	c.add_child(mp_ip_edit)
 	var row := HBoxContainer.new()
@@ -532,6 +532,7 @@ func _build_mp() -> void:
 	row.add_child(_btn("Create room", _on_mp_host, 200, true))
 	row.add_child(_btn("Join room", _on_mp_join, 200))
 	row.add_child(_btn("Copy code", _on_mp_copy, 140))
+	row.add_child(_btn("Copy address", _on_mp_copy_address, 160))
 	c.add_child(row)
 	mp_status = _sub(c, "Not connected.")
 	mp_roster = _sub(c, "")
@@ -552,7 +553,7 @@ func _on_mp_host() -> void:
 	if code != "":
 		mp_code_edit.text = code
 		var ips := ", ".join(net.local_ips())
-		mp_status.text = "Hosting %s. LAN code is enough on the same Wi-Fi.\nYour IP: %s" % [code, ips]
+		mp_status.text = net.last_status + "\nSame network instead? Your LAN IP: %s" % ips
 
 
 func _on_mp_join() -> void:
@@ -560,8 +561,8 @@ func _on_mp_join() -> void:
 	if net == null:
 		return
 	var code := mp_code_edit.text.strip_edges()
-	if code == "":
-		mp_status.text = "Enter a room code to join."
+	if code == "" and mp_ip_edit.text.strip_edges() == "":
+		mp_status.text = "Enter a room code (same network) or the host's online address."
 		return
 	net.join_room(code, mp_ip_edit.text)
 	mp_status.text = net.last_status
@@ -961,3 +962,19 @@ func _toggle_fullscreen() -> void:
 
 func _on_exit() -> void:
 	get_tree().quit()
+
+
+## Copies the address a friend outside your network types in (your public IP), or your LAN IP if that isn't known.
+func _on_mp_copy_address() -> void:
+	var net := _net()
+	if net == null or mp_status == null:
+		return
+	var addr: String = net.share_address()
+	if addr == "":
+		var ips: PackedStringArray = net.local_ips()
+		addr = ips[0] if not ips.is_empty() else ""
+	if addr == "":
+		mp_status.text = "Host a room first; the address appears once it is known."
+		return
+	DisplayServer.clipboard_set(addr)
+	mp_status.text = "Copied address %s. Send it to your friend." % addr
