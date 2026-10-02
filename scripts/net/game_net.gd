@@ -7,6 +7,7 @@ signal view_received
 signal match_begin
 signal address_changed
 signal countdown_changed(seconds: int)
+signal chat_received(sender: String, text: String, mine: bool)
 
 const GAME_PORT := 27777
 const BEACON_PORT := 27778
@@ -577,6 +578,8 @@ func receive_view(data: Dictionary) -> void:
 	var kept_tmp := v.you_kept
 	v.you_kept = v.rival_kept
 	v.rival_kept = kept_tmp
+	v.first_is_you = not v.first_is_you
+	v.caller_is_you = not v.caller_is_you
 	v.active_is_you = not v.active_is_you
 	v.your_priority = not v.your_priority
 	last_view = v
@@ -607,3 +610,39 @@ func local_ips() -> PackedStringArray:
 			continue
 		out.append(s)
 	return out
+
+
+# --- Chat ----------------------------------------------------------------------------------------------------
+## Text chat during the lobby and the match. Guests send to the host, which names the sender and relays to everyone.
+
+func send_chat(text: String) -> void:
+	var t := text.strip_edges().substr(0, 200)
+	if t == "" or role == "":
+		return
+	if role == "host":
+		_broadcast_chat(1, t)
+	else:
+		chat_to_host.rpc_id(1, t)
+
+
+@rpc("any_peer", "reliable")
+func chat_to_host(text: String) -> void:
+	if role != "host":
+		return
+	var t := text.strip_edges().substr(0, 200)
+	if t != "":
+		_broadcast_chat(multiplayer.get_remote_sender_id(), t)
+
+
+func _broadcast_chat(id: int, text: String) -> void:
+	var who := str((_lobby.get(id, {}) as Dictionary).get("name", "Player"))
+	for pid in connected_peer_ids:
+		receive_chat.rpc_id(pid, who, text, id)
+	chat_received.emit(who, text, id == 1)
+
+
+@rpc("authority", "reliable")
+func receive_chat(sender: String, text: String, id: int) -> void:
+	if role != "client":
+		return
+	chat_received.emit(sender, text, id == my_id())

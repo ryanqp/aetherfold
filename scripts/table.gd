@@ -1,7 +1,7 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 53
+const BUILD := 54
 const Mats := preload("res://engine/session/playmat_catalog.gd")
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
@@ -203,32 +203,48 @@ func _leave_to_menu() -> void:
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 
+## A guest's action, run here on the host (which owns the game). Turn actions run "as" the guest's seat, so the same
+## code that plays your own turn plays theirs.
 func apply_net_action(kind: String, payload: Dictionary, player_id: int) -> void:
-	if session == null:
+	if session == null or session.engine == null:
+		return
+	if kind == "call_coin":
+		if session.match_start == GameSession.MatchStart.COIN_FLIP and session.flip_caller == player_id:
+			session.call_coin(bool(payload.get("heads", true)), player_id)
+		_refresh()
 		return
 	## Only keeping or mulliganing is allowed until both players have kept their hands.
 	if kind != "keep" and kind != "mulligan" and session.match_start != GameSession.MatchStart.MAIN_GAME:
 		return
-	match kind:
-		"keep":
-			session.keep_hand(player_id)
-		"mulligan":
-			session.take_mulligan(player_id)
-		"pass":
-			session.pass_once()
-		"end_turn":
-			session.end_you_turn()
-		"attack":
-			session.attack_all()
-		"play":
-			var oid := int(payload.get("id", 0))
-			var zone := str(payload.get("zone", "hand"))
-			if zone == "battlefield":
-				session.activate_auto(oid)
-			elif str(payload.get("kind", "")) == "land":
-				session.play_land(oid)
-			else:
-				session.cast_auto(player_id, oid)
+	if kind == "keep":
+		session.keep_hand(player_id)
+		_refresh()
+		return
+	if kind == "mulligan":
+		session.take_mulligan(player_id)
+		_refresh()
+		return
+	## Everything else needs priority: a guest can't act in the host's turn.
+	if int(session.engine.state.awaiting.get("player_id", -1)) != player_id:
+		return
+	session.as_seat(player_id, func() -> void:
+		match kind:
+			"pass":
+				session.pass_once()
+			"end_turn":
+				session.end_you_turn()
+			"attack":
+				session.attack_all()
+			"play":
+				var oid := int(payload.get("id", 0))
+				var zone := str(payload.get("zone", "hand"))
+				if zone == "battlefield":
+					session.activate_auto(oid)
+				elif str(payload.get("kind", "")) == "land":
+					session.play_land(oid)
+				else:
+					session.cast_auto(player_id, oid)
+	)
 	_refresh()
 
 func _set_status(text: String) -> void:
@@ -314,6 +330,7 @@ func _build() -> void:
 	_build_turn_border()
 	_build_hover()
 	_build_deck_pile()
+	_build_chat()
 	_build_history_panel()
 	_build_draw_button()
 	_build_dice_tray()
@@ -1223,6 +1240,72 @@ func _paint_history() -> void:
 	history_text.text = out
 
 
+## Text chat for online matches: bottom right, to the left of the deck.
+var chat_panel: PanelContainer
+var chat_log_box: RichTextLabel
+var chat_input: LineEdit
+
+func _build_chat() -> void:
+	chat_panel = PanelContainer.new()
+	chat_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	chat_panel.anchor_left = 1.0
+	chat_panel.anchor_top = 1.0
+	chat_panel.anchor_right = 1.0
+	chat_panel.anchor_bottom = 1.0
+	chat_panel.offset_left = -672
+	chat_panel.offset_top = -128
+	chat_panel.offset_right = -284
+	chat_panel.offset_bottom = -16
+	chat_panel.z_index = 25
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.05, 0.06, 0.08, 0.88)
+	st.border_color = GOLD.darkened(0.3)
+	st.set_border_width_all(2)
+	st.set_corner_radius_all(8)
+	st.content_margin_left = 8
+	st.content_margin_right = 8
+	st.content_margin_top = 6
+	st.content_margin_bottom = 6
+	chat_panel.add_theme_stylebox_override("panel", st)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	chat_log_box = RichTextLabel.new()
+	chat_log_box.bbcode_enabled = true
+	chat_log_box.scroll_following = true
+	chat_log_box.size_flags_vertical = SIZE_EXPAND_FILL
+	chat_log_box.add_theme_font_size_override("normal_font_size", 13)
+	chat_log_box.add_theme_font_size_override("bold_font_size", 13)
+	col.add_child(chat_log_box)
+	chat_input = LineEdit.new()
+	chat_input.placeholder_text = "Chat — press Enter to send"
+	chat_input.max_length = 200
+	chat_input.text_submitted.connect(_on_chat_submit)
+	col.add_child(chat_input)
+	chat_panel.add_child(col)
+	var app := get_node_or_null("/root/AppState")
+	chat_panel.visible = app != null and app.is_mp()
+	add_child(chat_panel)
+	var net := get_node_or_null("/root/GameNet")
+	if net != null and not net.chat_received.is_connected(_on_chat_received):
+		net.chat_received.connect(_on_chat_received)
+
+
+func _on_chat_submit(text: String) -> void:
+	var net := get_node_or_null("/root/GameNet")
+	if net != null:
+		net.send_chat(text)
+	chat_input.text = ""
+	## Back to the game so Space / Enter keep working for the table.
+	chat_input.release_focus()
+
+
+func _on_chat_received(sender: String, text: String, mine: bool) -> void:
+	if chat_log_box == null:
+		return
+	var clean := text.replace("[", "[lb]")
+	var color := "#f0c850" if mine else "#7fd0ff"
+	chat_log_box.append_text("[color=%s][b]%s:[/b][/color] %s\n" % [color, sender.replace("[", "[lb]"), clean])
+
 func _build_deck_pile() -> void:
 	deck_btn = Button.new()
 	deck_btn.text = "92"
@@ -1469,7 +1552,23 @@ func _set_mat(zones: Dictionary, identity: Array) -> void:
 	mat.set_meta("file", file)
 	mat.texture = Mats.texture(file)
 
+## A guest's table has no engine of its own: its stand-in session mirrors the host's view, so the checks that ask the
+## session (can I play yet?) work, and the card you select stays yours instead of following the host's selection.
+func _sync_guest() -> void:
+	var app := get_node_or_null("/root/AppState")
+	if app == null or not app.is_mp_client() or session == null:
+		return
+	var net := get_node_or_null("/root/GameNet")
+	if net == null or net.last_view == null:
+		return
+	var v: TableView = net.last_view
+	session.match_start = v.match_start
+	session.pending_draw_anim = false
+	v.selected_id = session.selected_id
+
+
 func _refresh() -> void:
+	_sync_guest()
 	var b = _board()
 	_apply_mats()
 	_playable_styles.clear()
@@ -1950,6 +2049,8 @@ func _paint_match_buttons() -> void:
 
 
 func _on_attack() -> void:
+	if _mp_wait():
+		return
 	if _client_net("attack"):
 		return
 	if not USE_ENGINE or session == null:
@@ -2019,6 +2120,8 @@ func _next_phase_label(v) -> String:
 
 
 func _on_next_stage() -> void:
+	if _mp_wait():
+		return
 	if _client_net("pass"):
 		return
 	if USE_ENGINE:
@@ -2057,6 +2160,8 @@ func _client_net(kind: String, payload: Dictionary = {}) -> bool:
 
 
 func _on_end_turn() -> void:
+	if _mp_wait():
+		return
 	if _client_net("end_turn"):
 		return
 	if USE_ENGINE:
@@ -2831,8 +2936,65 @@ func _build_coin_overlay() -> void:
 	add_child(coin_overlay)
 
 
+## Online coin flip: the guest calls it, the host flips it. Both screens run off the host's view.
+func _refresh_coin_mp() -> void:
+	var v = _board()
+	var show: bool = v != null and bool(v.coin_flip)
+	coin_overlay.visible = show
+	if not show:
+		_coin_state = 0
+		return
+
+	var rival_name := str(v.rival.get("name", "Your rival"))
+	if not bool(v.flip_called):
+		_coin_state = 0
+		coin_face.text = "?"
+		coin_continue.visible = false
+		coin_call_row.visible = bool(v.caller_is_you)
+		coin_status.text = "Call it. The winner goes first." if bool(v.caller_is_you) else "%s is calling the coin…" % rival_name
+		return
+	if _coin_state != 0:
+		return
+	_coin_state = 1
+	coin_call_row.visible = false
+	coin_continue.visible = false
+	var caller := "You" if bool(v.caller_is_you) else rival_name
+	coin_status.text = "%s called %s…" % [caller, "heads" if bool(v.you_called_heads) else "tails"]
+	var tw := create_tween()
+	var delay := 0.06
+	for i in 14:
+		var face_text := "HEADS" if i % 2 == 0 else "TAILS"
+		tw.tween_callback(func() -> void: coin_face.text = face_text)
+		tw.tween_interval(delay)
+		delay += 0.025
+	tw.tween_callback(_coin_landed_mp)
+
+
+func _coin_landed_mp() -> void:
+	var v = _board()
+	if v == null:
+		return
+	var app := get_node_or_null("/root/AppState")
+	coin_face.text = "HEADS" if bool(v.coin_heads) else "TAILS"
+	var rival_name := str(v.rival.get("name", "Your rival"))
+	coin_status.text = ("It's %s. You go first!" if bool(v.first_is_you) else "It's %s. %s goes first.") % (["heads" if bool(v.coin_heads) else "tails"] if bool(v.first_is_you) else ["heads" if bool(v.coin_heads) else "tails", rival_name])
+	_coin_state = 2
+	## The host deals the opening hands a moment after the result has been shown to both players.
+	if app != null and app.mp_role == "host":
+		get_tree().create_timer(2.0).timeout.connect(func() -> void:
+			if session != null and session.match_start == GameSession.MatchStart.COIN_FLIP and session.flip_called:
+				session.finish_coin_flip()
+				_coin_state = 0
+				_refresh()
+		)
+
+
 func _refresh_coin() -> void:
 	if coin_overlay == null or session == null:
+		return
+	var app_c := get_node_or_null("/root/AppState")
+	if app_c != null and app_c.is_mp():
+		_refresh_coin_mp()
 		return
 	var show: bool = USE_ENGINE and session.match_start == GameSession.MatchStart.COIN_FLIP
 	coin_overlay.visible = show
@@ -2848,6 +3010,11 @@ func _refresh_coin() -> void:
 
 func _on_coin_call(heads: bool) -> void:
 	if session == null or _coin_state != 0:
+		return
+	## A guest calls the coin on the host's table; the flip then plays on both screens from the host's view.
+	if _client_net("call_coin", {"heads": heads}):
+		coin_call_row.visible = false
+		coin_status.text = "You called %s…" % ("heads" if heads else "tails")
 		return
 	_coin_state = 1
 	session.call_coin(heads)
@@ -3249,3 +3416,16 @@ func _on_new_game() -> void:
 
 func _on_art_updated(_card_id: String) -> void:
 	_refresh()
+
+
+## Online: true (with a message) while it is the other player's turn to act, so the buttons don't fire on the host's
+## table out of turn.
+func _mp_wait() -> bool:
+	var app := get_node_or_null("/root/AppState")
+	if app == null or not app.is_mp():
+		return false
+	var b = _board()
+	if b == null or bool(b.your_priority):
+		return false
+	_set_status("Waiting for %s…" % str(b.rival.get("name", "the other player")))
+	return true

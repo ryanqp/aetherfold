@@ -30,6 +30,10 @@ var debug_lines: PackedStringArray = PackedStringArray()
 var last_seed: int = 1
 var skip_ai: bool = false
 var you_seat: int = 0
+## True while an online guest's action runs as that seat (see as_seat): the host's history is left alone then.
+var _swapped := false
+## Who calls the coin: you against the bot, the guest in an online match.
+var flip_caller: int = 0
 ## True while the bot's attack is paused for you to declare blockers.
 var awaiting_blocks: bool = false
 ## True while you are picking which creatures attack.
@@ -135,7 +139,8 @@ func start_with_demo(demo: DemoSetup, seed: int = -1) -> void:
 	dbg("Rival library: %d + commander" % lib1)
 	first_player = 0
 	flip_called = false
-	if coin_flip and not skip_ai:
+	flip_caller = 1 if skip_ai else you_seat
+	if coin_flip:
 		match_start = MatchStart.COIN_FLIP
 		rebuild_view()
 		return
@@ -156,16 +161,17 @@ func _deal_opening_hands() -> void:
 
 
 ## You call heads or tails; the coin decides who goes first (CR 103.1).
-func call_coin(heads: bool) -> void:
+func call_coin(heads: bool, caller: int = -1) -> void:
 	if match_start != MatchStart.COIN_FLIP or flip_called:
 		return
+	var who := caller if caller >= 0 else flip_caller
 	var rng := RandomNumberGenerator.new()
 	rng.seed = last_seed ^ 0x51ED
 	coin_heads = rng.randf() < 0.5
-	you_called_heads = heads
-	first_player = you_seat if coin_heads == heads else (1 if you_seat == 0 else 0)
+	you_called_heads = heads  ## what the caller called
+	first_player = who if coin_heads == heads else 1 - who
 	flip_called = true
-	dbg("Coin: %s, you called %s, %s goes first" % ["heads" if coin_heads else "tails", "heads" if heads else "tails", "you" if first_player == you_seat else "Talrand"])
+	dbg("Coin: %s, seat %d called %s, seat %d goes first" % ["heads" if coin_heads else "tails", who, "heads" if heads else "tails", first_player])
 	rebuild_view()
 
 
@@ -198,9 +204,27 @@ func submit(action: GameAction) -> SubmitResult:
 	return r
 
 
+## The seat across the table (two seats).
+func _other_seat() -> int:
+	return 1 - you_seat
+
+
+## Runs `fn` as if `seat` were the player at this table (an online guest's action, run on the host): the same code
+## that plays your own turn plays theirs. The host's own view and history are rebuilt afterwards.
+func as_seat(seat: int, fn: Callable) -> void:
+	var saved := you_seat
+	you_seat = seat
+	_swapped = true
+	fn.call()
+	_swapped = false
+	you_seat = saved
+	rebuild_view()
+
+
 func rebuild_view() -> void:
 	pending_draw_anim = draw_waiting()
-	history.pump(engine, you_seat, match_start == MatchStart.MAIN_GAME)
+	if not _swapped:
+		history.pump(engine, you_seat, match_start == MatchStart.MAIN_GAME)
 	view = TableView.from_engine(engine, self)
 
 
@@ -283,7 +307,7 @@ func prompt_text() -> String:
 	if engine == null or engine.state == null:
 		return ""
 	if engine.is_over():
-		if engine.state.winners.has(0):
+		if engine.state.winners.has(you_seat):
 			return "You won."
 		return "You lost."
 	if not can_play():
@@ -324,7 +348,7 @@ func play_land(object_id: int, etb_choice: int = -1) -> SubmitResult:
 		last_error = bad.error
 		return bad
 	## Lands with "you may reveal a card / pay N life, otherwise it enters tapped": ask first.
-	if etb_choice < 0:
+	if etb_choice < 0 and you_seat == 0:
 		var q := _land_question(object_id)
 		if not q.is_empty():
 			land_prompt = q
@@ -334,7 +358,7 @@ func play_land(object_id: int, etb_choice: int = -1) -> SubmitResult:
 			return wait
 	var a := GameAction.new()
 	a.kind = GameAction.Kind.PLAY_LAND
-	a.player_id = 0
+	a.player_id = you_seat
 	a.object_id = object_id
 	engine.state.zones.etb_choice = etb_choice
 	var r: SubmitResult = submit(a)
@@ -421,7 +445,7 @@ func cast_auto(player_id: int, object_id: int, extra: Dictionary = {}) -> Submit
 		r.ok = false
 		r.error = "Can't pay that."
 		return r
-	if r.ok and player_id == 0:
+	if r.ok and player_id == you_seat:
 		resolve_stack_then_yield()
 	return r
 
@@ -660,7 +684,7 @@ func activate_ability(object_id: int, ability_id: StringName) -> SubmitResult:
 		bad.error = "Keep or mulligan first."
 		last_error = bad.error
 		return bad
-	for act in engine.legal_actions(0):
+	for act in engine.legal_actions(you_seat):
 		var ga := act as GameAction
 		if ga.kind != GameAction.Kind.ACTIVATE_ABILITY or ga.object_id != object_id:
 			continue
@@ -672,13 +696,13 @@ func activate_ability(object_id: int, ability_id: StringName) -> SubmitResult:
 			last_error = r.error
 			rebuild_view()
 			return r
-		if engine.state.mode == EngineEnums.EngineMode.CASTING and _awaiting_id() == 0:
+		if engine.state.mode == EngineEnums.EngineMode.CASTING and _awaiting_id() == you_seat:
 			## Targeted ability: pick the target for you (see _choose_target_auto).
-			var picked: SubmitResult = _choose_target_auto(0)
+			var picked: SubmitResult = _choose_target_auto(you_seat)
 			if picked == null:
 				var cancel_t := GameAction.new()
 				cancel_t.kind = GameAction.Kind.CANCEL_CAST
-				cancel_t.player_id = 0
+				cancel_t.player_id = you_seat
 				submit(cancel_t)
 				r.ok = false
 				r.error = "No legal target."
@@ -694,10 +718,10 @@ func activate_ability(object_id: int, ability_id: StringName) -> SubmitResult:
 				rebuild_view()
 				return r
 		if engine.state.mode == EngineEnums.EngineMode.PAYING_COSTS or engine.state.mode == EngineEnums.EngineMode.CASTING:
-			if _awaiting_id() == 0:
+			if _awaiting_id() == you_seat:
 				var cancel := GameAction.new()
 				cancel.kind = GameAction.Kind.CANCEL_CAST
-				cancel.player_id = 0
+				cancel.player_id = you_seat
 				submit(cancel)
 				r.ok = false
 				r.error = "Can't pay that."
@@ -721,7 +745,7 @@ func activate_auto(object_id: int) -> SubmitResult:
 		last_error = bad.error
 		return bad
 	var matches: Array = []
-	for act in engine.legal_actions(0):
+	for act in engine.legal_actions(you_seat):
 		var ga := act as GameAction
 		if ga.kind == GameAction.Kind.ACTIVATE_ABILITY and ga.object_id == object_id:
 			matches.append(ga)
@@ -771,12 +795,12 @@ func begin_attack() -> SubmitResult:
 		rebuild_view()
 		return r
 	_advance_to_attackers()
-	if engine.state.step != EngineEnums.Step.DECLARE_ATTACKERS or engine.state.active_player_id != 0:
+	if engine.state.step != EngineEnums.Step.DECLARE_ATTACKERS or engine.state.active_player_id != you_seat:
 		r.error = "Can't attack now."
 		last_error = r.error
 		rebuild_view()
 		return r
-	if engine.legal_attacker_ids(0).is_empty():
+	if engine.legal_attacker_ids(you_seat).is_empty():
 		r.error = "No creature can attack right now (summoning sick, tapped, or defender)."
 		last_error = r.error
 		rebuild_view()
@@ -796,7 +820,7 @@ func attack_with(ids: Array) -> SubmitResult:
 		last_error = bad.error
 		return bad
 	_advance_to_attackers()
-	if engine.state.step != EngineEnums.Step.DECLARE_ATTACKERS or engine.state.active_player_id != 0:
+	if engine.state.step != EngineEnums.Step.DECLARE_ATTACKERS or engine.state.active_player_id != you_seat:
 		var bad2 := SubmitResult.new()
 		bad2.ok = false
 		bad2.error = "Can't attack now."
@@ -806,7 +830,7 @@ func attack_with(ids: Array) -> SubmitResult:
 		return bad2
 	var a := GameAction.new()
 	a.kind = GameAction.Kind.DECLARE_ATTACKERS
-	a.player_id = 0
+	a.player_id = you_seat
 	a.extra = {attackers = ids}
 	var r: SubmitResult = submit(a)
 	if r.ok:
@@ -821,15 +845,15 @@ func attack_all() -> SubmitResult:
 	if not can_play():
 		return attack_with([])
 	_advance_to_attackers()
-	return attack_with(engine.legal_attacker_ids(0))
+	return attack_with(engine.legal_attacker_ids(you_seat))
 
 
 func pass_once() -> void:
 	if not can_play() or engine == null:
 		return
 	choosing_attackers = false
-	if _awaiting_id() == 0:
-		pass_priority(0)
+	if _awaiting_id() == you_seat:
+		pass_priority(you_seat)
 	var n := 0
 	while n < 32 and engine != null and not engine.is_over():
 		n += 1
@@ -841,7 +865,7 @@ func pass_once() -> void:
 		if _stop_for_human_decision():
 			rebuild_view()
 			return
-		if _awaiting_id() == 0:
+		if _awaiting_id() == you_seat:
 			rebuild_view()
 			return
 		_ai_respond()
@@ -863,7 +887,7 @@ func resolve_stack_then_yield() -> void:
 			rebuild_view()
 			return
 		if engine.state.mode == EngineEnums.EngineMode.PAYING_COSTS or engine.state.mode == EngineEnums.EngineMode.CASTING:
-			if _awaiting_id() == 0:
+			if _awaiting_id() == you_seat:
 				rebuild_view()
 				return
 			var cancel := GameAction.new()
@@ -873,14 +897,14 @@ func resolve_stack_then_yield() -> void:
 			continue
 		var empty := engine.state.stack == null or (engine.state.stack as MagicStack).is_empty()
 		var pid: int = _awaiting_id()
-		if empty and pid == 0:
+		if empty and pid == you_seat:
 			rebuild_view()
 			return
-		if empty and pid == 1 and engine.state.active_player_id == 1:
+		if empty and pid == _other_seat() and engine.state.active_player_id == _other_seat():
 			rebuild_view()
 			return
-		if pid == 0:
-			pass_priority(0)
+		if pid == you_seat:
+			pass_priority(you_seat)
 			continue
 		_ai_respond()
 	rebuild_view()
@@ -898,12 +922,12 @@ func _advance_to_attackers() -> void:
 		if _stop_for_human_decision():
 			rebuild_view()
 			return
-		if engine.state.active_player_id != 0:
+		if engine.state.active_player_id != you_seat:
 			return
 		if engine.state.step == EngineEnums.Step.DECLARE_ATTACKERS:
 			return
-		if _awaiting_id() == 0:
-			pass_priority(0)
+		if _awaiting_id() == you_seat:
+			pass_priority(you_seat)
 		else:
 			_ai_respond()
 
@@ -920,20 +944,28 @@ func _pass_through_combat() -> void:
 		if _stop_for_human_decision():
 			rebuild_view()
 			return
-		if engine.state.active_player_id != 0:
+		if engine.state.active_player_id != you_seat:
 			return
 		if engine.state.phase != EngineEnums.Phase.COMBAT:
 			return
-		if _awaiting_id() == 0:
-			pass_priority(0)
+		if _awaiting_id() == you_seat:
+			pass_priority(you_seat)
 		else:
 			_ai_respond()
 
 
 func _ai_respond() -> void:
 	var pid: int = _awaiting_id()
-	if pid != 1:
+	if pid != _other_seat():
 		pass_priority(pid)
+		return
+	## The other player is a person (online match) and has no block prompt yet: they declare no blockers.
+	if skip_ai and blocks_needed(pid):
+		var none := GameAction.new()
+		none.kind = GameAction.Kind.DECLARE_BLOCKERS
+		none.player_id = pid
+		none.extra = {blockers = {}}
+		submit(none)
 		return
 	if not skip_ai and blocks_needed(pid):
 		var blocks := GameAction.new()
@@ -954,7 +986,7 @@ func _ai_respond() -> void:
 		return
 	var empty := engine.state.stack == null or (engine.state.stack as MagicStack).is_empty()
 	if not empty:
-		var legal: Array = engine.legal_actions(1)
+		var legal: Array = engine.legal_actions(_other_seat())
 		for act in legal:
 			var ga := act as GameAction
 			if ga.kind != GameAction.Kind.CAST_SPELL:
@@ -963,12 +995,12 @@ func _ai_respond() -> void:
 			var def: CardDefinition = obj.definition as CardDefinition if obj != null and obj.definition is CardDefinition else null
 			var nm := def.name if def else ""
 			if nm == "Counterspell" or nm == "Cancel":
-				var cr: SubmitResult = cast_auto(1, ga.object_id)
+				var cr: SubmitResult = cast_auto(_other_seat(), ga.object_id)
 				if cr.ok:
 					return
-		pass_priority(1)
+		pass_priority(_other_seat())
 		return
-	pass_priority(1)
+	pass_priority(_other_seat())
 
 
 ## You click your library: take the draw-step card (CR 504.1). Returns the card, or {} if there is nothing to take.

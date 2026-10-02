@@ -27,6 +27,8 @@ var flip_called: bool = false
 var coin_heads: bool = true
 var you_called_heads: bool = true
 var first_is_you: bool = true
+## The player who calls the coin is you (the guest calls it in an online match).
+var caller_is_you: bool = true
 var match_start: int = 0
 ## Whether each side has kept its opening hand (the match starts when both have).
 var you_kept: bool = false
@@ -108,6 +110,7 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 		v.coin_heads = session.coin_heads
 		v.you_called_heads = session.you_called_heads
 		v.first_is_you = session.first_player == session.you_seat
+		v.caller_is_you = session.flip_caller == session.you_seat
 		v.match_start = session.match_start
 		v.you_kept = bool(session.kept.get(seat, false))
 		v.rival_kept = bool(session.kept.get(1 - seat if seat < 2 else 0, false))
@@ -143,6 +146,12 @@ func to_plain() -> Dictionary:
 		winners = winners,
 		prompt = prompt,
 		match_start = match_start,
+		coin_flip = coin_flip,
+		flip_called = flip_called,
+		coin_heads = coin_heads,
+		you_called_heads = you_called_heads,
+		first_is_you = first_is_you,
+		caller_is_you = caller_is_you,
 		you_kept = you_kept,
 		rival_kept = rival_kept,
 		blocking_mode = blocking_mode,
@@ -196,6 +205,12 @@ static func from_plain(d: Dictionary) -> TableView:
 	v.winners = d.get("winners", [])
 	v.prompt = str(d.get("prompt", ""))
 	v.match_start = int(d.get("match_start", 0))
+	v.coin_flip = bool(d.get("coin_flip", false))
+	v.flip_called = bool(d.get("flip_called", false))
+	v.coin_heads = bool(d.get("coin_heads", true))
+	v.you_called_heads = bool(d.get("you_called_heads", true))
+	v.first_is_you = bool(d.get("first_is_you", true))
+	v.caller_is_you = bool(d.get("caller_is_you", true))
 	v.you_kept = bool(d.get("you_kept", false))
 	v.rival_kept = bool(d.get("rival_kept", false))
 	v.blocking_mode = bool(d.get("blocking_mode", false))
