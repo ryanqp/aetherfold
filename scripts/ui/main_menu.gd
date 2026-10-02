@@ -16,7 +16,6 @@ var vs_diff: int = 1
 var mp_code_edit: LineEdit
 var mp_ip_edit: LineEdit
 var mp_status: Label
-var mp_roster: Label
 var gallery_grid: GridContainer
 var import_overlay: ImportOverlay
 var page_dim: ColorRect
@@ -67,6 +66,7 @@ func _ready() -> void:
 		net.status_changed.connect(_on_net_status)
 		net.peer_ready.connect(_on_peer_ready)
 		net.lobby_changed.connect(_on_lobby_changed)
+		net.countdown_changed.connect(_on_countdown)
 		net.match_begin.connect(_start_table)
 	_show("hub")
 
@@ -511,21 +511,36 @@ func _start_table() -> void:
 	get_tree().change_scene_to_file("res://scenes/table.tscn")
 
 
+var mp_connect_box: VBoxContainer
+var mp_lobby_box: VBoxContainer
+var mp_name_edit: LineEdit
+var mp_deck_pick: OptionButton
+var mp_roster_box: VBoxContainer
+var mp_ready_btn: Button
+var mp_count_label: Label
+var _mp_choices: Array = []
+var _mp_in_lobby := false
+
+
 func _build_mp() -> void:
 	var p := _page()
 	pages["mp"] = p
 	var c := _col(p)
 	_title(c, "Multiplayer", 32)
-	_sub(c, "Play on the same network with a room code, or over the internet: host a room, send your friend the online address shown, and they type it in below.")
+	## Stage 1: connect. Same network: a room code. Over the internet: the host's online address.
+	mp_connect_box = VBoxContainer.new()
+	mp_connect_box.add_theme_constant_override("separation", 12)
+	c.add_child(mp_connect_box)
+	_sub(mp_connect_box, "Play on the same network with a room code, or over the internet: host a room, send your friend the online address shown, and they type it in below.")
 	mp_code_edit = LineEdit.new()
 	mp_code_edit.placeholder_text = "Room code (leave blank to generate)"
 	mp_code_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mp_code_edit.max_length = 8
-	c.add_child(mp_code_edit)
+	mp_connect_box.add_child(mp_code_edit)
 	mp_ip_edit = LineEdit.new()
 	mp_ip_edit.placeholder_text = "Host's online address, e.g. 203.0.113.5 (blank = same network, uses the room code)"
 	mp_ip_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	c.add_child(mp_ip_edit)
+	mp_connect_box.add_child(mp_ip_edit)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 12)
@@ -533,15 +548,103 @@ func _build_mp() -> void:
 	row.add_child(_btn("Join room", _on_mp_join, 200))
 	row.add_child(_btn("Copy code", _on_mp_copy, 140))
 	row.add_child(_btn("Copy address", _on_mp_copy_address, 160))
-	c.add_child(row)
+	mp_connect_box.add_child(row)
+	## Stage 2: the lobby. Pick a deck, press Ready; when everyone is ready the match starts after a short countdown.
+	mp_lobby_box = VBoxContainer.new()
+	mp_lobby_box.add_theme_constant_override("separation", 10)
+	mp_lobby_box.visible = false
+	c.add_child(mp_lobby_box)
+	_sub(mp_lobby_box, "Pick your deck, then press Ready. When every player is ready the match starts in 3 seconds.")
+	var name_row := HBoxContainer.new()
+	name_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	name_row.add_theme_constant_override("separation", 10)
+	var nl := Label.new()
+	nl.text = "Your name"
+	nl.add_theme_color_override("font_color", GOLD)
+	name_row.add_child(nl)
+	mp_name_edit = LineEdit.new()
+	mp_name_edit.custom_minimum_size = Vector2(220, 0)
+	mp_name_edit.max_length = 20
+	mp_name_edit.text_submitted.connect(func(_t: String) -> void: _mp_send_profile())
+	mp_name_edit.focus_exited.connect(_mp_send_profile)
+	name_row.add_child(mp_name_edit)
+	var dl := Label.new()
+	dl.text = "Deck"
+	dl.add_theme_color_override("font_color", GOLD)
+	name_row.add_child(dl)
+	mp_deck_pick = OptionButton.new()
+	mp_deck_pick.custom_minimum_size = Vector2(380, 0)
+	mp_deck_pick.item_selected.connect(func(_i: int) -> void: _mp_send_profile())
+	name_row.add_child(mp_deck_pick)
+	mp_lobby_box.add_child(name_row)
+	mp_roster_box = VBoxContainer.new()
+	mp_roster_box.add_theme_constant_override("separation", 6)
+	mp_roster_box.size_flags_vertical = SIZE_EXPAND_FILL
+	mp_lobby_box.add_child(mp_roster_box)
+	mp_count_label = Label.new()
+	mp_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mp_count_label.add_theme_font_size_override("font_size", 30)
+	mp_count_label.add_theme_color_override("font_color", GOLD)
+	mp_lobby_box.add_child(mp_count_label)
+	var ready_row := HBoxContainer.new()
+	ready_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	ready_row.add_theme_constant_override("separation", 12)
+	mp_ready_btn = _btn("Ready", _on_mp_ready, 220, true)
+	ready_row.add_child(mp_ready_btn)
+	ready_row.add_child(_btn("Leave room", _on_mp_leave, 180))
+	mp_lobby_box.add_child(ready_row)
 	mp_status = _sub(c, "Not connected.")
-	mp_roster = _sub(c, "")
-	var actions := HBoxContainer.new()
-	actions.alignment = BoxContainer.ALIGNMENT_CENTER
-	actions.add_theme_constant_override("separation", 12)
-	actions.add_child(_btn("Ready", _on_mp_ready, 160))
-	actions.add_child(_btn("Start Match", _on_mp_start, 200, true))
-	_back_row(c, actions)
+	_back_row(c)
+
+
+func _mp_show_lobby(on: bool) -> void:
+	_mp_in_lobby = on
+	mp_connect_box.visible = not on
+	mp_lobby_box.visible = on
+	if on:
+		var app := _app()
+		mp_name_edit.text = str(app.player_name) if app != null else "Player"
+		_mp_fill_decks()
+		_mp_send_profile()
+		_on_lobby_changed()
+
+
+func _mp_fill_decks() -> void:
+	mp_deck_pick.clear()
+	_mp_choices = DeckCatalog.all_choices()
+	var pick := 0
+	for i in _mp_choices.size():
+		var rec: Dictionary = _mp_choices[i]
+		var nm := str(rec.get("name", DeckCatalog.commander_name(rec)))
+		var cmd := DeckCatalog.commander_name(rec)
+		mp_deck_pick.add_item(nm if nm == cmd else "%s  (%s)" % [nm, cmd], i)
+		if str(rec.get("id", "")) == vs_player_id:
+			pick = i
+	if not _mp_choices.is_empty():
+		mp_deck_pick.select(pick)
+
+
+## The deck record the lobby sends to the host (the full list, so nothing has to exist on the host's computer).
+func _mp_current_deck() -> Dictionary:
+	var i := mp_deck_pick.selected
+	if i < 0 or i >= _mp_choices.size():
+		return {}
+	return _mp_choices[i]
+
+
+func _mp_send_profile() -> void:
+	var net := _net()
+	if net == null or not _mp_in_lobby:
+		return
+	var rec := _mp_current_deck()
+	if rec.is_empty():
+		return
+	var app := _app()
+	if app != null:
+		app.set_player_name(mp_name_edit.text)
+		mp_name_edit.text = app.player_name
+	vs_player_id = str(rec.get("id", vs_player_id))
+	net.send_profile(mp_name_edit.text, str(rec.get("name", DeckCatalog.commander_name(rec))), rec)
 
 
 func _on_mp_host() -> void:
@@ -552,6 +655,7 @@ func _on_mp_host() -> void:
 	var code: String = net.host_room(wanted)
 	if code != "":
 		mp_code_edit.text = code
+		_mp_show_lobby(true)
 		var ips := ", ".join(net.local_ips())
 		mp_status.text = net.last_status + "\nSame network instead? Your LAN IP: %s" % ips
 
@@ -568,27 +672,12 @@ func _on_mp_join() -> void:
 	mp_status.text = net.last_status
 
 
-func _on_mp_start() -> void:
+func _on_mp_leave() -> void:
 	var net := _net()
-	var app := _app()
-	if net == null or app == null:
-		return
-	if net.role != "host":
-		mp_status.text = "Only the host can start the match."
-		return
-	if not net.is_connected_peer():
-		mp_status.text = "Wait for at least one player to join."
-		return
-	if not net.all_guests_ready():
-		mp_status.text = "Waiting for every guest to ready up."
-		return
-	app.player_deck_id = vs_player_id
-	var guest_deck: String = str(net.remote_deck_id)
-	if guest_deck == "":
-		guest_deck = vs_bot_id
-	app.rival_deck_id = guest_deck
-	net.start_match_rpc(vs_player_id, guest_deck)
-	_start_table()
+	if net != null:
+		net.leave()
+	_mp_show_lobby(false)
+	mp_status.text = "Not connected."
 
 
 func _on_net_status(text: String) -> void:
@@ -596,34 +685,71 @@ func _on_net_status(text: String) -> void:
 		mp_status.text = text
 
 
+## A guest is connected: show the lobby. (The host showed it when it created the room.)
 func _on_peer_ready() -> void:
 	var net := _net()
-	if net and net.role == "client":
-		net.announce_deck.rpc_id(1, vs_player_id)
-	if mp_status:
-		mp_status.text = "Connected. Host can start whenever ready."
+	if net and net.role == "client" and not _mp_in_lobby:
+		_mp_show_lobby(true)
 	_on_lobby_changed()
 
 
 func _on_lobby_changed() -> void:
 	var net := _net()
-	if net == null or mp_roster == null:
+	if net == null or mp_roster_box == null or not _mp_in_lobby:
 		return
-	if net.role == "host":
-		mp_roster.text = "Players: %d/%d. Ready: %d/%d." % [net.player_count(), net.max_players(), net.ready_count(), net.connected_peer_ids.size()]
-	elif net.role == "client":
-		mp_roster.text = "Press Ready, then wait for the host to start."
+	if net.role == "":
+		_mp_show_lobby(false)
+		return
+	while mp_roster_box.get_child_count() > 0:
+		var ch := mp_roster_box.get_child(0)
+		mp_roster_box.remove_child(ch)
+		ch.queue_free()
+	var me: int = net.my_id()
+	var i_am_ready := false
+	for r in net.roster:
+		var e: Dictionary = r
+		var line := Label.new()
+		var ok := bool(e.get("ready", false))
+		var who := str(e.get("name", "Player"))
+		if int(e.get("id", 0)) == 1:
+			who += "  (host)"
+		if int(e.get("id", 0)) == me:
+			who += "  (you)"
+			i_am_ready = ok
+		var deck := str(e.get("deck", ""))
+		line.text = "%s   —   %s   —   %s" % [who, deck if deck != "" else "choosing a deck…", "READY" if ok else "not ready"]
+		line.add_theme_font_size_override("font_size", 20)
+		line.add_theme_color_override("font_color", Color(0.45, 0.9, 0.5) if ok else INK)
+		mp_roster_box.add_child(line)
+	if net.roster.size() < 2:
+		var wait := _sub(mp_roster_box, "Waiting for another player to join…")
+		wait.add_theme_font_size_override("font_size", 18)
+	mp_ready_btn.text = "Not ready" if i_am_ready else "Ready"
+	mp_deck_pick.disabled = i_am_ready
+	mp_name_edit.editable = not i_am_ready
+
+
+func _on_countdown(seconds: int) -> void:
+	if mp_count_label == null:
+		return
+	if seconds < 0:
+		mp_count_label.text = ""
+	elif seconds > 0:
+		mp_count_label.text = "Match starts in %d…" % seconds
+	else:
+		mp_count_label.text = "Starting…"
 
 
 func _on_mp_ready() -> void:
 	var net := _net()
-	if net == null or net.role != "client":
-		if mp_status:
-			mp_status.text = "Only guests ready up. The host starts the match."
+	if net == null:
 		return
-	net.set_ready(true)
-	if mp_status:
-		mp_status.text = "You are ready."
+	var me: int = net.my_id()
+	var now := false
+	for r in net.roster:
+		if int((r as Dictionary).get("id", 0)) == me:
+			now = bool((r as Dictionary).get("ready", false))
+	net.set_my_ready(not now)
 
 
 func _build_library() -> void:

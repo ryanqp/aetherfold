@@ -1,0 +1,11 @@
+{
+  "source": "scryfall",
+  "bulk_type": "oracle_cards",
+  "updated_at": "2026-09-05T09:01:53.771+00:00",
+  "downloaded_at": "2026-09-05T14:39:50.199530+00:00",
+  "card_count": 38633,
+  "compressed_bytes": 24535279,
+  "catalog_bytes": 43818190,
+  "catalog_path": "D:\\AetherfoldData\\scryfall\\catalog.jsonl",
+  "download_uri": "https://data.scryfall.io/oracle-cards/oracle-cards-20260905090153.jsonl.gz"
+}

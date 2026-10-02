@@ -6,6 +6,7 @@ signal lobby_changed
 signal view_received
 signal match_begin
 signal address_changed
+signal countdown_changed(seconds: int)
 
 const GAME_PORT := 27777
 const BEACON_PORT := 27778
@@ -58,6 +59,10 @@ func host_room(wanted_code: String = "") -> String:
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	_start_beacon()
+	_lobby = {1: {"name": "Host", "deck": "", "ready": false, "rec": {}}}
+	_count_left = -1.0
+	countdown = -1
+	_lobby_updated()
 	_set_status("Room %s — waiting for players (1/%d)…" % [code, MAX_TOTAL_PLAYERS])
 	_open_to_internet()
 	return code
@@ -168,6 +173,10 @@ func join_room(wanted_code: String, ip: String = "") -> void:
 
 func leave() -> void:
 	_connect_token += 1
+	_lobby.clear()
+	roster = []
+	countdown = -1
+	_count_left = -1.0
 	_close_port()
 	public_ip = ""
 	upnp_tried = false
@@ -212,23 +221,180 @@ func max_players() -> int:
 	return MAX_TOTAL_PLAYERS
 
 
+
+# --- The lobby: names, decks, ready flags and the start countdown -------------------------------------------
+## Everyone picks a deck and presses Ready. The host keeps the truth (_lobby: peer id -> {name, deck, ready, rec},
+## the host itself is id 1), tells everyone the roster after every change, and once every player is ready counts
+## down START_DELAY seconds, then starts the match. Anyone un-readying or leaving cancels the countdown.
+
+const START_DELAY := 3.0
+
+## The roster as the host last sent it: [{id, name, deck, ready}], host first.
+var roster: Array = []
+## Seconds left before the match starts (3, 2, 1), or -1 when no countdown is running.
+var countdown: int = -1
+var _lobby: Dictionary = {}
+var _count_left := -1.0
+
+
+func my_id() -> int:
+	return multiplayer.get_unique_id() if multiplayer.multiplayer_peer != null else 1
+
+
+## Tell the lobby who you are and which deck you will play (the full deck record, so the host can build it).
+## Changing either un-readies you.
+func send_profile(player_name: String, deck_name: String, rec: Dictionary) -> void:
+	if role == "host":
+		_set_profile(1, player_name, deck_name, rec)
+	elif role == "client":
+		announce_profile.rpc_id(1, player_name, deck_name, rec)
+
+
+func set_my_ready(is_ready: bool) -> void:
+	if role == "host":
+		_set_ready(1, is_ready)
+	elif role == "client":
+		announce_ready.rpc_id(1, is_ready)
+
+
+## Compatibility: guests used to call this.
 func set_ready(is_ready: bool) -> void:
+	set_my_ready(is_ready)
+
+
+func ready_count() -> int:
+	var n := 0
+	for r in roster:
+		if bool((r as Dictionary).get("ready", false)):
+			n += 1
+	return n
+
+
+func _set_profile(id: int, player_name: String, deck_name: String, rec: Dictionary) -> void:
+	if not _lobby.has(id):
+		return
+	var e: Dictionary = _lobby[id]
+	e["name"] = player_name.strip_edges().substr(0, 20) if player_name.strip_edges() != "" else "Player"
+	e["deck"] = deck_name
+	e["rec"] = rec
+	e["ready"] = false
+	_lobby_updated()
+
+
+func _set_ready(id: int, is_ready: bool) -> void:
+	if not _lobby.has(id):
+		return
+	var e: Dictionary = _lobby[id]
+	if is_ready and (e.get("rec", {}) as Dictionary).is_empty():
+		return  ## can't be ready without a deck
+	e["ready"] = is_ready
+	_lobby_updated()
+
+
+@rpc("any_peer", "reliable")
+func announce_profile(player_name: String, deck_name: String, rec: Dictionary) -> void:
+	if role != "host":
+		return
+	_set_profile(multiplayer.get_remote_sender_id(), player_name, deck_name, rec)
+
+
+@rpc("any_peer", "reliable")
+func announce_ready(is_ready: bool) -> void:
+	if role != "host":
+		return
+	_set_ready(multiplayer.get_remote_sender_id(), is_ready)
+
+
+## Host: rebuild the roster, send it to everybody, and start or cancel the countdown.
+func _lobby_updated() -> void:
+	var out: Array = []
+	var ids: Array = _lobby.keys()
+	ids.sort()
+	ready_peer_ids.clear()
+	for id in ids:
+		var e: Dictionary = _lobby[id]
+		out.append({"id": int(id), "name": str(e.get("name", "Player")), "deck": str(e.get("deck", "")), "ready": bool(e.get("ready", false))})
+		if int(id) != 1 and bool(e.get("ready", false)):
+			ready_peer_ids.append(int(id))
+	roster = out
+	for pid in connected_peer_ids:
+		receive_roster.rpc_id(pid, out)
+	lobby_changed.emit()
+	_check_start()
+
+
+@rpc("authority", "reliable")
+func receive_roster(r: Array) -> void:
 	if role != "client":
 		return
-	announce_ready.rpc_id(1, is_ready)
+	roster = r
+	lobby_changed.emit()
 
 
-func all_guests_ready() -> bool:
-	if connected_peer_ids.is_empty():
+@rpc("authority", "reliable")
+func receive_countdown(n: int) -> void:
+	if role != "client":
+		return
+	countdown = n
+	countdown_changed.emit(n)
+
+
+## True when at least two players are in the lobby and every one of them is ready with a deck.
+func everyone_ready() -> bool:
+	if _lobby.size() < 2:
 		return false
-	for pid in connected_peer_ids:
-		if not ready_peer_ids.has(pid):
+	for id in _lobby:
+		var e: Dictionary = _lobby[id]
+		if not bool(e.get("ready", false)) or (e.get("rec", {}) as Dictionary).is_empty():
 			return false
 	return true
 
 
-func ready_count() -> int:
-	return ready_peer_ids.size()
+func _check_start() -> void:
+	if role != "host":
+		return
+	if everyone_ready():
+		if _count_left < 0.0:
+			_count_left = START_DELAY
+			_announce_countdown(int(ceil(_count_left)))
+	elif _count_left >= 0.0:
+		_count_left = -1.0
+		_announce_countdown(-1)
+
+
+func _announce_countdown(n: int) -> void:
+	countdown = n
+	countdown_changed.emit(n)
+	for pid in connected_peer_ids:
+		receive_countdown.rpc_id(pid, n)
+
+
+## Countdown over: build the match from the first two players' decks and send everyone to the table.
+func _start_now() -> void:
+	var guest_id := 0
+	var ids: Array = _lobby.keys()
+	ids.sort()
+	for id in ids:
+		if int(id) != 1:
+			guest_id = int(id)
+			break
+	if guest_id == 0 or not everyone_ready():
+		_announce_countdown(-1)
+		return
+	var host_e: Dictionary = _lobby[1]
+	var guest_e: Dictionary = _lobby[guest_id]
+	var app := get_node_or_null("/root/AppState")
+	if app != null:
+		app.player_rec = host_e.rec
+		app.rival_rec = guest_e.rec
+		app.player_name = str(host_e.name)
+		app.rival_name = str(guest_e.name)
+		app.mp_role = "host"
+		app.mp_code = code
+		app.you_seat = 0
+		app.skip_ai = true
+	begin_match.rpc(str(host_e.name), str(guest_e.name))
+	match_begin.emit()
 
 
 func send_action(kind: String, payload: Dictionary = {}) -> void:
@@ -250,33 +416,6 @@ func broadcast_view(view) -> void:
 		receive_view.rpc_id(pid, plain)
 
 
-@rpc("any_peer", "reliable")
-func announce_ready(is_ready: bool) -> void:
-	if role != "host":
-		return
-	var sender := multiplayer.get_remote_sender_id()
-	if is_ready:
-		if not ready_peer_ids.has(sender):
-			ready_peer_ids.append(sender)
-	else:
-		ready_peer_ids.erase(sender)
-	lobby_changed.emit()
-
-
-@rpc("any_peer", "reliable")
-func announce_deck(deck_id: String) -> void:
-	var sender := multiplayer.get_remote_sender_id()
-	guest_decks[sender] = deck_id
-	if remote_deck_id == "":
-		remote_deck_id = deck_id
-
-
-func start_match_rpc(player_deck: String, rival_deck: String) -> void:
-	if role != "host":
-		return
-	begin_match.rpc(player_deck, rival_deck)
-
-
 func _process(delta: float) -> void:
 	if role == "host" and udp != null:
 		_beacon_acc += delta
@@ -285,6 +424,15 @@ func _process(delta: float) -> void:
 			_send_beacon()
 	if role == "client" and udp != null and peer == null:
 		_poll_beacon()
+	if role == "host" and _count_left >= 0.0:
+		_count_left -= delta
+		var shown := int(ceil(_count_left))
+		if _count_left <= 0.0:
+			_count_left = -1.0
+			_announce_countdown(0)
+			_start_now()
+		elif shown != countdown:
+			_announce_countdown(shown)
 
 
 func _start_beacon() -> void:
@@ -365,17 +513,19 @@ func _on_peer_connected(id: int) -> void:
 	if not connected_peer_ids.has(id):
 		connected_peer_ids.append(id)
 	ready_peer_ids.erase(id)
+	_lobby[id] = {"name": "Player", "deck": "", "ready": false, "rec": {}}
 	_set_status("Room %s — %d/%d players joined.\n%s" % [code, player_count(), MAX_TOTAL_PLAYERS, share_text()])
 	peer_ready.emit()
-	lobby_changed.emit()
+	_lobby_updated()
 
 
 func _on_peer_disconnected(id: int) -> void:
 	connected_peer_ids.erase(id)
 	ready_peer_ids.erase(id)
 	guest_decks.erase(id)
+	_lobby.erase(id)
 	_set_status("A player left room %s (%d/%d).\n%s" % [code, player_count(), MAX_TOTAL_PLAYERS, share_text()])
-	lobby_changed.emit()
+	_lobby_updated()
 
 
 func _on_connected_ok() -> void:
@@ -430,21 +580,17 @@ func receive_view(data: Dictionary) -> void:
 	view_received.emit()
 
 
+## Sent by the host to every guest when the countdown ends; the host runs the same setup for itself in _start_now().
 @rpc("authority", "reliable")
-func begin_match(host_deck: String, guest_deck: String) -> void:
+func begin_match(host_name: String, guest_name: String) -> void:
 	var app := get_node_or_null("/root/AppState")
 	if app != null:
-		if role == "host":
-			app.player_deck_id = host_deck
-			app.rival_deck_id = guest_deck
-			app.you_seat = 0
-		else:
-			app.player_deck_id = guest_deck
-			app.rival_deck_id = host_deck
-			app.you_seat = 1
-		app.mp_role = role
+		app.mp_role = "client"
 		app.mp_code = code
+		app.you_seat = 1
 		app.skip_ai = true
+		app.player_name = guest_name
+		app.rival_name = host_name
 	match_begin.emit()
 
 

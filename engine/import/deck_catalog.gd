@@ -67,8 +67,34 @@ static func commander_row(rec: Dictionary) -> Dictionary:
 static func vs_pair(player_id: String, rival_id: String) -> DemoSetup:
 	if _is_builtin(player_id) and _is_builtin(rival_id):
 		return _builtin_pair(player_id, rival_id)
-	var p: Dictionary = _side(player_id)
-	var r: Dictionary = _side(rival_id)
+	return _pair_of_sides(player_id, _side(player_id), rival_id, _side(rival_id))
+
+
+## An online match: both decks come as records (the guest's was sent over the network, so no ids or paths are
+## looked up on this computer). `p_name` / `r_name` become the players' names at the table.
+static func vs_pair_recs(p_rec: Dictionary, r_rec: Dictionary, p_name: String = "", r_name: String = "") -> DemoSetup:
+	var pid := _id_of_rec(p_rec)
+	var rid := _id_of_rec(r_rec)
+	var d: DemoSetup
+	if _is_builtin(pid) and _is_builtin(rid):
+		d = _builtin_pair(pid, rid)
+	else:
+		d = _pair_of_sides(pid, _side_of_rec(p_rec), rid, _side_of_rec(r_rec))
+	if p_name.strip_edges() != "":
+		d.human_name = p_name
+	if r_name.strip_edges() != "":
+		d.rival_name = r_name
+	return d
+
+
+## A starter deck keeps its builtin id; anything else is "custom" and is read from the record itself.
+static func _id_of_rec(rec: Dictionary) -> String:
+	if bool(rec.get("builtin", false)):
+		return str(rec.get("id", BUILTIN_KRENKO))
+	return "custom"
+
+
+static func _pair_of_sides(player_id: String, p: Dictionary, rival_id: String, r: Dictionary) -> DemoSetup:
 	var extra: Array = []
 	for row in p.get("rows", {}).values():
 		extra.append(row)
@@ -144,6 +170,13 @@ static func _side(choice_id: String) -> Dictionary:
 	var rec: Dictionary = DeckStore.new().load_path(choice_id)
 	if rec.is_empty():
 		return _side(BUILTIN_KRENKO)
+	return _side_of_rec(rec)
+
+
+## A custom deck read from its record (the commander, the mainboard and the card rows saved with it).
+static func _side_of_rec(rec: Dictionary) -> Dictionary:
+	if bool(rec.get("builtin", false)):
+		return _side(str(rec.get("id", BUILTIN_KRENKO)))
 	var deck := NormalizedDeck.from_dict(rec)
 	if deck.commanders.is_empty():
 		deck.add_commander(commander_name(rec), 1)

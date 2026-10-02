@@ -2,6 +2,7 @@ extends Node
 
 ## Loads the lean Scryfall Oracle catalog from D: so the Godot project on C: stays small.
 const DATA_DIR := "D:/AetherfoldData/scryfall"
+const PROJECT_DATA_DIR := "res://data/scryfall"
 const CATALOG_FILE := "catalog.jsonl"
 const META_FILE := "meta.json"
 
@@ -31,6 +32,11 @@ func data_dir() -> String:
 	var override := OS.get_environment("AETHERFOLD_SCRYFALL_DIR").strip_edges()
 	if override != "":
 		return override.replace("\\", "/")
+	## The card data and art ship with the project (res://data/scryfall), so every player has the same cards.
+	## The older copy at D:/AetherfoldData/scryfall is only a fallback.
+	var shipped := ProjectSettings.globalize_path(PROJECT_DATA_DIR)
+	if FileAccess.file_exists(shipped.path_join(CATALOG_FILE)):
+		return shipped
 	return DATA_DIR
 
 func load_catalog() -> bool:

@@ -1475,7 +1475,11 @@ func _refresh() -> void:
 	_paint_cmdr_damage(you_cmdr_label, b.you)
 	_paint_cmdr_damage(rival_cmdr_label, b.rival)
 	if rival_title_label:
-		rival_title_label.text = "Talrand · %s" % RivalAI.label(b.difficulty)
+		var app_rt := get_node_or_null("/root/AppState")
+		if app_rt != null and app_rt.is_mp():
+			rival_title_label.text = str(b.rival.get("name", "Rival"))
+		else:
+			rival_title_label.text = "Talrand · %s" % RivalAI.label(b.difficulty)
 		var rs := str(b.rival.get("status", ""))
 		if rs != "":
 			rival_title_label.text += " · " + rs
