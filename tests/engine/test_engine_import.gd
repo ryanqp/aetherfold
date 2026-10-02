@@ -290,6 +290,7 @@ func test_saved_deck_roundtrip() -> void:
 	assert_eq(str(loaded.get("name", "")), deck.name)
 	assert_eq((loaded.get("commander", []) as Array).size(), 1)
 	assert_true((loaded.get("cards", {}) as Dictionary).has("Mountain"))
+	store.delete_path(path)  # don't leave a "Mono Red Test" deck in the player's saved decks
 
 
 func _mono_red(mountains: int) -> NormalizedDeck:
@@ -324,3 +325,83 @@ func _rows_for(deck: NormalizedDeck) -> Dictionary:
 		commander_legal = true,
 	}
 	return rows
+
+
+func test_deck_store_finds_by_source_key_and_keeps_meta() -> void:
+	var store := DeckStore.new()
+	var deck := NormalizedDeck.new()
+	deck.name = "Zz Edhrec Test"
+	deck.add_commander("Zz Test Cmd", 1)
+	deck.add_main("Mountain", 3)
+	var key := "edhrec:zz-test-key"
+	var path := store.save(deck, {}, {ok = true}, "", {is_imported = true, source_key = key, source = "edhrec_scryfall_top_100"})
+	var rec := store.find_by_source_key(key)
+	assert_false(rec.is_empty())
+	assert_eq(str(rec.get("source")), "edhrec_scryfall_top_100")
+	assert_true(bool(rec.get("is_imported")))
+	store.delete_path(path)
+	assert_true(store.find_by_source_key(key).is_empty())
+
+
+func test_double_faced_names_resolve_by_front_face() -> void:
+	assert_eq(ScryfallResolver._front_face("Fell the Profane // Fell Mire"), "Fell the Profane")
+	assert_eq(ScryfallResolver._front_face("Sol Ring"), "Sol Ring")
+	var deck := NormalizedDeck.new()
+	deck.add_main("Treasure", 1)
+	deck.remove_main("Treasure")
+	assert_eq(deck.total_cards(), 0, "tokens can be dropped from a list")
+
+
+func test_precons_ship_eight_commander_decks_of_100() -> void:
+	var recs: Array = PreconDecks.new().bundled()
+	assert_eq(recs.size(), PreconDecks.WANT, "eight bundled precons")
+	var names := PackedStringArray()
+	for r in recs:
+		var rec: Dictionary = r
+		names.append(str(rec.get("name", "")))
+		assert_eq(str(rec.get("source", "")), PreconDecks.SOURCE)
+		var total := 0
+		for e in (rec.get("commander", []) as Array) + (rec.get("mainboard", []) as Array):
+			total += int((e as Dictionary).get("quantity", 0))
+		assert_eq(total, 100, "%s has 100 cards" % str(rec.get("name", "")))
+		var cards: Dictionary = rec.get("cards", {})
+		for e2 in (rec.get("commander", []) as Array) + (rec.get("mainboard", []) as Array):
+			assert_true(cards.has(str((e2 as Dictionary).get("name", ""))), "row for %s" % str((e2 as Dictionary).get("name", "")))
+		var cmd := DeckCatalog.commander_row(rec)
+		assert_true(str((cmd.get("images", {}) as Dictionary).get("normal", "")) != "", "commander art for %s" % str(rec.get("name", "")))
+	assert_eq(names[0], "Multiverse Reforged")
+	assert_true(names.has("Calling All Angels"))
+	assert_true(names.has("Odd and Ends"))
+
+
+func test_precon_install_replaces_retired_starters() -> void:
+	var store := DeckStore.new()
+	var deck := NormalizedDeck.new()
+	deck.name = "Zz Old Starter"
+	deck.add_commander("Zz Test Cmd", 1)
+	deck.add_main("Mountain", 3)
+	var old_path := store.save(deck, {}, {ok = true}, "", {source = "moxfield_top_likes", source_key = "moxfield:zz-old"})
+	assert_true(FileAccess.file_exists(old_path))
+	var pd := PreconDecks.new()
+	pd.install()
+	assert_false(FileAccess.file_exists(old_path), "the retired starter deck is deleted")
+	assert_eq(pd.saved_count(), PreconDecks.WANT)
+	var again: Dictionary = pd.install()
+	assert_eq(int(again.installed), 0, "a second install keeps what is saved")
+	assert_eq(pd.saved_count(), PreconDecks.WANT)
+
+
+func test_precon_deck_starts_a_vs_ai_game() -> void:
+	PreconDecks.new().install()
+	var store := DeckStore.new()
+	var jace := ""
+	var angels := ""
+	for rec in store.list_decks():
+		if str(rec.get("precon_id", "")) == "multiverse-reforged":
+			jace = str(rec.get("_path", ""))
+		if str(rec.get("precon_id", "")) == "calling-all-angels":
+			angels = str(rec.get("_path", ""))
+	assert_true(jace != "" and angels != "")
+	var d := DeckCatalog.vs_pair(jace, angels)
+	assert_eq(str(d.human_commanders[0]), "Jace, Multiverse Architect")
+	assert_eq(str(d.rival_commanders[0]), "Giada, Font of Hope")

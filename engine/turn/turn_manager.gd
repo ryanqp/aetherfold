@@ -68,6 +68,7 @@ func _enter_current_step() -> void:
 	st.log.append(EngineEnums.EventType.STEP_BEGIN, st.active_player_id, {
 		step = st.step,
 		phase = st.phase,
+		turn = st.turn_number,
 	})
 	_start_tba(eng, st)
 	if _receives_priority(st.step):
@@ -93,11 +94,15 @@ func _finish_step_and_enter_next() -> void:
 			_rotate_turn(st)
 		else:
 			st.step = _next_step(st.step)
+			## CR 508.8: no attackers means the declare blockers and combat damage steps are skipped.
+			if st.step == EngineEnums.Step.DECLARE_BLOCKERS and not _has_attackers(st):
+				st.step = EngineEnums.Step.END_COMBAT
 		_sync_phase(st)
 		st.passed_since_action.clear()
 		st.log.append(EngineEnums.EventType.STEP_BEGIN, st.active_player_id, {
 			step = st.step,
 			phase = st.phase,
+			turn = st.turn_number,
 		})
 		_start_tba(eng, st)
 		if _receives_priority(st.step):
@@ -111,24 +116,46 @@ func _rotate_turn(st: GameState) -> void:
 		return
 	st.active_player_id = (st.active_player_id + 1) % n
 	st.turn_number += 1
+	st.draw_pending = false
 	for i in n:
 		st.land_played[i] = false
 	_clear_sickness(st, st.active_player_id)
+	var eng := _eng()
+	if eng != null and eng.kw != null:
+		eng.kw.on_new_turn()
 	st.step = EngineEnums.Step.UNTAP
+
+
+## CR 514.2: damage wears off in the cleanup step.
+func _clear_damage(st: GameState) -> void:
+	var bf: Zone = st.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return
+	for oid in bf.object_ids:
+		var obj: GameObject = st.objects.get(oid)
+		if obj != null:
+			obj.damage_marked = 0
+			obj.deathtouch_damage = false
 
 
 func _start_tba(eng: RulesEngine, st: GameState) -> void:
 	match st.step:
 		EngineEnums.Step.UNTAP:
+			if eng.kw != null:
+				eng.kw.on_untap(st.active_player_id)
 			_untap(st)
 		EngineEnums.Step.DRAW:
 			var skip := st.turn_number == 1 and st.rules.first_player_skips_draw
 			if not skip:
-				eng.draw_card(st.active_player_id)
+				if eng.manual_draw_seats.has(st.active_player_id):
+					st.draw_pending = true
+				else:
+					eng.draw_card(st.active_player_id)
 		EngineEnums.Step.COMBAT_DAMAGE:
 			eng.apply_combat_damage()
 		EngineEnums.Step.CLEANUP:
 			_clear_may_play(st)
+			_clear_damage(st)
 			if eng.layers != null:
 				eng.layers.clear_until_eot(st)
 			if st.combat is CombatState:
@@ -136,6 +163,7 @@ func _start_tba(eng: RulesEngine, st: GameState) -> void:
 				cs.attacker_ids.clear()
 				cs.blockers.clear()
 				cs.defenders.clear()
+				cs.blocks_declared = false
 		_:
 			pass
 
@@ -144,10 +172,23 @@ func _untap(st: GameState) -> void:
 	var bf: Zone = st.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
 	if bf == null:
 		return
+	var eng := _eng()
 	for oid in bf.object_ids:
 		var obj: GameObject = st.objects.get(oid)
 		if obj != null and obj.controller_id == st.active_player_id:
+			if eng != null and eng.layers != null and _held_tapped(st, eng.layers, obj):
+				continue
 			obj.tapped = false
+
+
+## CR 502.3: "doesn't untap during its controller's untap step" (unless that player is the monarch: Fall from Favor).
+func _held_tapped(st: GameState, layers: LayerManager, obj: GameObject) -> bool:
+	for spec in layers.attached_specs(st, obj, "doesnt_untap"):
+		var sp: Dictionary = spec
+		if bool(sp.get("unless_monarch", false)) and st.monarch_id == obj.controller_id:
+			continue
+		return true
+	return false
 
 
 func _clear_may_play(st: GameState) -> void:
@@ -165,6 +206,10 @@ func _clear_sickness(st: GameState, player_id: int) -> void:
 		var obj: GameObject = st.objects.get(oid)
 		if obj != null and obj.controller_id == player_id:
 			obj.summoned_this_turn = false
+
+
+func _has_attackers(st: GameState) -> bool:
+	return st.combat is CombatState and not (st.combat as CombatState).attacker_ids.is_empty()
 
 
 func _receives_priority(step: int) -> bool:

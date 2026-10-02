@@ -48,9 +48,22 @@ func can_pay(cost: ManaCost) -> bool:
 	return leftover >= cost.generic
 
 
+## Colors of mana spent since the last reset_spent() (sunburst, CR 702.44) and how much was spent (increment).
+var spent_colors: Dictionary = {}
+var spent_total: int = 0
+
+
+func reset_spent() -> void:
+	spent_colors = {}
+	spent_total = 0
+
+
 func pay(cost: ManaCost) -> bool:
 	if not can_pay(cost):
 		return false
+	var before := {"W": w, "U": u, "B": b, "R": r, "G": g, "C": colorless}
+	spent_total += cost.cmc()
+	_note_spent(before)
 	w -= cost.w
 	u -= cost.u
 	b -= cost.b
@@ -64,7 +77,18 @@ func pay(cost: ManaCost) -> bool:
 	remain = _take_generic(remain, "b")
 	remain = _take_generic(remain, "r")
 	remain = _take_generic(remain, "g")
+	var after := {"W": w, "U": u, "B": b, "R": r, "G": g}
+	for k in after.keys():
+		if int(after[k]) < int(_spent_before[k]):
+			spent_colors[k] = true
 	return remain == 0
+
+
+var _spent_before: Dictionary = {}
+
+
+func _note_spent(before: Dictionary) -> void:
+	_spent_before = before
 
 
 func _take_generic(remain: int, channel: String) -> int:

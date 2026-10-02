@@ -25,6 +25,16 @@ func list_decks() -> Array:
 	return out
 
 
+## Removes every saved "Mono Red" deck (test runs used to leave "Mono Red Test" copies behind).
+func purge_test_decks() -> int:
+	var n := 0
+	for rec in list_decks():
+		var nm := str(rec.get("name", "")).to_lower().replace("-", " ").strip_edges()
+		if nm.begins_with("mono red") and delete_path(str(rec.get("_path", ""))):
+			n += 1
+	return n
+
+
 func find_by_source_url(url: String) -> Dictionary:
 	if url.strip_edges() == "":
 		return {}
@@ -34,7 +44,38 @@ func find_by_source_url(url: String) -> Dictionary:
 	return {}
 
 
-func save(deck: NormalizedDeck, rows: Dictionary, validation: Dictionary, replace_path: String = "") -> String:
+## Finds an imported record by its stable source key (e.g. "edhrec:krenko-mob-boss").
+func find_by_source_key(key: String) -> Dictionary:
+	if key.strip_edges() == "":
+		return {}
+	for rec in list_decks():
+		if str(rec.get("source_key", "")) == key:
+			return rec
+	return {}
+
+
+## Saves a complete deck record as it is (the bundled precons); `replace_path` overwrites that file.
+## Returns the path, or "" when it could not be written.
+func save_record(rec: Dictionary, replace_path: String = "") -> String:
+	_ensure_dir()
+	var out := rec.duplicate(true)
+	out.erase("_path")
+	if not out.has("id"):
+		out["id"] = str(Time.get_unix_time_from_system()) + "-" + str(Time.get_ticks_usec())
+	out["importedAt"] = Time.get_datetime_string_from_system(true, true)
+	var path := replace_path
+	if path == "":
+		path = DIR.path_join("%s-%s.json" % [_slug(str(out.get("name", "deck"))), str(out.id)])
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		return ""
+	f.store_string(JSON.stringify(out, "\t"))
+	f.close()
+	return path
+
+
+## `meta` keys are merged into the record (is_imported, source, source_url, source_commander, ...).
+func save(deck: NormalizedDeck, rows: Dictionary, validation: Dictionary, replace_path: String = "", meta: Dictionary = {}) -> String:
 	_ensure_dir()
 	var rec := {
 		id = str(Time.get_unix_time_from_system()) + "-" + str(Time.get_ticks_usec()),
@@ -52,6 +93,8 @@ func save(deck: NormalizedDeck, rows: Dictionary, validation: Dictionary, replac
 			total = int(validation.get("total", deck.total_cards())),
 		},
 	}
+	for k in meta.keys():
+		rec[k] = meta[k]
 	var path := replace_path
 	if path == "":
 		var slug := _slug(deck.name)
@@ -113,6 +156,8 @@ func _compact_rows(rows: Dictionary) -> Dictionary:
 			loyalty = str(row.get("loyalty", "")),
 			commander_legal = bool(row.get("commander_legal", true)),
 			images = row.get("images", {}),
+			layout = str(row.get("layout", "normal")),
+			faces = row.get("faces", []),
 		}
 	return out
 

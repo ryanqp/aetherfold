@@ -8,17 +8,35 @@ var b: int = 0
 var r: int = 0
 var g: int = 0
 var colorless: int = 0
+## Produced mana only: one entry per mana whose color is picked when it is made. Each entry lists the
+## allowed colors ("W","U","B","R","G"), or ["CI"] for "a color in your commander's color identity".
+var choices: Array = []
+## Cost side only: hybrid and Phyrexian symbols. One entry per symbol, each a list of the ways to pay it:
+## a color letter, "2" (two generic, {2/W}) or "P" (2 life, {B/P}). Resolved to plain pips by RulesEngine.
+var hybrid: Array = []
+## Cost side only: number of {X} symbols (an activated ability's X is chosen as it is activated).
+var x: int = 0
 
 
 static func parse(s: String) -> ManaCost:
 	var c := ManaCost.new()
 	if s.is_empty():
 		return c
+	## Adventure, split and double-faced cards list both faces ("{2}{B} // {B}"); the front face is cast.
+	var cut := s.find(" // ")
+	if cut >= 0:
+		s = s.substr(0, cut)
 	var re := RegEx.new()
 	re.compile("\\{([^}]+)\\}")
 	for m in re.search_all(s):
 		var tok := m.get_string(1)
-		if tok.is_valid_int():
+		if tok.contains("/") and not tok.contains("|"):
+			c.hybrid.append(Array(tok.split("/")))
+		elif tok == "CI":
+			c.choices.append(["CI"])
+		elif tok.contains("|"):
+			c.choices.append(Array(tok.split("|")))
+		elif tok.is_valid_int():
 			c.generic += int(tok)
 		else:
 			match tok:
@@ -34,17 +52,31 @@ static func parse(s: String) -> ManaCost:
 					c.g += 1
 				"C":
 					c.colorless += 1
+				"X":
+					c.x += 1
 				_:
 					pass
 	return c
 
 
 func cmc() -> int:
-	return generic + w + u + b + r + g + colorless
+	var n := generic + w + u + b + r + g + colorless + choices.size()
+	for h in hybrid:
+		n += 2 if (h as Array).has("2") else 1
+	return n
+
+
+## The cost of a card from its printed cost and mana value. Symbols the parser doesn't know still count
+## toward the printed total as generic, except on two-faced cards whose total is the front face.
+static func for_card(mana_cost: String, printed_cmc: int) -> ManaCost:
+	var c := parse(mana_cost)
+	if not mana_cost.contains("//"):
+		c.generic += maxi(0, printed_cmc - c.cmc())
+	return c
 
 
 func is_zero() -> bool:
-	return cmc() == 0
+	return cmc() == 0 and hybrid.is_empty()
 
 
 func absorb(other: ManaCost) -> void:
@@ -57,6 +89,9 @@ func absorb(other: ManaCost) -> void:
 	r += other.r
 	g += other.g
 	colorless += other.colorless
+	choices.append_array(other.choices)
+	hybrid.append_array(other.hybrid)
+	x += other.x
 
 
 func to_text() -> String:
@@ -87,4 +122,7 @@ func duplicate_cost() -> ManaCost:
 	c.r = r
 	c.g = g
 	c.colorless = colorless
+	c.choices = choices.duplicate(true)
+	c.hybrid = hybrid.duplicate(true)
+	c.x = x
 	return c

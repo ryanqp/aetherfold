@@ -19,6 +19,8 @@ enum Kind {
 	CONCEDE,
 	SUBMIT_DECISION,
 	DECLINE_DECISION,
+	## Keyword special actions: extra.special = cycle | suspend | turn_up | ninjutsu | crew | channel, plus its own keys.
+	SPECIAL,
 }
 
 var kind: Kind = Kind.PASS_PRIORITY

@@ -13,3 +13,5 @@ var targets: Array = []
 var effects: Array = []
 var cursor: int = 0
 var choices: Dictionary = {}
+## What set a trigger off: {object_id, amount, power, toughness, player_id}. Read by value expressions.
+var ctx: Dictionary = {}

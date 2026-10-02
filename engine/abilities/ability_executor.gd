@@ -8,6 +8,33 @@ var tokens: TokenCatalog = TokenCatalog.new()
 func resolve(engine: RulesEngine, entry: StackEntry) -> bool:
 	if entry == null:
 		return true
+	if bool(entry.ctx.get("overload", false)):
+		return _resolve_overload(engine, entry)
+	return _resolve_once(engine, entry)
+
+
+## Overload (CR 702.96b): "target" became "each", so the spell's effects run once for every object its target
+## could have been, in turn. A decision pauses on the current object and picks up there.
+func _resolve_overload(engine: RulesEngine, entry: StackEntry) -> bool:
+	if not entry.ctx.has("ov_ids"):
+		var spec: Dictionary = entry.ctx.get("ov_spec", {})
+		var ids: Array = []
+		if engine.targeting != null and not spec.is_empty():
+			ids = engine.targeting.legal_ids(engine, spec, entry.object_id)
+		entry.ctx["ov_ids"] = ids
+		entry.ctx["ov_i"] = 0
+	var all: Array = entry.ctx["ov_ids"]
+	while int(entry.ctx["ov_i"]) < all.size():
+		entry.targets = [all[int(entry.ctx["ov_i"])]]
+		if not _resolve_once(engine, entry):
+			return false
+		entry.ctx["ov_i"] = int(entry.ctx["ov_i"]) + 1
+		entry.cursor = 0
+		entry.choices = {}
+	return true
+
+
+func _resolve_once(engine: RulesEngine, entry: StackEntry) -> bool:
 	var source: GameObject = engine.state.objects.get(entry.source_id)
 	if source == null:
 		source = engine.state.objects.get(entry.object_id)
@@ -35,50 +62,361 @@ func resolve(engine: RulesEngine, entry: StackEntry) -> bool:
 				return false
 			entry.cursor += 1
 			continue
+		## "If it was kicked" / "if an opponent was dealt damage this turn" gates (kicker, bloodthirst).
+		if bool(fx.params.get("if_kicked", false)) and _kicked_count(entry, source) <= 0:
+			entry.cursor += 1
+			continue
+		if bool(fx.params.get("if_cast", false)) and (source == null or source.cast_from < 0):
+			entry.cursor += 1
+			continue
+		if bool(fx.params.get("if_cast_from_hand", false)) and (source == null or source.cast_from != EngineEnums.ZoneId.HAND):
+			entry.cursor += 1
+			continue
+		if bool(fx.params.get("if_opp_damaged", false)) and not _opponent_damaged(engine, entry):
+			entry.cursor += 1
+			continue
+		if fx.params.has("if_exiled_creature") and bool(entry.ctx.get("exiled_creature", false)) != bool(fx.params["if_exiled_creature"]) \
+				or fx.params.has("if_exiled_noncreature") and (not entry.ctx.has("exiled_creature") or bool(entry.ctx.get("exiled_creature", false)) == bool(fx.params["if_exiled_noncreature"])):
+			entry.cursor += 1
+			continue
+		if fx.params.has("if_trigger_subtype") and not _trigger_object_has_subtype(engine, entry, str(fx.params["if_trigger_subtype"])):
+			entry.cursor += 1
+			continue
+		## Gift (CR 702.174): "if the gift was promised".
+		if bool(fx.params.get("if_gift", false)) and not (bool(entry.ctx.get("gift", false)) or (source != null and source.gift_promised)):
+			entry.cursor += 1
+			continue
+		## Dethrone (CR 702.105): the creature is attacking the player with the most life or tied for most.
+		if bool(fx.params.get("if_defender_most_life", false)) and not defender_has_most_life(engine, source):
+			entry.cursor += 1
+			continue
 		_apply(engine, entry, source, fx)
+		## An effect that needs a player's pick leaves a decision open: wait, and run this effect again after.
+		if engine.state.mode == EngineEnums.EngineMode.AWAITING_DECISION and engine.state.pending_decision is PlayerDecision \
+				and (engine.state.pending_decision as PlayerDecision).stack_id == entry.stack_id:
+			return false
 		entry.cursor += 1
 	return true
+
+
+## True when `attacker` is attacking a player whose life total is the highest (ties count), CR 702.105a.
+func defender_has_most_life(engine: RulesEngine, attacker: GameObject) -> bool:
+	if attacker == null:
+		return false
+	var d := engine.defender_of(attacker.object_id)
+	if d < 0 or d >= engine.state.players.size():
+		return false
+	var life := engine.state.players[d].life
+	for p in engine.state.players:
+		if not p.lost and p.life > life:
+			return false
+	return true
+
+
+## "If a Dinosaur is dealt damage this way": the creature that set the trigger off has that subtype.
+func _trigger_object_has_subtype(engine: RulesEngine, entry: StackEntry, subtype: String) -> bool:
+	var o: GameObject = engine.state.objects.get(int(entry.ctx.get("object_id", 0)))
+	if o == null or o.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return false
+	return Query._subtype_words((o.definition as CardDefinition).type_line if o.definition is CardDefinition else "").has(subtype) \
+		or engine.has_keyword(o, "Changeling")
+
+
+func _kicked_count(entry: StackEntry, source: GameObject) -> int:
+	if entry.ctx.has("kicked"):
+		return int(entry.ctx["kicked"])
+	return source.kicked if source != null else 0
+
+
+func _opponent_damaged(engine: RulesEngine, entry: StackEntry) -> bool:
+	for p in engine.state.players:
+		if p.player_id != entry.controller_id and p.damaged_this_turn:
+			return true
+	return false
 
 
 func _apply(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
 	match str(fx.kind):
 		"DRAW":
-			var n := int(fx.params.get("n", 1))
-			for _i in n:
-				engine.draw_card(entry.controller_id)
+			var n := _value(engine, entry, source, fx.params.get("n", 1))
+			for pid in _players_for(engine, entry, str(fx.params.get("who", "CONTROLLER"))):
+				if not _draw_cards(engine, entry, int(pid), n):
+					return
 		"CREATE_TOKEN":
-			var token_id := str(fx.params.get("token", ""))
-			var n := _count(engine, source, fx.params.get("count", 1))
-			var def: CardDefinition = tokens.definition_for(token_id)
-			for _j in n:
-				engine.state.zones.create(entry.controller_id, EngineEnums.ZoneId.BATTLEFIELD, {
-					definition = def,
-					is_token = true,
-					controller_id = entry.controller_id,
-				})
+			_create_tokens(engine, entry, source, fx)
 		"MOVE_ZONE":
 			_move_zone(engine, entry, fx)
+		"EXILE_UNTIL_LEAVES":
+			_exile_until_leaves(engine, entry, source, fx)
 		"COUNTER_SPELL":
 			_counter_spell(engine, entry, fx)
 		"ADD_MANA":
-			var produced := ManaCost.parse(str(fx.params.get("mana", "")))
+			var produced := engine.resolve_mana(entry.controller_id, ManaCost.parse(str(fx.params.get("mana", ""))))
 			engine.mana.add(entry.controller_id, produced)
 		"DEAL_DAMAGE":
-			_deal_damage(engine, entry, fx)
+			_deal_damage(engine, entry, source, fx)
+		"DEAL_DAMAGE_EACH":
+			_deal_damage_each(engine, entry, source, fx)
 		"LOSE_LIFE":
 			_lose_life(engine, entry, fx)
 		"TAP":
 			_set_tapped(engine, entry, fx, true)
 		"UNTAP":
 			_set_tapped(engine, entry, fx, false)
+		"UNTAP_EACH":
+			for obj in _each(engine, entry, source, fx.params.get("query", {})):
+				obj.tapped = false
 		"SET_CHARACTERISTICS":
 			_set_characteristics(engine, entry, source, fx)
 		"EXILE_TOP":
 			_exile_top(engine, entry, fx)
 		"PUT_COUNTER":
-			_put_counter(engine, entry, fx)
+			_put_counter(engine, entry, source, fx)
+		"GAIN_LIFE":
+			_gain_life(engine, entry, source, fx)
+		"DESTROY":
+			_destroy(engine, entry, fx)
+		"DESTROY_ALL":
+			_destroy_all(engine, entry, source, fx)
+		"PUMP":
+			_pump(engine, entry, source, fx)
+		"SEARCH_LIBRARY":
+			_search_library(engine, entry, source, fx)
+		"SCRY":
+			_scry(engine, entry, fx)
+		"FIGHT":
+			_fight(engine, entry, source, fx)
+		"ATTACH":
+			_attach(engine, entry, source, fx)
+		"CHOOSE_TYPE":
+			_choose_type(engine, entry, source)
+		"RETURN_FROM_GRAVEYARD":
+			_return_from_graveyard(engine, entry, fx)
+		"DISCOVER":
+			_discover(engine, entry, source, fx)
+		"HIDEAWAY":
+			_hideaway(engine, entry, source, fx)
+		"PLAY_HIDDEN":
+			_play_hidden(engine, entry, source, fx)
+		"MILL":
+			_mill(engine, entry, fx)
+		"DISCARD":
+			_discard(engine, entry, fx)
+		"SACRIFICE":
+			_sacrifice(engine, entry, source, fx)
+		"PROLIFERATE":
+			_proliferate(engine, entry)
+		"EXPLORE":
+			_explore(engine, entry, source)
+		"AMASS":
+			_amass(engine, entry, source, fx)
+		"BOLSTER":
+			_bolster(engine, entry, source, fx)
+		"POPULATE":
+			_populate(engine, entry)
+		"FABRICATE":
+			_fabricate(engine, entry, source, fx)
+		"CASCADE":
+			_cascade(engine, entry, source)
+		"RETURN_SELF":
+			_return_self(engine, entry, source, fx)
+		"SURVEIL":
+			_surveil(engine, entry, fx)
+		"BECOME_MONARCH":
+			engine.state.monarch_id = entry.controller_id
+		"CHOOSE_COLOR":
+			_choose_color(engine, entry, source, fx)
 		_:
-			pass
+			if KeywordEffects.handles(str(fx.kind)):
+				KeywordEffects.apply(self, engine, entry, source, fx)
+			elif CardEffects.handles(str(fx.kind)):
+				CardEffects.apply(self, engine, entry, source, fx)
+			elif KeywordActions.handles(str(fx.kind)):
+				KeywordActions.apply(self, engine, entry, source, fx)
+			elif PreconEffects.handles(str(fx.kind)):
+				PreconEffects.apply(self, engine, entry, source, fx)
+
+
+# --- Values, players and object sets ----------------------------------------------------
+
+## An int, or {"expr": ..., "mult": n, "add": n}: TRIGGER_TOUGHNESS / TRIGGER_POWER (the creature that
+## set off the trigger), EVENT_AMOUNT (damage or life that set it off), SELF_POWER, LANDS, COUNT (+ query).
+func _value(engine: RulesEngine, entry: StackEntry, source: GameObject, raw: Variant) -> int:
+	if not (raw is Dictionary):
+		return int(raw)
+	var d := raw as Dictionary
+	var base := 0
+	## {"query": ...} on its own means COUNT (Krenko: "the number of Goblins you control").
+	var expr := str(d.get("expr", "COUNT" if d.has("query") else ""))
+	match expr:
+		"TRIGGER_TOUGHNESS":
+			base = int(entry.ctx.get("toughness", 0))
+		"TRIGGER_POWER":
+			base = int(entry.ctx.get("power", 0))
+		"EVENT_AMOUNT":
+			base = int(entry.ctx.get("amount", 0))
+		"SELF_POWER":
+			base = engine.power_of(source) if source != null else 0
+		"X":
+			base = int(entry.ctx.get("x", 0))
+		"TARGET_POWER":
+			var tidx := int(d.get("target", 0))
+			if tidx >= 0 and tidx < entry.targets.size():
+				var tobj: GameObject = engine.state.objects.get(int(entry.targets[tidx]))
+				if tobj != null and tobj.zone == EngineEnums.ZoneId.BATTLEFIELD:
+					base = engine.power_of(tobj)
+		"GREATEST_POWER":
+			var gbf: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+			if gbf != null:
+				for gid in gbf.object_ids:
+					var go: GameObject = engine.state.objects.get(gid)
+					if go != null and go.controller_id == entry.controller_id and engine.is_creature_now(go):
+						base = maxi(base, engine.power_of(go))
+		"LANDS":
+			base = Query.count_objects(engine.state, _ref(entry, source), {"controller": "SOURCE_CONTROLLER", "type": "land"})
+		## Hit the Mother Lode: N minus the discovered card's mana value (0 if it was N or more).
+		"DISCOVER_DIFF":
+			base = maxi(0, int(d.get("n", 0)) - int(entry.ctx.get("dc_mv", int(d.get("n", 0)))))
+		"EXILED_COUNT":
+			base = int(entry.ctx.get("exiled_count", 0))
+		"COUNT":
+			var cq: Dictionary = d.get("query", {})
+			if cq.has("power_min"):
+				## "with power 4 or greater" needs current power, so it is counted here (CR 208.3).
+				var plain := cq.duplicate()
+				plain.erase("power_min")
+				for o in _each(engine, entry, source, plain):
+					if engine.power_of(o) >= int(cq["power_min"]):
+						base += 1
+			else:
+				base = Query.count_objects(engine.state, _ref(entry, source), cq)
+		"TARGET_MV":
+			var mi := int(d.get("target", 0))
+			if mi >= 0 and mi < entry.targets.size():
+				var mo: GameObject = engine.state.objects.get(int(entry.targets[mi]))
+				if mo != null and mo.definition is CardDefinition:
+					base = (mo.definition as CardDefinition).cmc
+				elif entry.ctx.has("target_mv"):
+					base = int(entry.ctx["target_mv"])
+	return base * int(d.get("mult", 1)) + int(d.get("add", 0))
+
+
+## The source as a reference for queries; a stand-in with the right controller if it is gone.
+func _ref(entry: StackEntry, source: GameObject) -> GameObject:
+	if source != null:
+		return source
+	var ghost := GameObject.new()
+	ghost.object_id = entry.source_id
+	ghost.controller_id = entry.controller_id
+	ghost.owner_id = entry.controller_id
+	return ghost
+
+
+func _players_for(engine: RulesEngine, entry: StackEntry, who: String) -> Array:
+	var out: Array = []
+	for p in engine.state.players:
+		if p.lost:
+			continue
+		match who:
+			"DEFENDER":
+				## The player the source is attacking or dealt combat damage to (afflict, ingest, poisonous).
+				var dfd := int(entry.ctx.get("defender", engine.defender_of(entry.source_id)))
+				if p.player_id == dfd:
+					out.append(p.player_id)
+			"EACH_OPPONENT":
+				if p.player_id != entry.controller_id:
+					out.append(p.player_id)
+			"EACH_PLAYER":
+				out.append(p.player_id)
+			_:
+				if p.player_id == entry.controller_id:
+					out.append(p.player_id)
+	return out
+
+
+## Battlefield objects matching a query, read from the source's side ("you control").
+func _each(engine: RulesEngine, entry: StackEntry, source: GameObject, query: Variant) -> Array:
+	var out: Array = []
+	if not (query is Dictionary):
+		return out
+	var bf: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return out
+	var ref := _ref(entry, source)
+	for oid in bf.object_ids.duplicate():
+		var obj: GameObject = engine.state.objects.get(oid)
+		if obj != null and Query._matches(obj, ref, query):
+			if bool((query as Dictionary).get("attacking", false)) and not _is_attacking(engine, obj):
+				continue
+			out.append(obj)
+	return out
+
+
+func _is_attacking(engine: RulesEngine, obj: GameObject) -> bool:
+	return engine.state.combat is CombatState and (engine.state.combat as CombatState).attacker_ids.has(obj.object_id)
+
+
+## What an effect acts on: the source itself ("self"), every object matching "each", or its target.
+func _affected(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> Array:
+	if bool(fx.params.get("self", false)):
+		if source != null and source.zone == EngineEnums.ZoneId.BATTLEFIELD:
+			return [source]
+		return []
+	if fx.params.has("each"):
+		return _each(engine, entry, source, fx.params["each"])
+	## The creature that set the trigger off (exalted: the lone attacker).
+	if bool(fx.params.get("trigger_object", false)):
+		var trig: GameObject = engine.state.objects.get(int(entry.ctx.get("object_id", 0)))
+		return [trig] if trig != null and trig.zone == EngineEnums.ZoneId.BATTLEFIELD else []
+	var idx := int(fx.params.get("target", 0))
+	if idx < 0 or idx >= entry.targets.size():
+		return []
+	var obj: GameObject = engine.state.objects.get(int(entry.targets[idx]))
+	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return []
+	return [obj]
+
+
+## Who does the effect: its controller, or "the target's controller" for "Its controller creates / may search".
+func _acting_player(entry: StackEntry, fx: AbilityEffect) -> int:
+	if str(fx.params.get("for", "")) == "TARGET_CONTROLLER":
+		return int(entry.ctx.get("target_controller", entry.controller_id))
+	return entry.controller_id
+
+
+func _create_tokens(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var def: CardDefinition = null
+	if fx.params.has("spec"):
+		def = tokens.from_spec(fx.params["spec"])
+	else:
+		def = tokens.definition_for(str(fx.params.get("token", "")))
+	if def == null:
+		return
+	var n := _value(engine, entry, source, fx.params.get("count", 1))
+	var maker := _acting_player(entry, fx)
+	## Token with X/X: the size is X (Mirror-style "X 1/1"), set from the spell's X.
+	var x_size := int(entry.ctx.get("x", 0))
+	for _j in n:
+		var opts := {
+			definition = def,
+			is_token = true,
+			controller_id = maker,
+		}
+		if bool(fx.params.get("tapped", false)):
+			opts["tapped"] = true
+		var obj: GameObject = engine.state.zones.create(maker, EngineEnums.ZoneId.BATTLEFIELD, opts)
+		if obj == null:
+			continue
+		if bool(fx.params.get("pt_x", false)) and x_size > 0:
+			obj.counters["+1/+1"] = int(obj.counters.get("+1/+1", 0)) + x_size
+		## Logged like any zone change so "enters" triggers and the History see tokens too.
+		engine.state.log.append(EngineEnums.EventType.ZONE_CHANGE, entry.controller_id, {
+			from_id = 0,
+			to_id = obj.object_id,
+			from_zone = -1,
+			to_zone = EngineEnums.ZoneId.BATTLEFIELD,
+			linked_from = 0,
+		})
 
 
 func _move_zone(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
@@ -90,7 +428,32 @@ func _move_zone(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> vo
 	var obj: GameObject = engine.state.objects.get(target_id)
 	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
 		return
-	engine.state.zones.move(target_id, dest, obj.owner_id)
+	entry.ctx["target_controller"] = obj.controller_id
+	var moved: GameObject = engine.state.zones.move(target_id, dest, obj.owner_id)
+	## Imprint: a permanent remembers the cards it exiled (Duplicant reads the last creature card).
+	if moved != null and dest == EngineEnums.ZoneId.EXILE:
+		var src: GameObject = engine.state.objects.get(entry.source_id)
+		if src != null and src.zone == EngineEnums.ZoneId.BATTLEFIELD:
+			src.imprinted.append(moved.object_id)
+
+
+## CR 610.3: exile the target until the source leaves the battlefield. If the source is already gone
+## when this resolves, nothing is exiled.
+func _exile_until_leaves(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var idx := int(fx.params.get("target", 0))
+	if idx < 0 or idx >= entry.targets.size():
+		return
+	if source == null or source.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
+	var obj: GameObject = engine.state.objects.get(int(entry.targets[idx]))
+	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
+	var moved: GameObject = engine.state.zones.move(obj.object_id, EngineEnums.ZoneId.EXILE, obj.owner_id)
+	if moved == null:
+		return
+	var linked: Array = engine.state.exile_links.get(source.object_id, [])
+	linked.append(moved.object_id)
+	engine.state.exile_links[source.object_id] = linked
 
 
 func _counter_spell(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
@@ -101,6 +464,9 @@ func _counter_spell(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -
 	if not (engine.state.stack is MagicStack):
 		return
 	var stack := engine.state.stack as MagicStack
+	for pending in stack.entries:
+		if (pending as StackEntry).stack_id == sid and engine.cant_be_countered(engine.state.objects.get((pending as StackEntry).object_id)):
+			return
 	var found: StackEntry = stack.remove_by_stack_id(sid)
 	if found == null:
 		return
@@ -115,54 +481,161 @@ func _lose_life(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> vo
 	var n := int(fx.params.get("n", 0))
 	if n <= 0:
 		return
-	var idx := int(fx.params.get("target", 0))
-	if idx < 0 or idx >= entry.targets.size():
-		return
-	var obj: GameObject = engine.state.objects.get(int(entry.targets[idx]))
-	if obj == null:
-		return
-	var pid := obj.controller_id
-	if pid < 0 or pid >= engine.state.players.size():
-		return
-	engine.state.players[pid].life -= n
-	engine.state.log.append(EngineEnums.EventType.LIFE_CHANGE, entry.controller_id, {
-		to_player = pid,
-		amount = n,
-	})
+	var pids: Array = []
+	if fx.params.has("who"):
+		pids = _players_for(engine, entry, str(fx.params["who"]))
+	else:
+		var idx := int(fx.params.get("target", 0))
+		if idx < 0 or idx >= entry.targets.size():
+			return
+		var tid := int(entry.targets[idx])
+		var tp := TargetingManager.decode_player(tid)
+		if tp >= 0:
+			pids = [tp]
+		else:
+			var obj: GameObject = engine.state.objects.get(tid)
+			if obj != null:
+				pids = [obj.controller_id]
+	for pid in pids:
+		if pid < 0 or pid >= engine.state.players.size():
+			continue
+		engine.state.players[pid].life -= n
+		engine.state.log.append(EngineEnums.EventType.LIFE_CHANGE, entry.controller_id, {
+			to_player = pid,
+			amount = n,
+		})
 	if engine.sba != null:
 		engine.sba.check(engine)
 
 
-func _deal_damage(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
-	var n := int(fx.params.get("n", 0))
+func _deal_damage(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var n := _value(engine, entry, source, fx.params.get("n", 0))
 	if n <= 0:
+		return
+	## "~ deals 2 damage to it" (the creature that set the trigger off).
+	if bool(fx.params.get("trigger_object", false)):
+		var hit: GameObject = engine.state.objects.get(int(entry.ctx.get("object_id", 0)))
+		if hit != null and hit.zone == EngineEnums.ZoneId.BATTLEFIELD:
+			engine.damage_object(source if source != null else _ref(entry, null), hit, n)
+			if engine.sba != null:
+				engine.sba.check(engine)
+		return
+	## Wayta-style "deals that much damage": the damage comes from the creature that was dealt it.
+	if bool(fx.params.get("from_trigger_object", false)):
+		var dealer: GameObject = engine.state.objects.get(int(entry.ctx.get("object_id", 0)))
+		if dealer != null:
+			source = dealer
+	if fx.params.has("who"):
+		for pid in _players_for(engine, entry, str(fx.params["who"])):
+			_damage_player(engine, entry, pid, n)
 		return
 	var idx := int(fx.params.get("target", 0))
 	if idx < 0 or idx >= entry.targets.size():
 		return
 	var tid := int(entry.targets[idx])
-	var pid := TargetingManager.decode_player(tid)
-	if pid >= 0 and pid < engine.state.players.size():
-		engine.state.players[pid].life -= n
-		engine.state.log.append(EngineEnums.EventType.DAMAGE, entry.controller_id, {
-			to_player = pid,
-			amount = n,
-		})
-		if engine.sba != null:
-			engine.sba.check(engine)
+	var pid2 := TargetingManager.decode_player(tid)
+	if pid2 >= 0 and pid2 < engine.state.players.size():
+		_damage_player(engine, entry, pid2, n)
 		return
 	var obj: GameObject = engine.state.objects.get(tid)
 	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
 		return
-	obj.damage_marked += n
-	var tou := 0
-	if engine.layers != null:
-		tou = int(engine.layers.snapshot(engine.state, obj).get("toughness", 0))
-	elif obj.definition is CardDefinition:
-		var def := obj.definition as CardDefinition
-		tou = int(def.toughness) if def.toughness.is_valid_int() else 0
-	if obj.definition is CardDefinition and (obj.definition as CardDefinition).is_creature() and obj.damage_marked >= tou:
-		engine.state.zones.move(obj.object_id, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
+	engine.damage_object(source if source != null else _ref(entry, null), obj, n)
+	## Lethal damage is a state-based action (CR 704.5g), so indestructible is respected.
+	if engine.sba != null:
+		engine.sba.check(engine)
+
+
+func _damage_player(engine: RulesEngine, entry: StackEntry, pid: int, n: int) -> void:
+	engine.state.players[pid].life -= n
+	engine.kw.note_player_damaged(pid, engine.state.objects.get(entry.source_id), false)
+	engine.state.log.append(EngineEnums.EventType.DAMAGE, entry.controller_id, {
+		to_player = pid,
+		amount = n,
+		object_id = entry.source_id,
+	})
+	if engine.sba != null:
+		engine.sba.check(engine)
+
+
+## "deals N damage to each other creature".
+func _deal_damage_each(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var n := int(fx.params.get("n", 0))
+	if n <= 0:
+		return
+	var src := source if source != null else _ref(entry, null)
+	for obj in _each(engine, entry, source, fx.params.get("query", {})):
+		engine.damage_object(src, obj, n)
+	if engine.sba != null:
+		engine.sba.check(engine)
+
+
+## CR 119.3: gaining life. With no `target` the effect's controller gains it.
+func _gain_life(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var n := _value(engine, entry, source, fx.params.get("n", 0))
+	if n <= 0:
+		return
+	var pids: Array = [entry.controller_id]
+	if fx.params.has("who"):
+		pids = _players_for(engine, entry, str(fx.params["who"]))
+	elif fx.params.has("target"):
+		var idx := int(fx.params.get("target", 0))
+		if idx < 0 or idx >= entry.targets.size():
+			return
+		var tid := int(entry.targets[idx])
+		var tp := TargetingManager.decode_player(tid)
+		if tp >= 0:
+			pids = [tp]
+		else:
+			var obj: GameObject = engine.state.objects.get(tid)
+			if obj == null:
+				return
+			pids = [obj.controller_id]
+	for pid in pids:
+		if pid < 0 or pid >= engine.state.players.size():
+			continue
+		engine.state.players[pid].life += n
+		engine.state.log.append(EngineEnums.EventType.LIFE_CHANGE, pid, {
+			to_player = pid,
+			amount = n,
+			gain = true,
+		})
+
+
+## CR 701.7: destroy puts the permanent into its owner's graveyard unless it has indestructible (CR 702.12b).
+func _destroy(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
+	var idx := int(fx.params.get("target", 0))
+	if idx < 0 or idx >= entry.targets.size():
+		return
+	var obj: GameObject = engine.state.objects.get(int(entry.targets[idx]))
+	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
+	entry.ctx["target_controller"] = obj.controller_id
+	engine.destroy_permanent(obj)
+
+
+## A temporary +X/+Y (layer 7c) and keywords (layer 6) on the affected objects (CR 611.2).
+## The effect follows those objects only; a new object id after a zone change is not affected (CR 400.7).
+func _pump(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var objs := _affected(engine, entry, source, fx)
+	if objs.is_empty():
+		return
+	var effect := ContinuousEffect.new()
+	for o in objs:
+		effect.object_ids.append((o as GameObject).object_id)
+	effect.source_id = entry.source_id
+	effect.controller_id = entry.controller_id
+	effect.timestamp = engine.state.next_timestamp
+	engine.state.next_timestamp += 1
+	effect.power = _value(engine, entry, source, fx.params.get("power", 0))
+	effect.toughness = _value(engine, entry, source, fx.params.get("toughness", 0))
+	effect.until_eot = str(fx.params.get("duration", "END_OF_TURN")) == "END_OF_TURN"
+	var kws: Variant = fx.params.get("keywords", [])
+	if kws is Array:
+		for kw in kws:
+			effect.add_keywords.append(str(kw))
+	engine.state.effects.append(effect)
+	## A negative toughness can kill it (CR 704.5f).
 	if engine.sba != null:
 		engine.sba.check(engine)
 
@@ -259,6 +732,11 @@ func _set_characteristics(engine: RulesEngine, entry: StackEntry, source: GameOb
 func _exile_top(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
 	var n := int(fx.params.get("n", 1))
 	var pid := entry.controller_id
+	if fx.params.has("who"):
+		var whos := _players_for(engine, entry, str(fx.params["who"]))
+		if whos.is_empty():
+			return
+		pid = int(whos[0])
 	var may_play := str(fx.params.get("may_play", ""))
 	for _i in n:
 		var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
@@ -270,16 +748,788 @@ func _exile_top(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> vo
 			moved.may_play_controller = pid
 
 
-func _put_counter(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
+func _put_counter(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var cname := str(fx.params.get("name", "+1/+1"))
+	var n := _value(engine, entry, source, fx.params.get("n", 1))
+	for obj in _affected(engine, entry, source, fx):
+		obj.counters[cname] = int(obj.counters.get(cname, 0)) + n
+
+
+## Draws `n` cards for `pid`. A card with dredge in their graveyard may replace each draw (CR 702.52a): the player
+## is asked first. Returns false while the game waits for the answer; progress is kept in entry.choices so the effect
+## picks up where it stopped.
+func _draw_cards(engine: RulesEngine, entry: StackEntry, pid: int, n: int) -> bool:
+	var key := "drawn_%d_%d" % [entry.cursor, pid]
+	var done := int(entry.choices.get(key, 0))
+	while done < n:
+		var opts := dredge_options(engine, pid)
+		if not opts.is_empty():
+			var ans := _ask(engine, entry, pid, "dredge_%d_%d_%d" % [entry.cursor, pid, done], "Dredge instead of drawing? Pick a card to return (or decline to draw).", opts, true)
+			if ans.s == "paused":
+				entry.choices[key] = done
+				return false
+			if ans.s == "picked":
+				engine.kw.do_dredge(pid, int(ans.value))
+				done += 1
+				continue
+		engine.draw_card(pid)
+		done += 1
+	entry.choices[key] = done
+	return true
+
+
+## Choices {value, label, detail} for dredging in place of a draw; empty when the seat isn't a person.
+func dredge_options(engine: RulesEngine, pid: int) -> Array:
+	var out: Array = []
+	if not engine.interactive_seats.has(pid):
+		return out
+	for opt in engine.kw.dredge_cards(pid):
+		var o := _card_option(engine, int(opt.id))
+		o["label"] = "Dredge %d: %s" % [int(opt.n), str(o.get("label", "card"))]
+		o["detail"] = "Mill %d cards, then return it to your hand instead of drawing.\n%s" % [int(opt.n), str(o.get("detail", ""))]
+		out.append(o)
+	return out
+
+
+# --- Asking the player ---------------------------------------------------------------------
+## Asks `pid` to pick one of `options` ({value, label, detail}). Returns {"s": status, "value": v}:
+##   "picked"   the player chose `value`
+##   "declined" the player passed on an optional choice
+##   "paused"   the game now waits for the answer; the effect must return before changing anything
+##   "auto"     nobody to ask (rival or no options): the effect decides itself
+## Answers are kept in entry.choices under `link`, so running the effect again after the answer finds them.
+func _ask(engine: RulesEngine, entry: StackEntry, pid: int, link: String, prompt: String, options: Array, optional: bool = false, kind: String = "PICK") -> Dictionary:
+	if entry.choices.has(link):
+		var got: Variant = entry.choices[link]
+		if got is bool:
+			return {"s": "picked" if got else "declined", "value": got}
+		return {"s": "picked", "value": got}
+	if options.is_empty() or not engine.interactive_seats.has(pid):
+		return {"s": "auto"}
+	var dec := PlayerDecision.new()
+	dec.decision_id = engine.state.next_stack_id
+	dec.kind = StringName(kind)
+	dec.player_id = pid
+	dec.stack_id = entry.stack_id
+	dec.link = link
+	dec.prompt = prompt
+	dec.optional = optional
+	dec.min_count = 0 if optional else 1
+	dec.max_count = 1
+	for o in options:
+		dec.candidates.append(o.get("value"))
+		dec.info[str(o.get("value"))] = {"label": str(o.get("label", o.get("value"))), "detail": str(o.get("detail", ""))}
+	engine.state.pending_decision = dec
+	engine.state.mode = EngineEnums.EngineMode.AWAITING_DECISION
+	engine.state.awaiting = {player_id = pid, type = &"decision", decision_id = dec.decision_id}
+	return {"s": "paused"}
+
+
+func _ask_yes_no(engine: RulesEngine, entry: StackEntry, pid: int, link: String, prompt: String, show_ids: Array = []) -> Dictionary:
+	if entry.choices.has(link):
+		return {"s": "picked", "value": bool(entry.choices[link])}
+	if not engine.interactive_seats.has(pid):
+		return {"s": "auto"}
+	var dec := PlayerDecision.new()
+	dec.decision_id = engine.state.next_stack_id
+	dec.kind = &"OPTIONAL_YES_NO"
+	dec.player_id = pid
+	dec.stack_id = entry.stack_id
+	dec.link = link
+	dec.prompt = prompt
+	dec.show_ids = show_ids.duplicate()
+	dec.optional = true
+	dec.min_count = 0
+	dec.max_count = 1
+	engine.state.pending_decision = dec
+	engine.state.mode = EngineEnums.EngineMode.AWAITING_DECISION
+	engine.state.awaiting = {player_id = pid, type = &"decision", decision_id = dec.decision_id}
+	return {"s": "paused"}
+
+
+## {value, label, detail} for choosing a card.
+func _card_option(engine: RulesEngine, oid: int) -> Dictionary:
+	var c: GameObject = engine.state.objects.get(oid)
+	var def := c.definition as CardDefinition if c != null and c.definition is CardDefinition else null
+	if def == null:
+		return {"value": oid, "label": "Card", "detail": ""}
+	var rules := def.oracle_text.replace("\n", " ")
+	if rules.length() > 170:
+		rules = rules.substr(0, 167) + "..."
+	return {"value": oid, "label": def.name, "detail": ("%s  %s\n%s" % [def.mana_cost, def.type_line, rules]).strip_edges()}
+
+
+func _name_of(engine: RulesEngine, oid: int) -> String:
+	var c: GameObject = engine.state.objects.get(oid)
+	return (c.definition as CardDefinition).name if c != null and c.definition is CardDefinition else "the card"
+
+
+# --- Keyword actions ------------------------------------------------------------------------
+
+func _spawn_token(engine: RulesEngine, pid: int, def: CardDefinition) -> GameObject:
+	var obj: GameObject = engine.state.zones.create(pid, EngineEnums.ZoneId.BATTLEFIELD, {definition = def, is_token = true, controller_id = pid})
+	if obj != null:
+		engine.state.log.append(EngineEnums.EventType.ZONE_CHANGE, pid, {
+			from_id = 0, to_id = obj.object_id, from_zone = -1, to_zone = EngineEnums.ZoneId.BATTLEFIELD, linked_from = 0,
+		})
+	return obj
+
+
+func _permanents_of(engine: RulesEngine, pid: int, kind: String = "") -> Array:
+	var out: Array = []
+	var bf: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return out
+	for oid in bf.object_ids:
+		var o: GameObject = engine.state.objects.get(oid)
+		if o == null or o.controller_id != pid or not (o.definition is CardDefinition):
+			continue
+		if kind != "" and not (o.definition as CardDefinition).type_line.to_lower().contains(kind.to_lower()):
+			continue
+		out.append(o)
+	return out
+
+
+## Sacrifice N (CR 701.17): each affected player picks their own. The rival gives up its cheapest first.
+func _sacrifice(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var n := int(fx.params.get("n", 1))
+	var plan := {}
+	for pid in _players_for(engine, entry, str(fx.params.get("who", "EACH_OPPONENT"))):
+		var mine := _permanents_of(engine, int(pid), str(fx.params.get("type", "")))
+		var chosen: Array = []
+		for i in mini(n, mine.size()):
+			var options: Array = []
+			for o in mine:
+				if not chosen.has(o.object_id):
+					options.append(_card_option(engine, o.object_id))
+			var ans := _ask(engine, entry, int(pid), "sac_%d_%d" % [pid, i], "Sacrifice a permanent (%d of %d)." % [i + 1, n], options)
+			if ans.s == "paused":
+				return
+			if ans.s == "picked":
+				chosen.append(int(ans.value))
+			else:
+				var worst: GameObject = null
+				var worst_score := 1000000
+				for o2 in mine:
+					if chosen.has(o2.object_id):
+						continue
+					var d2 := o2.definition as CardDefinition
+					var sc := -1 if o2.is_token else d2.cmc * 2 + engine.power_of(o2) + (6 if d2.is_land() else 0)
+					if sc < worst_score:
+						worst_score = sc
+						worst = o2
+				if worst != null:
+					chosen.append(worst.object_id)
+		plan[pid] = chosen
+	for pid in plan.keys():
+		for oid in plan[pid]:
+			var o3: GameObject = engine.state.objects.get(int(oid))
+			if o3 != null and o3.zone == EngineEnums.ZoneId.BATTLEFIELD:
+				engine.state.zones.move(o3.object_id, EngineEnums.ZoneId.GRAVEYARD, o3.owner_id)
+	if engine.sba != null:
+		engine.sba.check(engine)
+
+
+## Proliferate (CR 701.34): your good counters and your opponents' bad ones grow by one.
+func _proliferate(engine: RulesEngine, entry: StackEntry) -> void:
+	var bf: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf != null:
+		for oid in bf.object_ids:
+			var o: GameObject = engine.state.objects.get(oid)
+			if o == null:
+				continue
+			var mine := o.controller_id == entry.controller_id
+			for k in o.counters.keys():
+				if int(o.counters[k]) <= 0 or str(k) == "renowned":
+					continue
+				if mine != (str(k) == "-1/-1"):
+					o.counters[k] = int(o.counters[k]) + 1
+	for p in engine.state.players:
+		if p.player_id != entry.controller_id and p.poison > 0:
+			p.poison += 1
+
+
+## Explore (CR 701.44): reveal the top card. A land goes to your hand; otherwise the creature gets a
+## +1/+1 counter and you may put the card into your graveyard.
+func _explore(engine: RulesEngine, entry: StackEntry, source: GameObject) -> void:
+	if source == null or source.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
+	var pid := entry.controller_id
+	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
+	if lib == null or lib.is_empty():
+		return
+	var top_id := int(lib.object_ids[0])
+	var top: GameObject = engine.state.objects.get(top_id)
+	var def := top.definition as CardDefinition if top != null and top.definition is CardDefinition else null
+	if def == null:
+		return
+	if def.is_land():
+		engine.state.zones.move(top_id, EngineEnums.ZoneId.HAND, pid)
+		return
+	var ans := _ask_yes_no(engine, entry, pid, "explore_gy", "Explore: %s is not a land. Put it into your graveyard? (No leaves it on top.)" % def.name, [top_id])
+	if ans.s == "paused":
+		return
+	source.counters["+1/+1"] = int(source.counters.get("+1/+1", 0)) + 1
+	if ans.s == "picked" and bool(ans.value):
+		engine.state.zones.move(top_id, EngineEnums.ZoneId.GRAVEYARD, pid)
+
+
+## Amass N (CR 701.47): +N counters on your Army, making a 0/0 Army token first if you have none.
+func _amass(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var n := _value(engine, entry, source, fx.params.get("n", 1))
+	var army: GameObject = null
+	for o in _permanents_of(engine, entry.controller_id, "Army"):
+		army = o
+		break
+	if army == null:
+		army = _spawn_token(engine, entry.controller_id, tokens.from_spec({"subtypes": ["Army"], "colors": ["B"], "p": "0", "t": "0"}))
+	if army != null:
+		army.counters["+1/+1"] = int(army.counters.get("+1/+1", 0)) + n
+
+
+## Bolster N (CR 701.39): +N counters on the creature you control with the least toughness.
+func _bolster(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var n := _value(engine, entry, source, fx.params.get("n", 1))
+	var weakest: GameObject = null
+	for o in _permanents_of(engine, entry.controller_id, "Creature"):
+		if weakest == null or engine.toughness_of(o) < engine.toughness_of(weakest):
+			weakest = o
+	if weakest != null:
+		weakest.counters["+1/+1"] = int(weakest.counters.get("+1/+1", 0)) + n
+
+
+## Populate (CR 701.36): a copy of your token with the most power.
+func _populate(engine: RulesEngine, entry: StackEntry) -> void:
+	var best: GameObject = null
+	for o in _permanents_of(engine, entry.controller_id, "Creature"):
+		if o.is_token and (best == null or engine.power_of(o) > engine.power_of(best)):
+			best = o
+	if best != null:
+		_spawn_token(engine, entry.controller_id, best.definition as CardDefinition)
+
+
+## Fabricate N (CR 702.123): N +1/+1 counters on it, or N 1/1 Servo artifact creatures.
+func _fabricate(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var n := int(fx.params.get("n", 1))
+	var pid := entry.controller_id
+	var nm := (source.definition as CardDefinition).name if source != null and source.definition is CardDefinition else "it"
+	var ans := _ask_yes_no(engine, entry, pid, "fabricate", "Fabricate %d: put %d +1/+1 counter(s) on %s? (No creates %d Servo token(s).)" % [n, n, nm, n])
+	if ans.s == "paused":
+		return
+	var counters := true if ans.s == "auto" else bool(ans.value)
+	if counters and source != null and source.zone == EngineEnums.ZoneId.BATTLEFIELD:
+		source.counters["+1/+1"] = int(source.counters.get("+1/+1", 0)) + n
+		return
+	for _i in n:
+		_spawn_token(engine, pid, tokens.from_spec({"subtypes": ["Servo"], "colors": [], "p": "1", "t": "1", "artifact": true}))
+
+
+## Cascade (CR 702.85): exile cards from the top until a nonland card with lesser mana value, cast it free.
+func _cascade(engine: RulesEngine, entry: StackEntry, source: GameObject) -> void:
+	var pid := entry.controller_id
+	var spell: GameObject = engine.state.objects.get(int(entry.ctx.get("object_id", 0)))
+	var limit := (spell.definition as CardDefinition).cmc if spell != null and spell.definition is CardDefinition else (source.definition as CardDefinition).cmc if source != null and source.definition is CardDefinition else 0
+	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
+	if lib == null:
+		return
+	if not entry.ctx.has("cas_done"):
+		var skipped: Array = []
+		var found_id := -1
+		var guard := 0
+		while not lib.object_ids.is_empty() and guard < 200:
+			guard += 1
+			var top: GameObject = engine.state.objects.get(lib.object_ids[0])
+			if top == null:
+				lib.object_ids.remove_at(0)
+				continue
+			var moved: GameObject = engine.state.zones.move(top.object_id, EngineEnums.ZoneId.EXILE, pid)
+			if moved == null:
+				break
+			var def := moved.definition as CardDefinition if moved.definition is CardDefinition else null
+			if def != null and not def.is_land() and def.cmc < limit:
+				found_id = moved.object_id
+				break
+			skipped.append(moved.object_id)
+		engine.state.rng.shuffle(skipped)
+		for oid in skipped:
+			engine.put_library_bottom(int(oid), pid)
+		entry.ctx["cas_done"] = true
+		entry.ctx["cas_found"] = found_id
+	var fid := int(entry.ctx.get("cas_found", -1))
+	var found: GameObject = engine.state.objects.get(fid)
+	if found == null or found.zone != EngineEnums.ZoneId.EXILE:
+		return
+	var ans := _ask_yes_no(engine, entry, pid, "cascade_cast", "Cascade: cast %s without paying its mana cost? (No puts it on the bottom of your library.)" % _name_of(engine, fid), [fid])
+	if ans.s == "paused":
+		return
+	var cast_it := true if ans.s == "auto" else bool(ans.value)
+	if cast_it and engine.cast_free(pid, fid):
+		return
+	engine.put_library_bottom(fid, pid)
+
+
+## Undying / persist (CR 702.93, 702.79): the creature that just died comes back with a counter.
+func _return_self(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	if source == null or source.zone != EngineEnums.ZoneId.GRAVEYARD or source.is_token:
+		return
+	var back: GameObject = engine.state.zones.move(source.object_id, EngineEnums.ZoneId.BATTLEFIELD, source.owner_id)
+	if back != null:
+		var cname := str(fx.params.get("name", "+1/+1"))
+		back.counters[cname] = int(back.counters.get(cname, 0)) + 1
+
+
+# --- Search, scry, fights, equipment -----------------------------------------------------
+
+## "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle."
+## The game picks the card: for lands, a type you have fewer of, favouring your commander's colors.
+func _search_library(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var pid := _acting_player(entry, fx)
+	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
+	if lib == null:
+		return
+	var filt: Dictionary = fx.params.get("filter", {})
+	var want := int(fx.params.get("n", 1))
+	var dest := EngineEnums.ZoneId.BATTLEFIELD if str(fx.params.get("to", "HAND")) == "BATTLEFIELD" else EngineEnums.ZoneId.HAND
+	var ref := _ref(entry, source)
+	var shared_type := ""
+	## A person at the table picks the card (one entry per card name; they may also decline to find one).
+	if engine.interactive_seats.has(pid) and not bool(fx.params.get("same_type", false)):
+		var picked: Array = []
+		for i in want:
+			var options: Array = []
+			var seen := {}
+			for oid in lib.object_ids:
+				var cand0: GameObject = engine.state.objects.get(oid)
+				if cand0 == null or picked.has(int(oid)) or not Query._matches(cand0, ref, filt):
+					continue
+				var nm := _name_of(engine, int(oid))
+				if seen.has(nm):
+					continue
+				seen[nm] = true
+				options.append(_card_option(engine, int(oid)))
+			if options.is_empty():
+				break
+			var ans := _ask(engine, entry, pid, "search_%d" % i, "Search your library: choose a card (or decline to find nothing).", options, true)
+			if ans.s == "paused":
+				return
+			if ans.s != "picked":
+				break
+			picked.append(int(ans.value))
+		for pid_card in picked:
+			var got: GameObject = engine.state.zones.move(int(pid_card), dest, pid)
+			if got != null and dest == EngineEnums.ZoneId.BATTLEFIELD and bool(fx.params.get("tapped", false)):
+				got.tapped = true
+		engine.shuffle_library(pid)
+		return
+	for _i in want:
+		var best_id := -1
+		var best_score := -1000000
+		for oid in lib.object_ids:
+			var cand: GameObject = engine.state.objects.get(oid)
+			if cand == null or not Query._matches(cand, ref, filt):
+				continue
+			## "that share a land type": the second land must share a basic land type with the first.
+			if bool(fx.params.get("same_type", false)) and shared_type != "" and not (cand.definition as CardDefinition).type_line.contains(shared_type):
+				continue
+			var sc := _search_score(engine, pid, cand)
+			if sc > best_score:
+				best_score = sc
+				best_id = int(oid)
+		if best_id < 0:
+			break
+		var found_def := (engine.state.objects[best_id] as GameObject).definition as CardDefinition
+		if bool(fx.params.get("same_type", false)) and shared_type == "":
+			for bt in ["Plains", "Island", "Swamp", "Mountain", "Forest"]:
+				if found_def.type_line.contains(bt):
+					shared_type = bt
+					break
+		var moved: GameObject = engine.state.zones.move(best_id, dest, pid)
+		if moved != null and dest == EngineEnums.ZoneId.BATTLEFIELD and bool(fx.params.get("tapped", false)):
+			moved.tapped = true
+	engine.shuffle_library(pid)
+
+
+func _search_score(engine: RulesEngine, pid: int, cand: GameObject) -> int:
+	var def := cand.definition as CardDefinition if cand.definition is CardDefinition else null
+	if def == null:
+		return 0
+	if not def.is_land():
+		return def.cmc
+	var identity := engine.commander_identity(pid)
+	var score := 5
+	for pair in [["Plains", "W"], ["Island", "U"], ["Swamp", "B"], ["Mountain", "R"], ["Forest", "G"]]:
+		if def.type_line.contains(str(pair[0])):
+			if identity.has(str(pair[1])):
+				score += 10
+			score -= 3 * _controlled_of_type(engine, pid, str(pair[0]))
+	return score
+
+
+func _controlled_of_type(engine: RulesEngine, pid: int, subtype: String) -> int:
+	var n := 0
+	var bf: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return 0
+	for oid in bf.object_ids:
+		var o: GameObject = engine.state.objects.get(oid)
+		if o != null and o.controller_id == pid and o.definition is CardDefinition and (o.definition as CardDefinition).type_line.contains(subtype):
+			n += 1
+	return n
+
+
+## Scry N (CR 701.22): see _look_at_top.
+func _scry(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
+	_look_at_top(engine, entry, int(fx.params.get("n", 1)), false)
+
+
+## CR 701.14: each creature deals damage equal to its power to the other. "one_sided": only `a` deals damage.
+func _fight(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var a := _object_ref(engine, entry, source, fx.params.get("a", "SELF"))
+	var b := _object_ref(engine, entry, source, fx.params.get("b", 0))
+	if a == null or b == null or a.object_id == b.object_id:
+		return
+	if a.zone != EngineEnums.ZoneId.BATTLEFIELD or b.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
+	var pa := engine.power_of(a)
+	var pb := engine.power_of(b)
+	engine.damage_object(a, b, pa)
+	if not bool(fx.params.get("one_sided", false)):
+		engine.damage_object(b, a, pb)
+	if engine.sba != null:
+		engine.sba.check(engine)
+
+
+func _object_ref(engine: RulesEngine, entry: StackEntry, source: GameObject, ref: Variant) -> GameObject:
+	if str(ref) == "SELF":
+		return source
+	var idx := int(ref)
+	if idx < 0 or idx >= entry.targets.size():
+		return null
+	return engine.state.objects.get(int(entry.targets[idx]))
+
+
+## Equip (CR 702.6): attach the source to the target creature.
+func _attach(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	if source == null or source.zone != EngineEnums.ZoneId.BATTLEFIELD:
+		return
 	var idx := int(fx.params.get("target", 0))
 	if idx < 0 or idx >= entry.targets.size():
 		return
-	var obj: GameObject = engine.state.objects.get(int(entry.targets[idx]))
-	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
+	var host: GameObject = engine.state.objects.get(int(entry.targets[idx]))
+	if host == null or host.zone != EngineEnums.ZoneId.BATTLEFIELD or not engine.is_creature_now(host):
 		return
-	var cname := str(fx.params.get("name", "+1/+1"))
+	source.attached_to = host.object_id
+
+
+## "As ~ enters, choose a creature type": the player picks (the rival takes the type it has most of).
+func _choose_type(engine: RulesEngine, entry: StackEntry, source: GameObject) -> void:
+	if source == null:
+		return
+	var pid := entry.controller_id
+	var counts := {}
+	for zid in [EngineEnums.ZoneId.LIBRARY, EngineEnums.ZoneId.HAND, EngineEnums.ZoneId.BATTLEFIELD, EngineEnums.ZoneId.GRAVEYARD, EngineEnums.ZoneId.COMMAND]:
+		var z: Zone = engine.state.zones.get_zone(zid, pid)
+		if z == null:
+			continue
+		for oid in z.object_ids:
+			var o: GameObject = engine.state.objects.get(oid)
+			if o == null or o.owner_id != pid or not (o.definition is CardDefinition):
+				continue
+			var def := o.definition as CardDefinition
+			if not def.is_creature():
+				continue
+			for t in Query._subtype_words(def.type_line):
+				counts[str(t)] = int(counts.get(str(t), 0)) + 1
+	var names: Array = counts.keys()
+	names.sort_custom(func(a, b) -> bool: return int(counts[a]) > int(counts[b]) or (int(counts[a]) == int(counts[b]) and str(a) < str(b)))
+	var options: Array = []
+	for t in names:
+		options.append({"value": str(t), "label": str(t), "detail": "%d of your cards" % int(counts[t])})
+	var ans := _ask(engine, entry, pid, "chosen_type", "Choose a creature type.", options)
+	if ans.s == "paused":
+		return
+	if ans.s == "picked":
+		source.chosen_type = str(ans.value)
+	elif not names.is_empty():
+		source.chosen_type = str(names[0])
+
+
+## Discover X (CR 701.57): exile cards from the top of your library until a nonland card with mana
+## value X or less. You may cast it without paying its mana cost; if you don't (or can't) it goes to
+## your hand. The rest go to the bottom of the library in a random order.
+func _discover(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var pid := entry.controller_id
+	var x := _value(engine, entry, source, fx.params.get("n", 0))
+	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
+	if lib == null:
+		return
+	## The exile step runs once; a pause for the cast question re-runs this effect afterwards.
+	if not entry.ctx.has("dc_done"):
+		var skipped: Array = []
+		var found_id := -1
+		var guard := 0
+		while not lib.object_ids.is_empty() and guard < 200:
+			guard += 1
+			var top: GameObject = engine.state.objects.get(lib.object_ids[0])
+			if top == null:
+				lib.object_ids.remove_at(0)
+				continue
+			var moved: GameObject = engine.state.zones.move(top.object_id, EngineEnums.ZoneId.EXILE, pid)
+			if moved == null:
+				break
+			var def := moved.definition as CardDefinition if moved.definition is CardDefinition else null
+			if def != null and not def.is_land() and def.cmc <= x:
+				found_id = moved.object_id
+				break
+			skipped.append(moved.object_id)
+		engine.state.rng.shuffle(skipped)
+		for oid in skipped:
+			var back: GameObject = engine.state.zones.move(int(oid), EngineEnums.ZoneId.LIBRARY, pid)
+			if back != null:
+				lib.object_ids.erase(back.object_id)
+				lib.object_ids.append(back.object_id)
+		entry.ctx["dc_done"] = true
+		entry.ctx["dc_found"] = found_id
+		var fd: GameObject = engine.state.objects.get(found_id)
+		entry.ctx["dc_mv"] = (fd.definition as CardDefinition).cmc if fd != null and fd.definition is CardDefinition else x
+	var fid := int(entry.ctx.get("dc_found", -1))
+	var found: GameObject = engine.state.objects.get(fid)
+	if found == null or found.zone != EngineEnums.ZoneId.EXILE:
+		return
+	var ans := _ask_yes_no(engine, entry, pid, "discover_cast", "Discover: cast %s without paying its mana cost? (No puts it into your hand.)" % _name_of(engine, fid), [fid])
+	if ans.s == "paused":
+		return
+	var cast_it := true if ans.s == "auto" else bool(ans.value)
+	if cast_it and engine.cast_free(pid, fid):
+		return
+	engine.state.zones.move(fid, EngineEnums.ZoneId.HAND, pid)
+
+
+## "As ~ enters, choose a color other than green": the player picks; the rival takes the first fitting
+## color of its commander's identity.
+func _choose_color(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	if source == null:
+		return
+	var avoid := str(fx.params.get("not", ""))
+	var names := {"W": "White", "U": "Blue", "B": "Black", "R": "Red", "G": "Green"}
+	var order: Array = []
+	for c in engine.commander_identity(entry.controller_id):
+		if str(c) != avoid:
+			order.append(str(c))
+	for c2 in ["W", "U", "B", "R", "G"]:
+		if c2 != avoid and not order.has(c2):
+			order.append(c2)
+	var options: Array = []
+	for c3 in order:
+		options.append({"value": c3, "label": names[c3], "detail": ""})
+	var ans := _ask(engine, entry, entry.controller_id, "chosen_color", "Choose a color.", options)
+	if ans.s == "paused":
+		return
+	source.chosen_color = str(ans.value) if ans.s == "picked" else str(order[0])
+
+
+## Hideaway N (CR 702.75): look at the top N cards, exile one face down, put the rest on the bottom in a
+## random order. The permanent remembers which card (hideaway_card). The player picks; the rival takes the best.
+func _hideaway(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	if source == null:
+		return
+	var pid := entry.controller_id
+	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
+	if lib == null or lib.is_empty():
+		return
+	var ids: Array = []
+	for i in mini(int(fx.params.get("n", 1)), lib.object_ids.size()):
+		ids.append(int(lib.object_ids[i]))
+	var options: Array = []
+	for oid in ids:
+		options.append(_card_option(engine, int(oid)))
+	var ans := _ask(engine, entry, pid, "hideaway", "Hideaway: choose a card to exile face down. The rest go to the bottom.", options)
+	if ans.s == "paused":
+		return
+	var best_id := -1
+	if ans.s == "picked":
+		best_id = int(ans.value)
+	else:
+		var best_score := -1
+		for oid in ids:
+			var c: GameObject = engine.state.objects.get(oid)
+			if c == null or not (c.definition is CardDefinition):
+				continue
+			var def := c.definition as CardDefinition
+			var sc := 1 if def.is_land() else 2 + def.cmc
+			if sc > best_score:
+				best_score = sc
+				best_id = int(oid)
+	if best_id < 0:
+		return
+	var hidden: GameObject = engine.state.zones.move(best_id, EngineEnums.ZoneId.EXILE, pid)
+	if hidden != null:
+		source.hideaway_card = hidden.object_id
+	ids.erase(best_id)
+	engine.state.rng.shuffle(ids)
+	for oid in ids:
+		engine.put_library_bottom(int(oid), pid)
+
+
+## "You may play the exiled card without paying its mana cost [if creatures you control have total power N
+## or greater]": checked as the ability resolves. Lands are played (if a land drop is left), spells are cast.
+func _play_hidden(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	if source == null or source.hideaway_card == 0:
+		return
+	var pid := entry.controller_id
+	var need := int(fx.params.get("min_total_power", 0))
+	if need > 0:
+		var total := 0
+		for o in _each(engine, entry, source, {"controller": "SOURCE_CONTROLLER", "type": "creature"}):
+			total += engine.power_of(o)
+		if total < need:
+			return
+	var card: GameObject = engine.state.objects.get(source.hideaway_card)
+	if card == null or card.zone != EngineEnums.ZoneId.EXILE or not (card.definition is CardDefinition):
+		return
+	var def := card.definition as CardDefinition
+	var yn := _ask_yes_no(engine, entry, pid, "play_hidden", "Play %s from exile without paying its mana cost?" % def.name, [card.object_id])
+	if yn.s == "paused":
+		return
+	if yn.s == "picked" and not bool(yn.value):
+		return
+	if def.is_land():
+		if not engine.can_play_land_now(pid):
+			return
+		engine.state.zones.move(card.object_id, EngineEnums.ZoneId.BATTLEFIELD, pid)
+		engine.note_land_played(pid)
+		source.hideaway_card = 0
+		return
+	if engine.cast_free(pid, card.object_id):
+		source.hideaway_card = 0
+
+
+func _mill(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
 	var n := int(fx.params.get("n", 1))
-	obj.counters[cname] = int(obj.counters.get(cname, 0)) + n
+	for pid in _players_for(engine, entry, str(fx.params.get("who", "CONTROLLER"))):
+		var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
+		for _i in n:
+			if lib == null or lib.is_empty():
+				break
+			engine.state.zones.move(int(lib.object_ids[0]), EngineEnums.ZoneId.GRAVEYARD, pid)
+
+
+## Discard N (CR 701.8): the player picks the cards; the rival throws away its cheapest (extra lands first).
+func _discard(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
+	var n := int(fx.params.get("n", 1))
+	var plan := {}
+	for pid in _players_for(engine, entry, str(fx.params.get("who", "CONTROLLER"))):
+		var hand: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, pid)
+		var chosen: Array = []
+		for i in n:
+			var left: Array = []
+			if hand != null:
+				for oid in hand.object_ids:
+					if not chosen.has(int(oid)):
+						left.append(int(oid))
+			if left.is_empty():
+				break
+			var options: Array = []
+			for oid in left:
+				options.append(_card_option(engine, int(oid)))
+			var ans := _ask(engine, entry, int(pid), "discard_%d_%d" % [pid, i], "Discard a card (%d of %d)." % [i + 1, n], options)
+			if ans.s == "paused":
+				return
+			if ans.s == "picked":
+				chosen.append(int(ans.value))
+			else:
+				chosen.append(_cheapest_in_hand(engine, int(pid), chosen))
+		plan[pid] = chosen
+	for pid in plan.keys():
+		for oid in plan[pid]:
+			if int(oid) >= 0 and engine.state.objects.has(int(oid)):
+				engine.discard_card(int(pid), int(oid))
+
+
+func _cheapest_in_hand(engine: RulesEngine, pid: int, exclude: Array) -> int:
+	var hand: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, pid)
+	var lands := _controlled_of_type(engine, pid, "Land")
+	var worst := -1
+	var worst_score := 1000000
+	if hand == null:
+		return -1
+	for oid in hand.object_ids:
+		if exclude.has(int(oid)):
+			continue
+		var c: GameObject = engine.state.objects.get(oid)
+		if c == null or not (c.definition is CardDefinition):
+			continue
+		var def := c.definition as CardDefinition
+		var sc := def.cmc * 2 + (-3 if def.is_land() and lands >= 5 else (4 if def.is_land() else 0))
+		if sc < worst_score:
+			worst_score = sc
+			worst = int(oid)
+	return worst
+
+
+## Surveil N (CR 701.46): for each of the top N cards the player chooses graveyard or stay on top.
+## The rival puts spare lands (once it has six) into the graveyard.
+func _surveil(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
+	_look_at_top(engine, entry, int(fx.params.get("n", 1)), true)
+
+
+## Shared by surveil (to the graveyard) and scry (to the bottom).
+func _look_at_top(engine: RulesEngine, entry: StackEntry, n: int, to_graveyard: bool) -> void:
+	var pid := entry.controller_id
+	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, pid)
+	if lib == null:
+		return
+	var lands := _controlled_of_type(engine, pid, "Land")
+	var hand: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, pid)
+	if hand != null:
+		for oid in hand.object_ids:
+			var h: GameObject = engine.state.objects.get(oid)
+			if h != null and h.definition is CardDefinition and (h.definition as CardDefinition).is_land():
+				lands += 1
+	var top_ids: Array = []
+	for i in mini(n, lib.object_ids.size()):
+		top_ids.append(int(lib.object_ids[i]))
+	var away: Array = []
+	for i in top_ids.size():
+		var oid := int(top_ids[i])
+		var word := "graveyard" if to_graveyard else "bottom of your library"
+		var ans := _ask_yes_no(engine, entry, pid, "look_%d" % i, "%s: put %s into the %s? (No keeps it on top.)" % ["Surveil" if to_graveyard else "Scry", _name_of(engine, oid), word], [oid])
+		if ans.s == "paused":
+			return
+		if ans.s == "picked":
+			if bool(ans.value):
+				away.append(oid)
+		else:
+			var c: GameObject = engine.state.objects.get(oid)
+			if c != null and c.definition is CardDefinition and (c.definition as CardDefinition).is_land() and lands >= 6:
+				away.append(oid)
+	for oid in away:
+		if to_graveyard:
+			engine.state.zones.move(int(oid), EngineEnums.ZoneId.GRAVEYARD, pid)
+		else:
+			engine.put_library_bottom(int(oid), pid)
+
+
+func _return_from_graveyard(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
+	var idx := int(fx.params.get("target", 0))
+	if idx < 0 or idx >= entry.targets.size():
+		return
+	var card: GameObject = engine.state.objects.get(int(entry.targets[idx]))
+	if card == null or card.zone != EngineEnums.ZoneId.GRAVEYARD:
+		return
+	var dest := EngineEnums.ZoneId.BATTLEFIELD if str(fx.params.get("to", "HAND")) == "BATTLEFIELD" else EngineEnums.ZoneId.HAND
+	if card.definition is CardDefinition:
+		entry.ctx["target_mv"] = (card.definition as CardDefinition).cmc
+	var back: GameObject = engine.state.zones.move(card.object_id, dest, card.owner_id)
+	## Finality counter (CR 122.1g): if it would die, it is exiled instead (see ZoneManager).
+	if back != null and bool(fx.params.get("finality", false)) and dest == EngineEnums.ZoneId.BATTLEFIELD:
+		back.counters["finality"] = 1
+
+
+## CR 701.7: destroy all permanents matching the query (indestructible ones survive).
+func _destroy_all(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	for obj in _each(engine, entry, source, fx.params.get("query", {})):
+		engine.destroy_permanent(obj)
 
 
 func _count(engine: RulesEngine, source: GameObject, raw: Variant) -> int:

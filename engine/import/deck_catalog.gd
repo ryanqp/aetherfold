@@ -29,6 +29,7 @@ static func builtins() -> Array:
 static func all_choices() -> Array:
 	var out: Array = builtins()
 	var store := DeckStore.new()
+	store.purge_test_decks()  ## the Vs. AI lists come from here, not only the gallery
 	for rec in store.list_decks():
 		var d: Dictionary = rec
 		d["id"] = str(d.get("_path", d.get("id", "")))
@@ -68,24 +69,33 @@ static func vs_pair(player_id: String, rival_id: String) -> DemoSetup:
 		return _builtin_pair(player_id, rival_id)
 	var p: Dictionary = _side(player_id)
 	var r: Dictionary = _side(rival_id)
-	var mem := CatalogSource.Memory.new()
-	DemoSetup._fill_catalog(mem)
+	var extra: Array = []
 	for row in p.get("rows", {}).values():
-		if row is Dictionary:
-			mem.add(row)
+		extra.append(row)
 	for row2 in r.get("rows", {}).values():
-		if row2 is Dictionary:
-			mem.add(row2)
-	var d := DemoSetup.new()
-	d.db = CardDatabase.new()
-	d.db.setup(mem)
-	d.krenko_list = p.get("list")
-	d.talrand_list = r.get("list")
+		extra.append(row2)
+	## The starter decks use the same real-card builds as a starter-vs-starter game, so an imported
+	## deck on one side doesn't leave the other with the offline filler cards.
+	var seed := int(Time.get_unix_time_from_system())
+	if seed == 0:
+		seed = 1
+	var d := DemoSetup.table_demo(seed, extra)
+	d.krenko_list = _list_for(player_id, p, d)
+	d.talrand_list = _list_for(rival_id, r, d)
 	d.human_commanders = p.get("commanders", PackedStringArray([DemoSetup.KRENKO]))
 	d.human_name = str(p.get("name", "You"))
 	d.rival_commanders = r.get("commanders", PackedStringArray([DemoSetup.TALRAND]))
 	d.rival_name = str(r.get("name", "Rival"))
 	return d
+
+
+## A custom deck's own list, or the real-card starter list for a starter deck.
+static func _list_for(choice_id: String, side: Dictionary, base: DemoSetup) -> DeckList:
+	if choice_id == BUILTIN_TALRAND:
+		return base.talrand_list
+	if choice_id == BUILTIN_KRENKO or choice_id == "":
+		return base.krenko_list
+	return side.get("list")
 
 
 static func _is_builtin(choice_id: String) -> bool:

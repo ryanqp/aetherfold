@@ -48,14 +48,16 @@ func test_forgotten_cave_enters_tapped() -> void:
 
 func test_turn_draw_is_exactly_one_card() -> void:
 	var session := GameSession.new()
+	session.manual_draw = true  ## the table draws by hand, one click per card
 	session.start_table_demo(1)
 	session.keep_hand(0)
 	var lib_before := session.engine.library_size(0)
 	var hand_before := session.engine.hand_size(0)
 	session.end_you_turn()
+	## With manual draw the card stays in the library until you click your deck.
 	assert_true(session.pending_draw_anim)
-	assert_eq(session.engine.library_size(0), lib_before - 1)
-	assert_eq(session.engine.hand_size(0), hand_before + 1)
+	assert_eq(session.engine.library_size(0), lib_before)
+	assert_eq(session.engine.hand_size(0), hand_before)
 	var acked: Dictionary = session.ack_draw()
 	assert_false(acked.is_empty())
 	assert_false(session.pending_draw_anim)
@@ -68,6 +70,7 @@ func test_turn_draw_is_exactly_one_card() -> void:
 
 func test_second_land_after_end_turn() -> void:
 	var session := GameSession.new()
+	session.manual_draw = true  ## the table draws by hand, one click per card
 	session.start_table_demo(1)
 	session.keep_hand(0)
 	var db := DemoSetup.memory_db()
@@ -76,6 +79,7 @@ func test_second_land_after_end_turn() -> void:
 	session.end_you_turn()
 	assert_eq(session.engine.state.active_player_id, 0)
 	assert_true(session.pending_draw_anim, "P0 should have a draw to ack on turn 3")
+	assert_false(session.ack_draw().is_empty())
 	assert_true(
 		session.engine.state.phase == EngineEnums.Phase.MAIN_1
 		or session.engine.state.phase == EngineEnums.Phase.MAIN_2

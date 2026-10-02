@@ -15,6 +15,15 @@ func on_step_end() -> void:
 	for p in gs.players:
 		if p.mana is ManaPool:
 			(p.mana as ManaPool).empty()
+	## Firebending (CR 702.189a): its {R} stays until end of combat. Unspent, it comes back after each combat step.
+	if gs.step == EngineEnums.Step.END_COMBAT:
+		gs.combat_mana.clear()
+	else:
+		for pid in gs.combat_mana.keys():
+			var keep := int(gs.combat_mana[pid])
+			var pl := pool(int(pid))
+			if pl != null and keep > 0:
+				pl.r += keep
 
 
 func pool(player_id: int) -> ManaPool:

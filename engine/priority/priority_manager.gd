@@ -43,6 +43,9 @@ func submit_pass(engine: RulesEngine, action: GameAction) -> SubmitResult:
 	if action.player_id != int(st.awaiting.get("player_id", -1)):
 		r.error = "not your priority"
 		return r
+	if st.draw_pending:
+		r.error = "draw your card first"
+		return r
 	var wrapped := pass_from(st, action.player_id)
 	if wrapped:
 		engine.turn.all_passed()

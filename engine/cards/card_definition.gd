@@ -18,6 +18,20 @@ var keywords: PackedStringArray = PackedStringArray()
 var unimplemented_keywords: PackedStringArray = PackedStringArray()
 var commander_legal: bool = true
 var abilities: Array = []
+## The other face of a double-faced card (transform, disturb, daybound, craft, MDFC back), or null.
+var back_face: CardDefinition = null
+## A split card's second half or an adventure / aftermath half, castable on its own; null if none.
+var other_half: CardDefinition = null
+var _kw: Dictionary = {}
+var _kw_ready: bool = false
+
+
+## Keyword abilities that carry costs or numbers, read from the Oracle text (see KeywordLines).
+func kw() -> Dictionary:
+	if not _kw_ready:
+		_kw = KeywordLines.parse(self)
+		_kw_ready = true
+	return _kw
 
 
 static func from_catalog_row(row: Dictionary) -> CardDefinition:
@@ -35,6 +49,62 @@ static func from_catalog_row(row: Dictionary) -> CardDefinition:
 	d.color_identity = _string_array(row.get("color_identity", []))
 	d.keywords = _string_array(row.get("keywords", []))
 	d.commander_legal = bool(row.get("commander_legal", true))
+	## The second face (CR 709 split / adventure halves, CR 712 double-faced cards).
+	var faces: Variant = row.get("faces", [])
+	if faces is Array and (faces as Array).size() >= 2 and (faces as Array)[1] is Dictionary:
+		var f1: Dictionary = (faces as Array)[1]
+		var other := CardDefinition.new()
+		other.oracle_id = d.oracle_id
+		other.name = str(f1.get("name", d.name))
+		other.mana_cost = str(f1.get("mana_cost", ""))
+		other.cmc = ManaCost.parse(other.mana_cost).cmc()
+		other.type_line = str(f1.get("type_line", ""))
+		other.oracle_text = str(f1.get("oracle_text", ""))
+		other.power = _str_or_empty(f1.get("power", ""))
+		other.toughness = _str_or_empty(f1.get("toughness", ""))
+		other.loyalty = _str_or_empty(f1.get("loyalty", ""))
+		other.colors = _string_array(f1.get("colors", row.get("colors", [])))
+		other.color_identity = d.color_identity.duplicate()
+		other.commander_legal = d.commander_legal
+		var layout := str(row.get("layout", ""))
+		if layout in ["split", "adventure", "aftermath"]:
+			d.other_half = other
+		else:
+			d.back_face = other
+		## A split card's front half keeps its own name for casting; the whole card's name stays on `d`.
+		var f0: Variant = (faces as Array)[0]
+		if f0 is Dictionary and layout in ["split", "aftermath"] and str(d.oracle_text) == "":
+			d.oracle_text = str((f0 as Dictionary).get("oracle_text", ""))
+	return d
+
+
+## A Saga's last chapter number (CR 714.2b): the highest chapter of its chapter abilities, 0 if none.
+func saga_final_chapter() -> int:
+	var best := 0
+	for a in abilities:
+		if a is Ability and str((a as Ability).trigger.get("on", "")) == "CHAPTER":
+			for c in (a as Ability).trigger.get("chapters", []):
+				best = maxi(best, int(c))
+	return best
+
+
+## A copy of the printed card (token copies: encore, eternalize, embalm). Abilities are shared, not re-read.
+func copy_def() -> CardDefinition:
+	var d := CardDefinition.new()
+	d.oracle_id = oracle_id
+	d.name = name
+	d.mana_cost = mana_cost
+	d.cmc = cmc
+	d.type_line = type_line
+	d.oracle_text = oracle_text
+	d.power = power
+	d.toughness = toughness
+	d.loyalty = loyalty
+	d.colors = colors.duplicate()
+	d.color_identity = color_identity.duplicate()
+	d.keywords = keywords.duplicate()
+	d.commander_legal = commander_legal
+	d.abilities = abilities.duplicate()
 	return d
 
 
@@ -54,7 +124,7 @@ func enters_tapped() -> bool:
 	var t := oracle_text.to_lower().replace("\n", " ")
 	if t.find("enters the battlefield tapped") < 0 and t.find("enters tapped") < 0:
 		return false
-	if t.find("unless") >= 0:
+	if t.find("unless") >= 0 or t.find("if you don't") >= 0:
 		return false
 	return true
 

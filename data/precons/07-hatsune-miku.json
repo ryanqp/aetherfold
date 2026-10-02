@@ -1,0 +1,3046 @@
+{
+	"name": "Hatsune Miku",
+	"source": "moxfield_commander_precons",
+	"sourceUrl": "https://moxfield.com/decks/n3QS3JZ_zkmwLhmLDTc8Sw",
+	"source_url": "https://moxfield.com/decks/n3QS3JZ_zkmwLhmLDTc8Sw",
+	"source_key": "precon:n3QS3JZ_zkmwLhmLDTc8Sw",
+	"source_deck_id": "n3QS3JZ_zkmwLhmLDTc8Sw",
+	"precon_id": "hatsune-miku",
+	"precon_order": 7,
+	"precon_set": "Secret Lair Commander 2026",
+	"precon_version": 1,
+	"source_commander": "Trostani, Selesnya's Voice",
+	"scryfall_commander_id": "6ab6e6c9-fe20-40d3-997e-fe3480081f03",
+	"is_imported": true,
+	"commander": [
+		{
+			"cardId": "6ab6e6c9-fe20-40d3-997e-fe3480081f03",
+			"name": "Trostani, Selesnya's Voice",
+			"oracle_id": "e94ef397-f5c5-4b8d-ae27-528352fa1d1e",
+			"quantity": 1,
+			"scryfall_id": "6ab6e6c9-fe20-40d3-997e-fe3480081f03"
+		}
+	],
+	"mainboard": [
+		{
+			"cardId": "8542d37d-99cd-4b64-a524-94d2b2a4d9c3",
+			"name": "Aetherflux Reservoir",
+			"oracle_id": "5f15125e-ae89-471e-b055-226a783bc7c1",
+			"quantity": 1,
+			"scryfall_id": "8542d37d-99cd-4b64-a524-94d2b2a4d9c3"
+		},
+		{
+			"cardId": "668eae14-fead-4264-9e16-a63a7815c954",
+			"name": "Crested Sunmare",
+			"oracle_id": "054fedbb-062e-491e-9a94-594fda33094f",
+			"quantity": 1,
+			"scryfall_id": "668eae14-fead-4264-9e16-a63a7815c954"
+		},
+		{
+			"cardId": "dc2e59ad-7592-44e2-86d7-7a20d0a10775",
+			"name": "Song of Freyalise",
+			"oracle_id": "9fe1f3ef-2c30-4ccc-9a67-5349e98e2502",
+			"quantity": 1,
+			"scryfall_id": "dc2e59ad-7592-44e2-86d7-7a20d0a10775"
+		},
+		{
+			"cardId": "b4899ae9-4375-4c58-bd27-fbb32df1b53d",
+			"name": "Nykthos Paragon",
+			"oracle_id": "367ac7e2-5056-48f3-a296-87d6cb1f7b54",
+			"quantity": 1,
+			"scryfall_id": "b4899ae9-4375-4c58-bd27-fbb32df1b53d"
+		},
+		{
+			"cardId": "cd39083e-f67e-4be1-9c1d-29df27e1ff1a",
+			"name": "Speaker of the Heavens",
+			"oracle_id": "e4bacf1b-0a45-4c73-857d-dffadb7e6fa5",
+			"quantity": 1,
+			"scryfall_id": "cd39083e-f67e-4be1-9c1d-29df27e1ff1a"
+		},
+		{
+			"cardId": "48e8de7c-3e9a-4569-8968-c4a5fc81acaa",
+			"name": "Cleric Class",
+			"oracle_id": "f0ead7f5-5c82-40fd-8e89-3e3c5d31fbad",
+			"quantity": 1,
+			"scryfall_id": "48e8de7c-3e9a-4569-8968-c4a5fc81acaa"
+		},
+		{
+			"cardId": "5d61ebe0-e115-49d8-a97d-53b81b8acdc5",
+			"name": "Overgrown Farmland",
+			"oracle_id": "709d2f10-1585-48c3-9058-ddd5f62f0452",
+			"quantity": 1,
+			"scryfall_id": "5d61ebe0-e115-49d8-a97d-53b81b8acdc5"
+		},
+		{
+			"cardId": "204476df-d5b1-4d0b-b0d3-a4c3fc7efcab",
+			"name": "Farseek",
+			"oracle_id": "495e52e6-4c2b-4574-9474-eadbdcc8b4ac",
+			"quantity": 1,
+			"scryfall_id": "204476df-d5b1-4d0b-b0d3-a4c3fc7efcab"
+		},
+		{
+			"cardId": "3396f676-d990-42ea-b40a-7da6548cca0a",
+			"name": "Growing Ranks",
+			"oracle_id": "bec6fb31-60a3-432f-ba36-aebf172f8b27",
+			"quantity": 1,
+			"scryfall_id": "3396f676-d990-42ea-b40a-7da6548cca0a"
+		},
+		{
+			"cardId": "a2e35d8d-050f-4f7a-809a-c0aea30c0dbb",
+			"name": "Phyrexian Processor",
+			"oracle_id": "36c800cb-b1ca-4432-ad3c-4d8b90337f4c",
+			"quantity": 1,
+			"scryfall_id": "a2e35d8d-050f-4f7a-809a-c0aea30c0dbb"
+		},
+		{
+			"cardId": "3dfccb9c-e098-4f5b-817c-08403d0d27ef",
+			"name": "Angel of Indemnity",
+			"oracle_id": "4f57a320-b6b5-49de-af0a-f2e2649758a7",
+			"quantity": 1,
+			"scryfall_id": "3dfccb9c-e098-4f5b-817c-08403d0d27ef"
+		},
+		{
+			"cardId": "f8692db5-6f2d-4330-9e23-1c3246898a35",
+			"name": "Idol of Oblivion",
+			"oracle_id": "c232d974-9c65-4bce-b045-e5a7cc0c62e0",
+			"quantity": 1,
+			"scryfall_id": "f8692db5-6f2d-4330-9e23-1c3246898a35"
+		},
+		{
+			"cardId": "5a7c5405-a20c-4385-b91c-7bda787533c2",
+			"name": "Conclave Evangelist",
+			"oracle_id": "13c81fc5-dd35-481d-8e32-4d404fb0e4ac",
+			"quantity": 1,
+			"scryfall_id": "5a7c5405-a20c-4385-b91c-7bda787533c2"
+		},
+		{
+			"cardId": "5af28ad7-5736-44f0-81ae-67ec82d03ee2",
+			"name": "Voice of Resurgence",
+			"oracle_id": "5cbbb3f3-63a4-4983-81ea-8c405b10e63f",
+			"quantity": 1,
+			"scryfall_id": "5af28ad7-5736-44f0-81ae-67ec82d03ee2"
+		},
+		{
+			"cardId": "22bf056b-24bb-4f32-93af-088817f42ce8",
+			"name": "Lazotep Quarry",
+			"oracle_id": "0d2fa39a-9cac-4a1f-bb1e-b6162e6d5169",
+			"quantity": 1,
+			"scryfall_id": "22bf056b-24bb-4f32-93af-088817f42ce8"
+		},
+		{
+			"cardId": "7d094fd4-2b7d-479f-a1af-4610a8349847",
+			"name": "Gruff Triplets",
+			"oracle_id": "32de1b70-f993-4423-b0ef-0762c2b4d1b1",
+			"quantity": 1,
+			"scryfall_id": "7d094fd4-2b7d-479f-a1af-4610a8349847"
+		},
+		{
+			"cardId": "362e5d97-a20e-47b6-9d28-818faa3804de",
+			"name": "Soul of Eternity",
+			"oracle_id": "4d211447-9f18-4d23-8f19-cdf6ad3c68ba",
+			"quantity": 1,
+			"scryfall_id": "362e5d97-a20e-47b6-9d28-818faa3804de"
+		},
+		{
+			"cardId": "72549b49-4eca-4852-b145-f4bb18e2d7cb",
+			"name": "Bramble Sovereign",
+			"oracle_id": "5e26a688-67d7-48a5-8862-653851bf3784",
+			"quantity": 1,
+			"scryfall_id": "72549b49-4eca-4852-b145-f4bb18e2d7cb"
+		},
+		{
+			"cardId": "af107542-ebf3-4a35-a313-b8803d8eda0c",
+			"name": "Rhys the Redeemed",
+			"oracle_id": "f7252190-ad24-4ba3-a644-2790dd1d680d",
+			"quantity": 1,
+			"scryfall_id": "af107542-ebf3-4a35-a313-b8803d8eda0c"
+		},
+		{
+			"cardId": "7430b1e0-b91d-412b-8b0c-d480c3ce4165",
+			"name": "Swords to Plowshares",
+			"oracle_id": "b1544f21-7e98-461b-aed5-e748b0168c52",
+			"quantity": 1,
+			"scryfall_id": "7430b1e0-b91d-412b-8b0c-d480c3ce4165"
+		},
+		{
+			"cardId": "50f1b7ba-7888-4f0d-a515-23dcf96bf87e",
+			"name": "Rootborn Defenses",
+			"oracle_id": "04046ae4-5c51-434b-930c-f3b1d348bf4b",
+			"quantity": 1,
+			"scryfall_id": "50f1b7ba-7888-4f0d-a515-23dcf96bf87e"
+		},
+		{
+			"cardId": "1e73f893-b8ab-4c1f-821a-c7dc8de99351",
+			"name": "Congregate",
+			"oracle_id": "d139294c-36bb-4a1e-800d-50c4a4ae9877",
+			"quantity": 1,
+			"scryfall_id": "1e73f893-b8ab-4c1f-821a-c7dc8de99351"
+		},
+		{
+			"cardId": "deb0e799-1920-4cd9-acd2-2df9df333712",
+			"name": "Nature's Lore",
+			"oracle_id": "78826359-fe63-44ad-adc4-a17ffcd710e4",
+			"quantity": 1,
+			"scryfall_id": "deb0e799-1920-4cd9-acd2-2df9df333712"
+		},
+		{
+			"cardId": "ff1f6e62-eb7b-4d9b-8034-f227f655431f",
+			"name": "Excavation Technique",
+			"oracle_id": "bcd3e6a1-7b76-408d-9236-3791c3e1064a",
+			"quantity": 1,
+			"scryfall_id": "ff1f6e62-eb7b-4d9b-8034-f227f655431f"
+		},
+		{
+			"cardId": "ef5793d2-58e7-4da2-9777-8db45abc09c0",
+			"name": "Prosperous Innkeeper",
+			"oracle_id": "da785227-cf8a-4d44-9e7c-fc909ea868f2",
+			"quantity": 1,
+			"scryfall_id": "ef5793d2-58e7-4da2-9777-8db45abc09c0"
+		},
+		{
+			"cardId": "43b5b24f-316a-406d-b30a-0f6252f6590d",
+			"name": "Selesnya Signet",
+			"oracle_id": "1436dd81-496e-42a5-b210-fb5b9cdf073f",
+			"quantity": 1,
+			"scryfall_id": "43b5b24f-316a-406d-b30a-0f6252f6590d"
+		},
+		{
+			"cardId": "1c21b711-9f2b-460a-86fb-6f1ef0de3037",
+			"name": "Ancient Cornucopia",
+			"oracle_id": "f0950c95-a297-489d-b166-74bba6af5376",
+			"quantity": 1,
+			"scryfall_id": "1c21b711-9f2b-460a-86fb-6f1ef0de3037"
+		},
+		{
+			"cardId": "15844392-111e-4bab-91eb-4fe53c52c34c",
+			"name": "Fanatic of Rhonas",
+			"oracle_id": "7973820b-fdaf-46ec-9e3e-d4c0e77b5067",
+			"quantity": 1,
+			"scryfall_id": "15844392-111e-4bab-91eb-4fe53c52c34c"
+		},
+		{
+			"cardId": "d75a8f9b-e16c-496c-80a2-6fc857e9d159",
+			"name": "Arasta of the Endless Web",
+			"oracle_id": "695eea46-1535-48c5-bbb6-0b8379e77bfc",
+			"quantity": 1,
+			"scryfall_id": "d75a8f9b-e16c-496c-80a2-6fc857e9d159"
+		},
+		{
+			"cardId": "a0b21a6d-5f3c-41e3-b994-42a6a7af538f",
+			"name": "Elenda's Hierophant",
+			"oracle_id": "cb99c675-adc5-4dad-8be8-524f5f921213",
+			"quantity": 1,
+			"scryfall_id": "a0b21a6d-5f3c-41e3-b994-42a6a7af538f"
+		},
+		{
+			"cardId": "e29cd7be-b6b3-4f04-9951-b25bb1b94eef",
+			"name": "Krosan Verge",
+			"oracle_id": "d9a10971-f32b-4978-952d-fed0a5bc9e36",
+			"quantity": 1,
+			"scryfall_id": "e29cd7be-b6b3-4f04-9951-b25bb1b94eef"
+		},
+		{
+			"cardId": "53f70ada-935d-4c46-bb37-8093b679dcf2",
+			"name": "Voice of the Blessed",
+			"oracle_id": "01e742ed-660c-43c6-b393-e589a54cbe1b",
+			"quantity": 1,
+			"scryfall_id": "53f70ada-935d-4c46-bb37-8093b679dcf2"
+		},
+		{
+			"cardId": "02bfeace-61d9-4db3-ae48-87334151a496",
+			"name": "Path to Exile",
+			"oracle_id": "d683d985-9888-4d21-8b5f-69e69ce4a03b",
+			"quantity": 1,
+			"scryfall_id": "02bfeace-61d9-4db3-ae48-87334151a496"
+		},
+		{
+			"cardId": "8ba06faa-01b5-4939-b790-97fd26b22584",
+			"name": "Sungrass Prairie",
+			"oracle_id": "0a28dff0-2bd6-4105-b73a-b6c4735833fd",
+			"quantity": 1,
+			"scryfall_id": "8ba06faa-01b5-4939-b790-97fd26b22584"
+		},
+		{
+			"cardId": "86e21f70-c4de-4e1e-b3e4-0c823376da41",
+			"name": "Brokers Hideout",
+			"oracle_id": "bd002797-a545-4bee-88bf-b878436e7cca",
+			"quantity": 1,
+			"scryfall_id": "86e21f70-c4de-4e1e-b3e4-0c823376da41"
+		},
+		{
+			"cardId": "fb36f34f-11b0-495a-8304-c98b692e3bc8",
+			"name": "Restless Prairie",
+			"oracle_id": "c071257a-63e7-48d0-a677-0b396a09b624",
+			"quantity": 1,
+			"scryfall_id": "fb36f34f-11b0-495a-8304-c98b692e3bc8"
+		},
+		{
+			"cardId": "cb3d9604-ed75-49b6-be67-bd66cddaa971",
+			"name": "Skullclamp",
+			"oracle_id": "65986c1b-8e51-4604-b685-d82fa7d1263a",
+			"quantity": 1,
+			"scryfall_id": "cb3d9604-ed75-49b6-be67-bd66cddaa971"
+		},
+		{
+			"cardId": "d2b7763c-8820-46aa-9ced-65d8803f9b7d",
+			"name": "Camaraderie",
+			"oracle_id": "9aab386c-d48c-4611-b757-aa69b26cc1b1",
+			"quantity": 1,
+			"scryfall_id": "d2b7763c-8820-46aa-9ced-65d8803f9b7d"
+		},
+		{
+			"cardId": "e4a25752-9155-44be-a7eb-865755c2f915",
+			"name": "Storm Herd",
+			"oracle_id": "30aa362b-7ab1-486e-9802-1171e0dc2416",
+			"quantity": 1,
+			"scryfall_id": "e4a25752-9155-44be-a7eb-865755c2f915"
+		},
+		{
+			"cardId": "048b055e-e045-43b3-9bba-e8fd366be45b",
+			"name": "Selesnya Sanctuary",
+			"oracle_id": "00ef1c55-dea1-4564-bd57-66de86cba4df",
+			"quantity": 1,
+			"scryfall_id": "048b055e-e045-43b3-9bba-e8fd366be45b"
+		},
+		{
+			"cardId": "1b8e0e7a-a37b-4b20-a843-413a6da740f0",
+			"name": "Dazzling Theater // Prop Room",
+			"oracle_id": "c46a02db-13d6-477f-9da0-822599470168",
+			"quantity": 1,
+			"scryfall_id": "1b8e0e7a-a37b-4b20-a843-413a6da740f0"
+		},
+		{
+			"cardId": "814bc057-dc2d-4630-86d2-6dfaadeba4c7",
+			"name": "Ajani's Pridemate",
+			"oracle_id": "95e94dea-5ac0-4d6f-adec-ca147aee861f",
+			"quantity": 1,
+			"scryfall_id": "814bc057-dc2d-4630-86d2-6dfaadeba4c7"
+		},
+		{
+			"cardId": "8a256374-7a0d-4ae2-9c9b-fb962a6d9fc4",
+			"name": "Silverquill Lecturer",
+			"oracle_id": "ac230b68-f945-4a1a-bd89-33e6d62e3c36",
+			"quantity": 1,
+			"scryfall_id": "8a256374-7a0d-4ae2-9c9b-fb962a6d9fc4"
+		},
+		{
+			"cardId": "0d903049-adaa-4c41-b790-28f2303ed564",
+			"name": "Llanowar Elves",
+			"oracle_id": "68954295-54e3-4303-a6bc-fc4547a4e3a3",
+			"quantity": 1,
+			"scryfall_id": "0d903049-adaa-4c41-b790-28f2303ed564"
+		},
+		{
+			"cardId": "a6ee978a-1cde-4661-bfe0-4c0d24211fa1",
+			"name": "Sunpetal Grove",
+			"oracle_id": "402ec768-76fb-474e-ae74-babc90d833c4",
+			"quantity": 1,
+			"scryfall_id": "a6ee978a-1cde-4661-bfe0-4c0d24211fa1"
+		},
+		{
+			"cardId": "4a45bf1f-748d-4075-976d-cc355fce1862",
+			"name": "Pest Infestation",
+			"oracle_id": "1b704798-0c69-4c18-ac7e-42933ce90028",
+			"quantity": 1,
+			"scryfall_id": "4a45bf1f-748d-4075-976d-cc355fce1862"
+		},
+		{
+			"cardId": "27b36061-a6d1-4d80-80fc-f536757eebee",
+			"name": "Healing Technique",
+			"oracle_id": "1b99c32d-1d02-410e-84bf-9db2ca05f576",
+			"quantity": 1,
+			"scryfall_id": "27b36061-a6d1-4d80-80fc-f536757eebee"
+		},
+		{
+			"cardId": "05e1189b-837d-4c1f-85a2-35d229c4dee8",
+			"name": "Ghalta and Mavren",
+			"oracle_id": "756042c5-e444-45d7-8dc6-ae7c83c98438",
+			"quantity": 1,
+			"scryfall_id": "05e1189b-837d-4c1f-85a2-35d229c4dee8"
+		},
+		{
+			"cardId": "79ca8982-826a-4c23-9e3a-04721d2e6466",
+			"name": "Canopy Vista",
+			"oracle_id": "dcb7e046-f01b-497c-88e5-57794eb30ce5",
+			"quantity": 1,
+			"scryfall_id": "79ca8982-826a-4c23-9e3a-04721d2e6466"
+		},
+		{
+			"cardId": "ec4e782f-55fa-448d-9c9e-ed2d1a8972d0",
+			"name": "Sapseep Forest",
+			"oracle_id": "8d4dcab0-86e5-4ff8-a90f-78a062664e16",
+			"quantity": 1,
+			"scryfall_id": "ec4e782f-55fa-448d-9c9e-ed2d1a8972d0"
+		},
+		{
+			"cardId": "d41f7539-738f-4e27-a538-a442e0d2fe84",
+			"name": "Grove of the Guardian",
+			"oracle_id": "f746612a-fbed-44ca-b2cc-5928e10cf4bb",
+			"quantity": 1,
+			"scryfall_id": "d41f7539-738f-4e27-a538-a442e0d2fe84"
+		},
+		{
+			"cardId": "f5fc17a9-4e12-40b1-b08a-0322bbcf8718",
+			"name": "Rogue's Passage",
+			"oracle_id": "f29dc596-2121-4421-8463-15f6c2e8b9b3",
+			"quantity": 1,
+			"scryfall_id": "f5fc17a9-4e12-40b1-b08a-0322bbcf8718"
+		},
+		{
+			"cardId": "06271dfc-e1af-4a98-a647-41873fc0046e",
+			"name": "Angelic Chorus",
+			"oracle_id": "e66b12ff-45da-46dc-9148-bd8ea9b7fde0",
+			"quantity": 1,
+			"scryfall_id": "06271dfc-e1af-4a98-a647-41873fc0046e"
+		},
+		{
+			"cardId": "716a6199-5bcd-45f5-8e9c-1cd1b67f6029",
+			"name": "Avacyn's Pilgrim",
+			"oracle_id": "069f6530-e65c-4d52-85f3-e0a2acd148c5",
+			"quantity": 1,
+			"scryfall_id": "716a6199-5bcd-45f5-8e9c-1cd1b67f6029"
+		},
+		{
+			"cardId": "fade917b-5e44-438e-949c-d3909cb6d037",
+			"name": "Invincible Hymn",
+			"oracle_id": "cc7d99e8-f9dc-47d3-b6c0-e9308d33c3c0",
+			"quantity": 1,
+			"scryfall_id": "fade917b-5e44-438e-949c-d3909cb6d037"
+		},
+		{
+			"cardId": "abccd29b-02c9-429e-a9c4-c18008e8b578",
+			"name": "Blossoming Bogbeast",
+			"oracle_id": "30f3c3be-0fe9-463d-a245-e44701aec7f2",
+			"quantity": 1,
+			"scryfall_id": "abccd29b-02c9-429e-a9c4-c18008e8b578"
+		},
+		{
+			"cardId": "a5fab5db-0b2c-4721-9692-f0a402cb26a8",
+			"name": "Blossoming Sands",
+			"oracle_id": "45429b2c-be3b-4b2e-9bab-a059ccbda8cd",
+			"quantity": 1,
+			"scryfall_id": "a5fab5db-0b2c-4721-9692-f0a402cb26a8"
+		},
+		{
+			"cardId": "fe0dbf31-79b1-4c8a-ba24-8ed3730724bf",
+			"name": "Gavony Township",
+			"oracle_id": "8a44e4e7-dfa2-427b-bbff-11c398fa60bb",
+			"quantity": 1,
+			"scryfall_id": "fe0dbf31-79b1-4c8a-ba24-8ed3730724bf"
+		},
+		{
+			"cardId": "65587afb-4edd-4a57-9968-8a91a1b07861",
+			"name": "Boon Reflection",
+			"oracle_id": "b86d3142-568a-4eea-b1ae-5fcfc1453533",
+			"quantity": 1,
+			"scryfall_id": "65587afb-4edd-4a57-9968-8a91a1b07861"
+		},
+		{
+			"cardId": "41caa041-a5f3-44ba-a509-681a2fcdf5ed",
+			"name": "Radiant Fountain",
+			"oracle_id": "6db442e5-fbcc-4456-a4c5-bea1aee3fc8e",
+			"quantity": 1,
+			"scryfall_id": "41caa041-a5f3-44ba-a509-681a2fcdf5ed"
+		},
+		{
+			"cardId": "4b2ec79e-a545-4b26-9c81-e81626fd7073",
+			"name": "Springleaf Drum",
+			"oracle_id": "bdeb440d-a714-40e8-9038-f651e6ae45fb",
+			"quantity": 1,
+			"scryfall_id": "4b2ec79e-a545-4b26-9c81-e81626fd7073"
+		},
+		{
+			"cardId": "6dfde7ce-4741-4ace-b6b3-6e90f62d235c",
+			"name": "Sundering Growth",
+			"oracle_id": "a2a380d8-4df7-4357-862c-ed3fb795db6c",
+			"quantity": 1,
+			"scryfall_id": "6dfde7ce-4741-4ace-b6b3-6e90f62d235c"
+		},
+		{
+			"cardId": "1740ef90-42a6-454d-bb85-b495bb149ca6",
+			"name": "Resplendent Angel",
+			"oracle_id": "2ac93092-1a57-4cf7-8f03-1dca86d5c476",
+			"quantity": 1,
+			"scryfall_id": "1740ef90-42a6-454d-bb85-b495bb149ca6"
+		},
+		{
+			"cardId": "92736247-ba8d-47dd-91e9-30ae47212cb9",
+			"name": "Mirari's Wake",
+			"oracle_id": "852657c0-18a4-4b28-b9ae-7728acdb5044",
+			"quantity": 1,
+			"scryfall_id": "92736247-ba8d-47dd-91e9-30ae47212cb9"
+		},
+		{
+			"cardId": "e6ed2004-936c-4967-a9c2-82f270ac5bb6",
+			"name": "Seraph Sanctuary",
+			"oracle_id": "0b504dc6-61cc-4a72-907c-145fa4c72466",
+			"quantity": 1,
+			"scryfall_id": "e6ed2004-936c-4967-a9c2-82f270ac5bb6"
+		},
+		{
+			"cardId": "4a6d7336-6713-442b-a10d-a357f306b604",
+			"name": "Shamanic Revelation",
+			"oracle_id": "d1d171de-1c6d-4fb9-817a-9c689c709f3d",
+			"quantity": 1,
+			"scryfall_id": "4a6d7336-6713-442b-a10d-a357f306b604"
+		},
+		{
+			"cardId": "e11a301d-27a3-4306-82e8-9e9b0b437415",
+			"name": "Command Tower",
+			"oracle_id": "0895c9b7-ae7d-4bb3-af17-3b75deb50a25",
+			"quantity": 1,
+			"scryfall_id": "e11a301d-27a3-4306-82e8-9e9b0b437415"
+		},
+		{
+			"cardId": "bb2d6c1a-16f9-4807-aab2-73fed094a2a6",
+			"name": "Explore",
+			"oracle_id": "b8f566ea-8283-4afa-9ac8-737e26419283",
+			"quantity": 1,
+			"scryfall_id": "bb2d6c1a-16f9-4807-aab2-73fed094a2a6"
+		},
+		{
+			"cardId": "f5130ca9-d8b4-4d0c-a0fa-9b7ce7c2a548",
+			"name": "Graypelt Refuge",
+			"oracle_id": "60b36821-0fad-423c-98c4-f64d991719f3",
+			"quantity": 1,
+			"scryfall_id": "f5130ca9-d8b4-4d0c-a0fa-9b7ce7c2a548"
+		},
+		{
+			"cardId": "5e234ce4-e179-45b8-851c-76a7371044aa",
+			"name": "Hour of Reckoning",
+			"oracle_id": "3bc13640-03f8-4b19-b0a4-7e7cb5271c0c",
+			"quantity": 1,
+			"scryfall_id": "5e234ce4-e179-45b8-851c-76a7371044aa"
+		},
+		{
+			"cardId": "744a260d-d546-48e8-8991-c355c719f2b3",
+			"name": "Lathiel, the Bounteous Dawn",
+			"oracle_id": "d3c56fc4-3611-41b1-952e-4c5311b1510b",
+			"quantity": 1,
+			"scryfall_id": "744a260d-d546-48e8-8991-c355c719f2b3"
+		},
+		{
+			"cardId": "3b6a6593-b08f-4627-99a5-45d68f6e1c59",
+			"name": "Sol Ring",
+			"oracle_id": "6ad8011d-3471-4369-9d68-b264cc027487",
+			"quantity": 1,
+			"scryfall_id": "3b6a6593-b08f-4627-99a5-45d68f6e1c59"
+		},
+		{
+			"cardId": "f1229d97-bd56-4b53-802d-be74c3374aaf",
+			"name": "Suture Priest",
+			"oracle_id": "c4d36522-3ace-4bfb-bf2d-1a366f458698",
+			"quantity": 1,
+			"scryfall_id": "f1229d97-bd56-4b53-802d-be74c3374aaf"
+		},
+		{
+			"cardId": "ba751c9b-d6a1-40d4-b74c-b8d0e511eeaa",
+			"name": "Temple of Plenty",
+			"oracle_id": "e521322b-0e83-458c-8936-7021a80ee279",
+			"quantity": 1,
+			"scryfall_id": "ba751c9b-d6a1-40d4-b74c-b8d0e511eeaa"
+		},
+		{
+			"cardId": "6aebcc3b-504e-40fc-b232-a2aa21a0521b",
+			"name": "Vorinclex, Voice of Hunger",
+			"oracle_id": "dbf0ad03-ab31-49d2-89b1-05b45948a61f",
+			"quantity": 1,
+			"scryfall_id": "6aebcc3b-504e-40fc-b232-a2aa21a0521b"
+		},
+		{
+			"cardId": "b459b25c-647b-4353-932e-f590f26ab973",
+			"name": "Shalai, Voice of Plenty",
+			"oracle_id": "a0c47ab6-dfb4-46ee-a3f7-9e1521b4bb4b",
+			"quantity": 1,
+			"scryfall_id": "b459b25c-647b-4353-932e-f590f26ab973"
+		},
+		{
+			"cardId": "ff0d8624-1f83-4150-8ef4-ce8345f8067f",
+			"name": "Cultivate",
+			"oracle_id": "8b755881-a72d-4e21-a369-d2924eb4585a",
+			"quantity": 1,
+			"scryfall_id": "ff0d8624-1f83-4150-8ef4-ce8345f8067f"
+		},
+		{
+			"cardId": "4ce95099-9032-4c44-af25-ab02e60af168",
+			"name": "Archangel of Thune",
+			"oracle_id": "4f2d4538-dc1d-4c09-964b-b0d7c240fb7d",
+			"quantity": 1,
+			"scryfall_id": "4ce95099-9032-4c44-af25-ab02e60af168"
+		},
+		{
+			"cardId": "ea9d7b34-7c68-470e-88e1-6d3216fea368",
+			"name": "Song of the Worldsoul",
+			"oracle_id": "fbb70f54-8c33-4de0-b05c-f0bff9ffa6ce",
+			"quantity": 1,
+			"scryfall_id": "ea9d7b34-7c68-470e-88e1-6d3216fea368"
+		},
+		{
+			"cardId": "af542837-77a1-462e-8dd6-b4fa8b21bb33",
+			"name": "Halo Fountain",
+			"oracle_id": "36a9de4c-8073-475d-8679-e50844eef09e",
+			"quantity": 1,
+			"scryfall_id": "af542837-77a1-462e-8dd6-b4fa8b21bb33"
+		},
+		{
+			"cardId": "91ede26e-8784-4631-b9e7-f8f97b2904ac",
+			"name": "Bountiful Promenade",
+			"oracle_id": "761cb262-f83b-4a99-9345-b773182a7671",
+			"quantity": 1,
+			"scryfall_id": "91ede26e-8784-4631-b9e7-f8f97b2904ac"
+		},
+		{
+			"cardId": "53b54485-37e2-4ae0-be91-c77ec02c5fe0",
+			"name": "Soul Warden",
+			"oracle_id": "f3fad295-1af2-4ecc-8546-b121ad6be27b",
+			"quantity": 1,
+			"scryfall_id": "53b54485-37e2-4ae0-be91-c77ec02c5fe0"
+		},
+		{
+			"cardId": "721ea98f-4150-4fde-a0af-4f454695e927",
+			"name": "Finale of Devastation",
+			"oracle_id": "69872a9a-fe54-4e58-940c-89395af71acd",
+			"quantity": 1,
+			"scryfall_id": "721ea98f-4150-4fde-a0af-4f454695e927"
+		},
+		{
+			"cardId": "acfe026f-75a7-45b9-b7e8-e1a76855ea94",
+			"name": "Break Down",
+			"oracle_id": "73094bde-5466-41a4-88f9-a98e67f5ed2e",
+			"quantity": 1,
+			"scryfall_id": "acfe026f-75a7-45b9-b7e8-e1a76855ea94"
+		},
+		{
+			"cardId": "59e34237-1ef5-4376-b671-11692693fc61",
+			"name": "Grand Crescendo",
+			"oracle_id": "dc600c06-8239-409e-b53d-20f813a3f5e7",
+			"quantity": 1,
+			"scryfall_id": "59e34237-1ef5-4376-b671-11692693fc61"
+		},
+		{
+			"cardId": "8dd6cfef-6eac-4fa2-b9f3-808bd5502f27",
+			"name": "Forest",
+			"oracle_id": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+			"quantity": 7,
+			"scryfall_id": "8dd6cfef-6eac-4fa2-b9f3-808bd5502f27"
+		},
+		{
+			"cardId": "e2289fd7-19bb-4034-a6dd-267c4914975b",
+			"name": "Plains",
+			"oracle_id": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+			"quantity": 7,
+			"scryfall_id": "e2289fd7-19bb-4034-a6dd-267c4914975b"
+		}
+	],
+	"cards": {
+		"Trostani, Selesnya's Voice": {
+			"id": "6ab6e6c9-fe20-40d3-997e-fe3480081f03",
+			"oracle_id": "e94ef397-f5c5-4b8d-ae27-528352fa1d1e",
+			"name": "Trostani, Selesnya's Voice",
+			"mana_cost": "{G}{G}{W}{W}",
+			"cmc": 4,
+			"type_line": "Legendary Creature — Dryad",
+			"oracle_text": "Whenever another creature you control enters, you gain life equal to that creature's toughness.\n{1}{G}{W}, {T}: Populate. (Create a token that's a copy of a creature token you control.)",
+			"colors": [
+				"G",
+				"W"
+			],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [
+				"Populate"
+			],
+			"power": "2",
+			"toughness": "5",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/a/6ab6e6c9-fe20-40d3-997e-fe3480081f03.jpg?1786456571",
+				"normal": "https://cards.scryfall.io/normal/front/6/a/6ab6e6c9-fe20-40d3-997e-fe3480081f03.jpg?1786456571",
+				"large": "https://cards.scryfall.io/large/front/6/a/6ab6e6c9-fe20-40d3-997e-fe3480081f03.jpg?1786456571",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/a/6ab6e6c9-fe20-40d3-997e-fe3480081f03.jpg?1786456571"
+			}
+		},
+		"Aetherflux Reservoir": {
+			"id": "8542d37d-99cd-4b64-a524-94d2b2a4d9c3",
+			"oracle_id": "5f15125e-ae89-471e-b055-226a783bc7c1",
+			"name": "Aetherflux Reservoir",
+			"mana_cost": "{4}",
+			"cmc": 4,
+			"type_line": "Artifact",
+			"oracle_text": "Whenever you cast a spell, you gain 1 life for each spell you've cast this turn.\nPay 50 life: This artifact deals 50 damage to any target.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/8/5/8542d37d-99cd-4b64-a524-94d2b2a4d9c3.jpg?1783931976",
+				"normal": "https://cards.scryfall.io/normal/front/8/5/8542d37d-99cd-4b64-a524-94d2b2a4d9c3.jpg?1783931976",
+				"large": "https://cards.scryfall.io/large/front/8/5/8542d37d-99cd-4b64-a524-94d2b2a4d9c3.jpg?1783931976",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/8/5/8542d37d-99cd-4b64-a524-94d2b2a4d9c3.jpg?1783931976"
+			}
+		},
+		"Crested Sunmare": {
+			"id": "668eae14-fead-4264-9e16-a63a7815c954",
+			"oracle_id": "054fedbb-062e-491e-9a94-594fda33094f",
+			"name": "Crested Sunmare",
+			"mana_cost": "{3}{W}{W}",
+			"cmc": 5,
+			"type_line": "Creature — Horse",
+			"oracle_text": "Other Horses you control have indestructible.\nAt the beginning of each end step, if you gained life this turn, create a 5/5 white Horse creature token.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "5",
+			"toughness": "5",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/6/668eae14-fead-4264-9e16-a63a7815c954.jpg?1783928106",
+				"normal": "https://cards.scryfall.io/normal/front/6/6/668eae14-fead-4264-9e16-a63a7815c954.jpg?1783928106",
+				"large": "https://cards.scryfall.io/large/front/6/6/668eae14-fead-4264-9e16-a63a7815c954.jpg?1783928106",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/6/668eae14-fead-4264-9e16-a63a7815c954.jpg?1783928106"
+			}
+		},
+		"Song of Freyalise": {
+			"id": "dc2e59ad-7592-44e2-86d7-7a20d0a10775",
+			"oracle_id": "9fe1f3ef-2c30-4ccc-9a67-5349e98e2502",
+			"name": "Song of Freyalise",
+			"mana_cost": "{1}{G}",
+			"cmc": 2,
+			"type_line": "Enchantment — Saga",
+			"oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI, II — Until your next turn, creatures you control gain \"{T}: Add one mana of any color.\"\nIII — Put a +1/+1 counter on each creature you control. Those creatures gain vigilance, trample, and indestructible until end of turn.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "saga",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/d/c/dc2e59ad-7592-44e2-86d7-7a20d0a10775.jpg?1783925024",
+				"normal": "https://cards.scryfall.io/normal/front/d/c/dc2e59ad-7592-44e2-86d7-7a20d0a10775.jpg?1783925024",
+				"large": "https://cards.scryfall.io/large/front/d/c/dc2e59ad-7592-44e2-86d7-7a20d0a10775.jpg?1783925024",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/d/c/dc2e59ad-7592-44e2-86d7-7a20d0a10775.jpg?1783925024"
+			}
+		},
+		"Nykthos Paragon": {
+			"id": "b4899ae9-4375-4c58-bd27-fbb32df1b53d",
+			"oracle_id": "367ac7e2-5056-48f3-a296-87d6cb1f7b54",
+			"name": "Nykthos Paragon",
+			"mana_cost": "{4}{W}{W}",
+			"cmc": 6,
+			"type_line": "Enchantment Creature — Human Soldier",
+			"oracle_text": "Whenever you gain life, you may put that many +1/+1 counters on each creature you control. Do this only once each turn.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "4",
+			"toughness": "6",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/b/4/b4899ae9-4375-4c58-bd27-fbb32df1b53d.jpg?1783915213",
+				"normal": "https://cards.scryfall.io/normal/front/b/4/b4899ae9-4375-4c58-bd27-fbb32df1b53d.jpg?1783915213",
+				"large": "https://cards.scryfall.io/large/front/b/4/b4899ae9-4375-4c58-bd27-fbb32df1b53d.jpg?1783915213",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/b/4/b4899ae9-4375-4c58-bd27-fbb32df1b53d.jpg?1783915213"
+			}
+		},
+		"Speaker of the Heavens": {
+			"id": "cd39083e-f67e-4be1-9c1d-29df27e1ff1a",
+			"oracle_id": "e4bacf1b-0a45-4c73-857d-dffadb7e6fa5",
+			"name": "Speaker of the Heavens",
+			"mana_cost": "{W}",
+			"cmc": 1,
+			"type_line": "Creature — Human Cleric",
+			"oracle_text": "Vigilance, lifelink (Attacking doesn't cause this creature to tap. Damage dealt by this creature also causes you to gain that much life.)\n{T}: Create a 4/4 white Angel creature token with flying. Activate only if you have at least 7 life more than your starting life total and only as a sorcery.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Lifelink",
+				"Vigilance"
+			],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/c/d/cd39083e-f67e-4be1-9c1d-29df27e1ff1a.jpg?1783915205",
+				"normal": "https://cards.scryfall.io/normal/front/c/d/cd39083e-f67e-4be1-9c1d-29df27e1ff1a.jpg?1783915205",
+				"large": "https://cards.scryfall.io/large/front/c/d/cd39083e-f67e-4be1-9c1d-29df27e1ff1a.jpg?1783915205",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/c/d/cd39083e-f67e-4be1-9c1d-29df27e1ff1a.jpg?1783915205"
+			}
+		},
+		"Cleric Class": {
+			"id": "48e8de7c-3e9a-4569-8968-c4a5fc81acaa",
+			"oracle_id": "f0ead7f5-5c82-40fd-8e89-3e3c5d31fbad",
+			"name": "Cleric Class",
+			"mana_cost": "{W}",
+			"cmc": 1,
+			"type_line": "Enchantment — Class",
+			"oracle_text": "(Gain the next level as a sorcery to add its ability.)\nIf you would gain life, you gain that much life plus 1 instead.\n{3}{W}: Level 2\nWhenever you gain life, put a +1/+1 counter on target creature you control.\n{4}{W}: Level 3\nWhen this Class becomes level 3, return target creature card from your graveyard to the battlefield. You gain life equal to that creature's toughness.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "class",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/8/48e8de7c-3e9a-4569-8968-c4a5fc81acaa.jpg?1783910477",
+				"normal": "https://cards.scryfall.io/normal/front/4/8/48e8de7c-3e9a-4569-8968-c4a5fc81acaa.jpg?1783910477",
+				"large": "https://cards.scryfall.io/large/front/4/8/48e8de7c-3e9a-4569-8968-c4a5fc81acaa.jpg?1783910477",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/8/48e8de7c-3e9a-4569-8968-c4a5fc81acaa.jpg?1783910477"
+			}
+		},
+		"Overgrown Farmland": {
+			"id": "5d61ebe0-e115-49d8-a97d-53b81b8acdc5",
+			"oracle_id": "709d2f10-1585-48c3-9058-ddd5f62f0452",
+			"name": "Overgrown Farmland",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "This land enters tapped unless you control two or more other lands.\n{T}: Add {G} or {W}.",
+			"colors": [],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/d/5d61ebe0-e115-49d8-a97d-53b81b8acdc5.jpg?1783908474",
+				"normal": "https://cards.scryfall.io/normal/front/5/d/5d61ebe0-e115-49d8-a97d-53b81b8acdc5.jpg?1783908474",
+				"large": "https://cards.scryfall.io/large/front/5/d/5d61ebe0-e115-49d8-a97d-53b81b8acdc5.jpg?1783908474",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/d/5d61ebe0-e115-49d8-a97d-53b81b8acdc5.jpg?1783908474"
+			}
+		},
+		"Farseek": {
+			"id": "204476df-d5b1-4d0b-b0d3-a4c3fc7efcab",
+			"oracle_id": "495e52e6-4c2b-4574-9474-eadbdcc8b4ac",
+			"name": "Farseek",
+			"mana_cost": "{1}{G}",
+			"cmc": 2,
+			"type_line": "Sorcery",
+			"oracle_text": "Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/0/204476df-d5b1-4d0b-b0d3-a4c3fc7efcab.jpg?1783906706",
+				"normal": "https://cards.scryfall.io/normal/front/2/0/204476df-d5b1-4d0b-b0d3-a4c3fc7efcab.jpg?1783906706",
+				"large": "https://cards.scryfall.io/large/front/2/0/204476df-d5b1-4d0b-b0d3-a4c3fc7efcab.jpg?1783906706",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/0/204476df-d5b1-4d0b-b0d3-a4c3fc7efcab.jpg?1783906706"
+			}
+		},
+		"Growing Ranks": {
+			"id": "3396f676-d990-42ea-b40a-7da6548cca0a",
+			"oracle_id": "bec6fb31-60a3-432f-ba36-aebf172f8b27",
+			"name": "Growing Ranks",
+			"mana_cost": "{2}{G/W}{G/W}",
+			"cmc": 4,
+			"type_line": "Enchantment",
+			"oracle_text": "At the beginning of your upkeep, populate. (Create a token that's a copy of a creature token you control.)",
+			"colors": [
+				"G",
+				"W"
+			],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [
+				"Populate"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/3/3/3396f676-d990-42ea-b40a-7da6548cca0a.jpg?1790073220",
+				"normal": "https://cards.scryfall.io/normal/front/3/3/3396f676-d990-42ea-b40a-7da6548cca0a.jpg?1790073220",
+				"large": "https://cards.scryfall.io/large/front/3/3/3396f676-d990-42ea-b40a-7da6548cca0a.jpg?1790073220",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/3/3/3396f676-d990-42ea-b40a-7da6548cca0a.jpg?1790073220"
+			}
+		},
+		"Phyrexian Processor": {
+			"id": "a2e35d8d-050f-4f7a-809a-c0aea30c0dbb",
+			"oracle_id": "36c800cb-b1ca-4432-ad3c-4d8b90337f4c",
+			"name": "Phyrexian Processor",
+			"mana_cost": "{4}",
+			"cmc": 4,
+			"type_line": "Artifact",
+			"oracle_text": "As this artifact enters, pay any amount of life.\n{4}, {T}: Create an X/X black Phyrexian Minion creature token, where X is the life paid as this artifact entered.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/a/2/a2e35d8d-050f-4f7a-809a-c0aea30c0dbb.jpg?1786456387",
+				"normal": "https://cards.scryfall.io/normal/front/a/2/a2e35d8d-050f-4f7a-809a-c0aea30c0dbb.jpg?1786456387",
+				"large": "https://cards.scryfall.io/large/front/a/2/a2e35d8d-050f-4f7a-809a-c0aea30c0dbb.jpg?1786456387",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/a/2/a2e35d8d-050f-4f7a-809a-c0aea30c0dbb.jpg?1786456387"
+			}
+		},
+		"Angel of Indemnity": {
+			"id": "3dfccb9c-e098-4f5b-817c-08403d0d27ef",
+			"oracle_id": "4f57a320-b6b5-49de-af0a-f2e2649758a7",
+			"name": "Angel of Indemnity",
+			"mana_cost": "{5}{W}",
+			"cmc": 6,
+			"type_line": "Creature — Angel Warrior",
+			"oracle_text": "Flying, lifelink\nWhen this creature enters, return target permanent card with mana value 4 or less from your graveyard to the battlefield.\nEncore {6}{W}{W} ({6}{W}{W}, Exile this card from your graveyard: For each opponent, create a token copy that attacks that opponent this turn if able. They gain haste. Sacrifice them at the beginning of the next end step. Activate only as a sorcery.)",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Lifelink",
+				"Encore"
+			],
+			"power": "5",
+			"toughness": "5",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/3/d/3dfccb9c-e098-4f5b-817c-08403d0d27ef.jpg?1787700589",
+				"normal": "https://cards.scryfall.io/normal/front/3/d/3dfccb9c-e098-4f5b-817c-08403d0d27ef.jpg?1787700589",
+				"large": "https://cards.scryfall.io/large/front/3/d/3dfccb9c-e098-4f5b-817c-08403d0d27ef.jpg?1787700589",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/3/d/3dfccb9c-e098-4f5b-817c-08403d0d27ef.jpg?1787700589"
+			}
+		},
+		"Idol of Oblivion": {
+			"id": "f8692db5-6f2d-4330-9e23-1c3246898a35",
+			"oracle_id": "c232d974-9c65-4bce-b045-e5a7cc0c62e0",
+			"name": "Idol of Oblivion",
+			"mana_cost": "{2}",
+			"cmc": 2,
+			"type_line": "Artifact",
+			"oracle_text": "{T}: Draw a card. Activate only if you created a token this turn.\n{8}, {T}, Sacrifice this artifact: Create a 10/10 colorless Eldrazi creature token.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/f/8/f8692db5-6f2d-4330-9e23-1c3246898a35.jpg?1787681677",
+				"normal": "https://cards.scryfall.io/normal/front/f/8/f8692db5-6f2d-4330-9e23-1c3246898a35.jpg?1787681677",
+				"large": "https://cards.scryfall.io/large/front/f/8/f8692db5-6f2d-4330-9e23-1c3246898a35.jpg?1787681677",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/f/8/f8692db5-6f2d-4330-9e23-1c3246898a35.jpg?1787681677"
+			}
+		},
+		"Conclave Evangelist": {
+			"id": "5a7c5405-a20c-4385-b91c-7bda787533c2",
+			"oracle_id": "13c81fc5-dd35-481d-8e32-4d404fb0e4ac",
+			"name": "Conclave Evangelist",
+			"mana_cost": "{3}{G/W}{G/W}",
+			"cmc": 5,
+			"type_line": "Creature — Elephant Cleric",
+			"oracle_text": "Myriad (Whenever this creature attacks, for each opponent other than defending player, you may create a token copy that's tapped and attacking that player or a planeswalker they control. Exile the tokens at end of combat.)\nWhenever this creature deals combat damage to a player, create a token that's a copy of this creature.",
+			"colors": [
+				"G",
+				"W"
+			],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [
+				"Myriad"
+			],
+			"power": "4",
+			"toughness": "4",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/a/5a7c5405-a20c-4385-b91c-7bda787533c2.jpg?1787678602",
+				"normal": "https://cards.scryfall.io/normal/front/5/a/5a7c5405-a20c-4385-b91c-7bda787533c2.jpg?1787678602",
+				"large": "https://cards.scryfall.io/large/front/5/a/5a7c5405-a20c-4385-b91c-7bda787533c2.jpg?1787678602",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/a/5a7c5405-a20c-4385-b91c-7bda787533c2.jpg?1787678602"
+			}
+		},
+		"Voice of Resurgence": {
+			"id": "5af28ad7-5736-44f0-81ae-67ec82d03ee2",
+			"oracle_id": "5cbbb3f3-63a4-4983-81ea-8c405b10e63f",
+			"name": "Voice of Resurgence",
+			"mana_cost": "{G}{W}",
+			"cmc": 2,
+			"type_line": "Creature — Elemental",
+			"oracle_text": "Whenever an opponent casts a spell during your turn and when this creature dies, create a green and white Elemental creature token with \"This token's power and toughness are each equal to the number of creatures you control.\"",
+			"colors": [
+				"G",
+				"W"
+			],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "2",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/a/5af28ad7-5736-44f0-81ae-67ec82d03ee2.jpg?1788990230",
+				"normal": "https://cards.scryfall.io/normal/front/5/a/5af28ad7-5736-44f0-81ae-67ec82d03ee2.jpg?1788990230",
+				"large": "https://cards.scryfall.io/large/front/5/a/5af28ad7-5736-44f0-81ae-67ec82d03ee2.jpg?1788990230",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/a/5af28ad7-5736-44f0-81ae-67ec82d03ee2.jpg?1788990230"
+			}
+		},
+		"Lazotep Quarry": {
+			"id": "22bf056b-24bb-4f32-93af-088817f42ce8",
+			"oracle_id": "0d2fa39a-9cac-4a1f-bb1e-b6162e6d5169",
+			"name": "Lazotep Quarry",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land — Desert",
+			"oracle_text": "{T}: Add {C}.\n{T}, Sacrifice a creature: Add one mana of any color.\n{X}{2}, {T}, Sacrifice a Desert: Exile target creature card with mana value X from your graveyard. Create a token that's a copy of it, except it's a 4/4 black Zombie. Activate only as a sorcery.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/2/22bf056b-24bb-4f32-93af-088817f42ce8.jpg?1788990998",
+				"normal": "https://cards.scryfall.io/normal/front/2/2/22bf056b-24bb-4f32-93af-088817f42ce8.jpg?1788990998",
+				"large": "https://cards.scryfall.io/large/front/2/2/22bf056b-24bb-4f32-93af-088817f42ce8.jpg?1788990998",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/2/22bf056b-24bb-4f32-93af-088817f42ce8.jpg?1788990998"
+			}
+		},
+		"Gruff Triplets": {
+			"id": "7d094fd4-2b7d-479f-a1af-4610a8349847",
+			"oracle_id": "32de1b70-f993-4423-b0ef-0762c2b4d1b1",
+			"name": "Gruff Triplets",
+			"mana_cost": "{3}{G}{G}{G}",
+			"cmc": 6,
+			"type_line": "Creature — Satyr Warrior",
+			"oracle_text": "Trample\nWhen this creature enters, if it isn't a token, create two tokens that are copies of it.\nWhen this creature dies, put a number of +1/+1 counters equal to its power on each creature you control named Gruff Triplets.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [
+				"Trample"
+			],
+			"power": "3",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/7/d/7d094fd4-2b7d-479f-a1af-4610a8349847.jpg?1788991239",
+				"normal": "https://cards.scryfall.io/normal/front/7/d/7d094fd4-2b7d-479f-a1af-4610a8349847.jpg?1788991239",
+				"large": "https://cards.scryfall.io/large/front/7/d/7d094fd4-2b7d-479f-a1af-4610a8349847.jpg?1788991239",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/7/d/7d094fd4-2b7d-479f-a1af-4610a8349847.jpg?1788991239"
+			}
+		},
+		"Soul of Eternity": {
+			"id": "362e5d97-a20e-47b6-9d28-818faa3804de",
+			"oracle_id": "4d211447-9f18-4d23-8f19-cdf6ad3c68ba",
+			"name": "Soul of Eternity",
+			"mana_cost": "{5}{W}{W}",
+			"cmc": 7,
+			"type_line": "Creature — Avatar",
+			"oracle_text": "Soul of Eternity's power and toughness are each equal to your life total.\nEncore {7}{W}{W} ({7}{W}{W}, Exile this card from your graveyard: For each opponent, create a token copy that attacks that opponent this turn if able. They gain haste. Sacrifice them at the beginning of the next end step. Activate only as a sorcery.)",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Encore"
+			],
+			"power": "*",
+			"toughness": "*",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/3/6/362e5d97-a20e-47b6-9d28-818faa3804de.jpg?1788990680",
+				"normal": "https://cards.scryfall.io/normal/front/3/6/362e5d97-a20e-47b6-9d28-818faa3804de.jpg?1788990680",
+				"large": "https://cards.scryfall.io/large/front/3/6/362e5d97-a20e-47b6-9d28-818faa3804de.jpg?1788990680",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/3/6/362e5d97-a20e-47b6-9d28-818faa3804de.jpg?1788990680"
+			}
+		},
+		"Bramble Sovereign": {
+			"id": "72549b49-4eca-4852-b145-f4bb18e2d7cb",
+			"oracle_id": "5e26a688-67d7-48a5-8862-653851bf3784",
+			"name": "Bramble Sovereign",
+			"mana_cost": "{2}{G}{G}",
+			"cmc": 4,
+			"type_line": "Creature — Dryad",
+			"oracle_text": "Whenever another nontoken creature enters, you may pay {1}{G}. If you do, that creature's controller creates a token that's a copy of that creature.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [],
+			"power": "4",
+			"toughness": "4",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/7/2/72549b49-4eca-4852-b145-f4bb18e2d7cb.jpg?1788990263",
+				"normal": "https://cards.scryfall.io/normal/front/7/2/72549b49-4eca-4852-b145-f4bb18e2d7cb.jpg?1788990263",
+				"large": "https://cards.scryfall.io/large/front/7/2/72549b49-4eca-4852-b145-f4bb18e2d7cb.jpg?1788990263",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/7/2/72549b49-4eca-4852-b145-f4bb18e2d7cb.jpg?1788990263"
+			}
+		},
+		"Rhys the Redeemed": {
+			"id": "af107542-ebf3-4a35-a313-b8803d8eda0c",
+			"oracle_id": "f7252190-ad24-4ba3-a644-2790dd1d680d",
+			"name": "Rhys the Redeemed",
+			"mana_cost": "{G/W}",
+			"cmc": 1,
+			"type_line": "Legendary Creature — Elf Warrior",
+			"oracle_text": "{2}{G/W}, {T}: Create a 1/1 green and white Elf Warrior creature token.\n{4}{G/W}{G/W}, {T}: For each creature token you control, create a token that's a copy of that creature.",
+			"colors": [
+				"G",
+				"W"
+			],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/a/f/af107542-ebf3-4a35-a313-b8803d8eda0c.jpg?1788990214",
+				"normal": "https://cards.scryfall.io/normal/front/a/f/af107542-ebf3-4a35-a313-b8803d8eda0c.jpg?1788990214",
+				"large": "https://cards.scryfall.io/large/front/a/f/af107542-ebf3-4a35-a313-b8803d8eda0c.jpg?1788990214",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/a/f/af107542-ebf3-4a35-a313-b8803d8eda0c.jpg?1788990214"
+			}
+		},
+		"Swords to Plowshares": {
+			"id": "7430b1e0-b91d-412b-8b0c-d480c3ce4165",
+			"oracle_id": "b1544f21-7e98-461b-aed5-e748b0168c52",
+			"name": "Swords to Plowshares",
+			"mana_cost": "{W}",
+			"cmc": 1,
+			"type_line": "Instant",
+			"oracle_text": "Exile target creature. Its controller gains life equal to its power.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/7/4/7430b1e0-b91d-412b-8b0c-d480c3ce4165.jpg?1788990727",
+				"normal": "https://cards.scryfall.io/normal/front/7/4/7430b1e0-b91d-412b-8b0c-d480c3ce4165.jpg?1788990727",
+				"large": "https://cards.scryfall.io/large/front/7/4/7430b1e0-b91d-412b-8b0c-d480c3ce4165.jpg?1788990727",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/7/4/7430b1e0-b91d-412b-8b0c-d480c3ce4165.jpg?1788990727"
+			}
+		},
+		"Rootborn Defenses": {
+			"id": "50f1b7ba-7888-4f0d-a515-23dcf96bf87e",
+			"oracle_id": "04046ae4-5c51-434b-930c-f3b1d348bf4b",
+			"name": "Rootborn Defenses",
+			"mana_cost": "{2}{W}",
+			"cmc": 3,
+			"type_line": "Instant",
+			"oracle_text": "Populate. Creatures you control gain indestructible until end of turn. (To populate, create a token that's a copy of a creature token you control.)",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Populate"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/0/50f1b7ba-7888-4f0d-a515-23dcf96bf87e.jpg?1788991186",
+				"normal": "https://cards.scryfall.io/normal/front/5/0/50f1b7ba-7888-4f0d-a515-23dcf96bf87e.jpg?1788991186",
+				"large": "https://cards.scryfall.io/large/front/5/0/50f1b7ba-7888-4f0d-a515-23dcf96bf87e.jpg?1788991186",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/0/50f1b7ba-7888-4f0d-a515-23dcf96bf87e.jpg?1788991186"
+			}
+		},
+		"Congregate": {
+			"id": "1e73f893-b8ab-4c1f-821a-c7dc8de99351",
+			"oracle_id": "d139294c-36bb-4a1e-800d-50c4a4ae9877",
+			"name": "Congregate",
+			"mana_cost": "{3}{W}",
+			"cmc": 4,
+			"type_line": "Instant",
+			"oracle_text": "Target player gains 2 life for each creature on the battlefield.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/e/1e73f893-b8ab-4c1f-821a-c7dc8de99351.jpg?1788990709",
+				"normal": "https://cards.scryfall.io/normal/front/1/e/1e73f893-b8ab-4c1f-821a-c7dc8de99351.jpg?1788990709",
+				"large": "https://cards.scryfall.io/large/front/1/e/1e73f893-b8ab-4c1f-821a-c7dc8de99351.jpg?1788990709",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/e/1e73f893-b8ab-4c1f-821a-c7dc8de99351.jpg?1788990709"
+			}
+		},
+		"Nature's Lore": {
+			"id": "deb0e799-1920-4cd9-acd2-2df9df333712",
+			"oracle_id": "78826359-fe63-44ad-adc4-a17ffcd710e4",
+			"name": "Nature's Lore",
+			"mana_cost": "{1}{G}",
+			"cmc": 2,
+			"type_line": "Sorcery",
+			"oracle_text": "Search your library for a Forest card, put that card onto the battlefield, then shuffle.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/d/e/deb0e799-1920-4cd9-acd2-2df9df333712.jpg?1788990647",
+				"normal": "https://cards.scryfall.io/normal/front/d/e/deb0e799-1920-4cd9-acd2-2df9df333712.jpg?1788990647",
+				"large": "https://cards.scryfall.io/large/front/d/e/deb0e799-1920-4cd9-acd2-2df9df333712.jpg?1788990647",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/d/e/deb0e799-1920-4cd9-acd2-2df9df333712.jpg?1788990647"
+			}
+		},
+		"Excavation Technique": {
+			"id": "ff1f6e62-eb7b-4d9b-8034-f227f655431f",
+			"oracle_id": "bcd3e6a1-7b76-408d-9236-3791c3e1064a",
+			"name": "Excavation Technique",
+			"mana_cost": "{3}{W}",
+			"cmc": 4,
+			"type_line": "Sorcery",
+			"oracle_text": "Demonstrate (When you cast this spell, you may copy it. If you do, choose an opponent to also copy it. Players may choose new targets for their copies.)\nDestroy target nonland permanent. Its controller creates two Treasure tokens.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Treasure",
+				"Demonstrate"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/f/f/ff1f6e62-eb7b-4d9b-8034-f227f655431f.jpg?1788990551",
+				"normal": "https://cards.scryfall.io/normal/front/f/f/ff1f6e62-eb7b-4d9b-8034-f227f655431f.jpg?1788990551",
+				"large": "https://cards.scryfall.io/large/front/f/f/ff1f6e62-eb7b-4d9b-8034-f227f655431f.jpg?1788990551",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/f/f/ff1f6e62-eb7b-4d9b-8034-f227f655431f.jpg?1788990551"
+			}
+		},
+		"Prosperous Innkeeper": {
+			"id": "ef5793d2-58e7-4da2-9777-8db45abc09c0",
+			"oracle_id": "da785227-cf8a-4d44-9e7c-fc909ea868f2",
+			"name": "Prosperous Innkeeper",
+			"mana_cost": "{1}{G}",
+			"cmc": 2,
+			"type_line": "Creature — Halfling Citizen",
+			"oracle_text": "When this creature enters, create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")\nWhenever another creature you control enters, you gain 1 life.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [
+				"Treasure"
+			],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/f/ef5793d2-58e7-4da2-9777-8db45abc09c0.jpg?1788990314",
+				"normal": "https://cards.scryfall.io/normal/front/e/f/ef5793d2-58e7-4da2-9777-8db45abc09c0.jpg?1788990314",
+				"large": "https://cards.scryfall.io/large/front/e/f/ef5793d2-58e7-4da2-9777-8db45abc09c0.jpg?1788990314",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/f/ef5793d2-58e7-4da2-9777-8db45abc09c0.jpg?1788990314"
+			}
+		},
+		"Selesnya Signet": {
+			"id": "43b5b24f-316a-406d-b30a-0f6252f6590d",
+			"oracle_id": "1436dd81-496e-42a5-b210-fb5b9cdf073f",
+			"name": "Selesnya Signet",
+			"mana_cost": "{2}",
+			"cmc": 2,
+			"type_line": "Artifact",
+			"oracle_text": "{1}, {T}: Add {G}{W}.",
+			"colors": [],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/3/43b5b24f-316a-406d-b30a-0f6252f6590d.jpg?1788991206",
+				"normal": "https://cards.scryfall.io/normal/front/4/3/43b5b24f-316a-406d-b30a-0f6252f6590d.jpg?1788991206",
+				"large": "https://cards.scryfall.io/large/front/4/3/43b5b24f-316a-406d-b30a-0f6252f6590d.jpg?1788991206",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/3/43b5b24f-316a-406d-b30a-0f6252f6590d.jpg?1788991206"
+			}
+		},
+		"Ancient Cornucopia": {
+			"id": "1c21b711-9f2b-460a-86fb-6f1ef0de3037",
+			"oracle_id": "f0950c95-a297-489d-b166-74bba6af5376",
+			"name": "Ancient Cornucopia",
+			"mana_cost": "{2}{G}",
+			"cmc": 3,
+			"type_line": "Artifact",
+			"oracle_text": "Whenever you cast a spell that's one or more colors, you may gain 1 life for each of that spell's colors. Do this only once each turn.\n{T}: Add one mana of any color.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/c/1c21b711-9f2b-460a-86fb-6f1ef0de3037.jpg?1788990292",
+				"normal": "https://cards.scryfall.io/normal/front/1/c/1c21b711-9f2b-460a-86fb-6f1ef0de3037.jpg?1788990292",
+				"large": "https://cards.scryfall.io/large/front/1/c/1c21b711-9f2b-460a-86fb-6f1ef0de3037.jpg?1788990292",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/c/1c21b711-9f2b-460a-86fb-6f1ef0de3037.jpg?1788990292"
+			}
+		},
+		"Fanatic of Rhonas": {
+			"id": "15844392-111e-4bab-91eb-4fe53c52c34c",
+			"oracle_id": "7973820b-fdaf-46ec-9e3e-d4c0e77b5067",
+			"name": "Fanatic of Rhonas",
+			"mana_cost": "{1}{G}",
+			"cmc": 2,
+			"type_line": "Creature — Snake Druid",
+			"oracle_text": "{T}: Add {G}.\nFerocious — {T}: Add {G}{G}{G}{G}. Activate only if you control a creature with power 4 or greater.\nEternalize {2}{G}{G} ({2}{G}{G}, Exile this card from your graveyard: Create a token that's a copy of it, except it's a 4/4 black Zombie Snake Druid with no mana cost. Eternalize only as a sorcery.)",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [
+				"Ferocious",
+				"Eternalize"
+			],
+			"power": "1",
+			"toughness": "4",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/5/15844392-111e-4bab-91eb-4fe53c52c34c.jpg?1788991054",
+				"normal": "https://cards.scryfall.io/normal/front/1/5/15844392-111e-4bab-91eb-4fe53c52c34c.jpg?1788991054",
+				"large": "https://cards.scryfall.io/large/front/1/5/15844392-111e-4bab-91eb-4fe53c52c34c.jpg?1788991054",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/5/15844392-111e-4bab-91eb-4fe53c52c34c.jpg?1788991054"
+			}
+		},
+		"Arasta of the Endless Web": {
+			"id": "d75a8f9b-e16c-496c-80a2-6fc857e9d159",
+			"oracle_id": "695eea46-1535-48c5-bbb6-0b8379e77bfc",
+			"name": "Arasta of the Endless Web",
+			"mana_cost": "{2}{G}{G}",
+			"cmc": 4,
+			"type_line": "Legendary Enchantment Creature — Spider",
+			"oracle_text": "Reach\nWhenever an opponent casts an instant or sorcery spell, create a 1/2 green Spider creature token with reach.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [
+				"Reach"
+			],
+			"power": "3",
+			"toughness": "5",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/d/7/d75a8f9b-e16c-496c-80a2-6fc857e9d159.jpg?1788990378",
+				"normal": "https://cards.scryfall.io/normal/front/d/7/d75a8f9b-e16c-496c-80a2-6fc857e9d159.jpg?1788990378",
+				"large": "https://cards.scryfall.io/large/front/d/7/d75a8f9b-e16c-496c-80a2-6fc857e9d159.jpg?1788990378",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/d/7/d75a8f9b-e16c-496c-80a2-6fc857e9d159.jpg?1788990378"
+			}
+		},
+		"Elenda's Hierophant": {
+			"id": "a0b21a6d-5f3c-41e3-b994-42a6a7af538f",
+			"oracle_id": "cb99c675-adc5-4dad-8be8-524f5f921213",
+			"name": "Elenda's Hierophant",
+			"mana_cost": "{2}{W}",
+			"cmc": 3,
+			"type_line": "Creature — Vampire Cleric",
+			"oracle_text": "Flying\nWhenever you gain life, put a +1/+1 counter on this creature.\nWhen this creature dies, create X 1/1 white Vampire creature tokens with lifelink, where X is its power.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/a/0/a0b21a6d-5f3c-41e3-b994-42a6a7af538f.jpg?1788990909",
+				"normal": "https://cards.scryfall.io/normal/front/a/0/a0b21a6d-5f3c-41e3-b994-42a6a7af538f.jpg?1788990909",
+				"large": "https://cards.scryfall.io/large/front/a/0/a0b21a6d-5f3c-41e3-b994-42a6a7af538f.jpg?1788990909",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/a/0/a0b21a6d-5f3c-41e3-b994-42a6a7af538f.jpg?1788990909"
+			}
+		},
+		"Krosan Verge": {
+			"id": "e29cd7be-b6b3-4f04-9951-b25bb1b94eef",
+			"oracle_id": "d9a10971-f32b-4978-952d-fed0a5bc9e36",
+			"name": "Krosan Verge",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "This land enters tapped.\n{T}: Add {C}.\n{2}, {T}, Sacrifice this land: Search your library for a Forest card and a Plains card, put them onto the battlefield tapped, then shuffle.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/2/e29cd7be-b6b3-4f04-9951-b25bb1b94eef.jpg?1788991144",
+				"normal": "https://cards.scryfall.io/normal/front/e/2/e29cd7be-b6b3-4f04-9951-b25bb1b94eef.jpg?1788991144",
+				"large": "https://cards.scryfall.io/large/front/e/2/e29cd7be-b6b3-4f04-9951-b25bb1b94eef.jpg?1788991144",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/2/e29cd7be-b6b3-4f04-9951-b25bb1b94eef.jpg?1788991144"
+			}
+		},
+		"Voice of the Blessed": {
+			"id": "53f70ada-935d-4c46-bb37-8093b679dcf2",
+			"oracle_id": "01e742ed-660c-43c6-b393-e589a54cbe1b",
+			"name": "Voice of the Blessed",
+			"mana_cost": "{W}{W}",
+			"cmc": 2,
+			"type_line": "Creature — Spirit Cleric",
+			"oracle_text": "Whenever you gain life, put a +1/+1 counter on this creature.\nAs long as this creature has four or more +1/+1 counters on it, it has flying and vigilance.\nAs long as this creature has ten or more +1/+1 counters on it, it has indestructible.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "2",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/3/53f70ada-935d-4c46-bb37-8093b679dcf2.jpg?1788990851",
+				"normal": "https://cards.scryfall.io/normal/front/5/3/53f70ada-935d-4c46-bb37-8093b679dcf2.jpg?1788990851",
+				"large": "https://cards.scryfall.io/large/front/5/3/53f70ada-935d-4c46-bb37-8093b679dcf2.jpg?1788990851",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/3/53f70ada-935d-4c46-bb37-8093b679dcf2.jpg?1788990851"
+			}
+		},
+		"Path to Exile": {
+			"id": "02bfeace-61d9-4db3-ae48-87334151a496",
+			"oracle_id": "d683d985-9888-4d21-8b5f-69e69ce4a03b",
+			"name": "Path to Exile",
+			"mana_cost": "{W}",
+			"cmc": 1,
+			"type_line": "Instant",
+			"oracle_text": "Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/0/2/02bfeace-61d9-4db3-ae48-87334151a496.jpg?1788990356",
+				"normal": "https://cards.scryfall.io/normal/front/0/2/02bfeace-61d9-4db3-ae48-87334151a496.jpg?1788990356",
+				"large": "https://cards.scryfall.io/large/front/0/2/02bfeace-61d9-4db3-ae48-87334151a496.jpg?1788990356",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/0/2/02bfeace-61d9-4db3-ae48-87334151a496.jpg?1788990356"
+			}
+		},
+		"Sungrass Prairie": {
+			"id": "8ba06faa-01b5-4939-b790-97fd26b22584",
+			"oracle_id": "0a28dff0-2bd6-4105-b73a-b6c4735833fd",
+			"name": "Sungrass Prairie",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "{1}, {T}: Add {G}{W}.",
+			"colors": [],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/8/b/8ba06faa-01b5-4939-b790-97fd26b22584.jpg?1788990440",
+				"normal": "https://cards.scryfall.io/normal/front/8/b/8ba06faa-01b5-4939-b790-97fd26b22584.jpg?1788990440",
+				"large": "https://cards.scryfall.io/large/front/8/b/8ba06faa-01b5-4939-b790-97fd26b22584.jpg?1788990440",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/8/b/8ba06faa-01b5-4939-b790-97fd26b22584.jpg?1788990440"
+			}
+		},
+		"Brokers Hideout": {
+			"id": "86e21f70-c4de-4e1e-b3e4-0c823376da41",
+			"oracle_id": "bd002797-a545-4bee-88bf-b878436e7cca",
+			"name": "Brokers Hideout",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "When this land enters, sacrifice it. When you do, search your library for a basic Forest, Plains, or Island card, put it onto the battlefield tapped, then shuffle and you gain 1 life.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/8/6/86e21f70-c4de-4e1e-b3e4-0c823376da41.jpg?1788991224",
+				"normal": "https://cards.scryfall.io/normal/front/8/6/86e21f70-c4de-4e1e-b3e4-0c823376da41.jpg?1788991224",
+				"large": "https://cards.scryfall.io/large/front/8/6/86e21f70-c4de-4e1e-b3e4-0c823376da41.jpg?1788991224",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/8/6/86e21f70-c4de-4e1e-b3e4-0c823376da41.jpg?1788991224"
+			}
+		},
+		"Restless Prairie": {
+			"id": "fb36f34f-11b0-495a-8304-c98b692e3bc8",
+			"oracle_id": "c071257a-63e7-48d0-a677-0b396a09b624",
+			"name": "Restless Prairie",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "This land enters tapped.\n{T}: Add {G} or {W}.\n{2}{G}{W}: This land becomes a 3/3 green and white Llama creature until end of turn. It's still a land.\nWhenever this land attacks, other creatures you control get +1/+1 until end of turn.",
+			"colors": [],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/f/b/fb36f34f-11b0-495a-8304-c98b692e3bc8.jpg?1788990930",
+				"normal": "https://cards.scryfall.io/normal/front/f/b/fb36f34f-11b0-495a-8304-c98b692e3bc8.jpg?1788990930",
+				"large": "https://cards.scryfall.io/large/front/f/b/fb36f34f-11b0-495a-8304-c98b692e3bc8.jpg?1788990930",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/f/b/fb36f34f-11b0-495a-8304-c98b692e3bc8.jpg?1788990930"
+			}
+		},
+		"Skullclamp": {
+			"id": "cb3d9604-ed75-49b6-be67-bd66cddaa971",
+			"oracle_id": "65986c1b-8e51-4604-b685-d82fa7d1263a",
+			"name": "Skullclamp",
+			"mana_cost": "{1}",
+			"cmc": 1,
+			"type_line": "Artifact — Equipment",
+			"oracle_text": "Equipped creature gets +1/-1.\nWhenever equipped creature dies, draw two cards.\nEquip {1}",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [
+				"Equip"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/c/b/cb3d9604-ed75-49b6-be67-bd66cddaa971.jpg?1788991117",
+				"normal": "https://cards.scryfall.io/normal/front/c/b/cb3d9604-ed75-49b6-be67-bd66cddaa971.jpg?1788991117",
+				"large": "https://cards.scryfall.io/large/front/c/b/cb3d9604-ed75-49b6-be67-bd66cddaa971.jpg?1788991117",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/c/b/cb3d9604-ed75-49b6-be67-bd66cddaa971.jpg?1788991117"
+			}
+		},
+		"Camaraderie": {
+			"id": "d2b7763c-8820-46aa-9ced-65d8803f9b7d",
+			"oracle_id": "9aab386c-d48c-4611-b757-aa69b26cc1b1",
+			"name": "Camaraderie",
+			"mana_cost": "{4}{G}{W}",
+			"cmc": 6,
+			"type_line": "Sorcery",
+			"oracle_text": "You gain X life and draw X cards, where X is the number of creatures you control. Creatures you control get +1/+1 until end of turn.",
+			"colors": [
+				"G",
+				"W"
+			],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/d/2/d2b7763c-8820-46aa-9ced-65d8803f9b7d.jpg?1788990836",
+				"normal": "https://cards.scryfall.io/normal/front/d/2/d2b7763c-8820-46aa-9ced-65d8803f9b7d.jpg?1788990836",
+				"large": "https://cards.scryfall.io/large/front/d/2/d2b7763c-8820-46aa-9ced-65d8803f9b7d.jpg?1788990836",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/d/2/d2b7763c-8820-46aa-9ced-65d8803f9b7d.jpg?1788990836"
+			}
+		},
+		"Storm Herd": {
+			"id": "e4a25752-9155-44be-a7eb-865755c2f915",
+			"oracle_id": "30aa362b-7ab1-486e-9802-1171e0dc2416",
+			"name": "Storm Herd",
+			"mana_cost": "{8}{W}{W}",
+			"cmc": 10,
+			"type_line": "Sorcery",
+			"oracle_text": "Create X 1/1 white Pegasus creature tokens with flying, where X is your life total.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/4/e4a25752-9155-44be-a7eb-865755c2f915.jpg?1788990871",
+				"normal": "https://cards.scryfall.io/normal/front/e/4/e4a25752-9155-44be-a7eb-865755c2f915.jpg?1788990871",
+				"large": "https://cards.scryfall.io/large/front/e/4/e4a25752-9155-44be-a7eb-865755c2f915.jpg?1788990871",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/4/e4a25752-9155-44be-a7eb-865755c2f915.jpg?1788990871"
+			}
+		},
+		"Selesnya Sanctuary": {
+			"id": "048b055e-e045-43b3-9bba-e8fd366be45b",
+			"oracle_id": "00ef1c55-dea1-4564-bd57-66de86cba4df",
+			"name": "Selesnya Sanctuary",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "This land enters tapped.\nWhen this land enters, return a land you control to its owner's hand.\n{T}: Add {G}{W}.",
+			"colors": [],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/0/4/048b055e-e045-43b3-9bba-e8fd366be45b.jpg?1788990628",
+				"normal": "https://cards.scryfall.io/normal/front/0/4/048b055e-e045-43b3-9bba-e8fd366be45b.jpg?1788990628",
+				"large": "https://cards.scryfall.io/large/front/0/4/048b055e-e045-43b3-9bba-e8fd366be45b.jpg?1788990628",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/0/4/048b055e-e045-43b3-9bba-e8fd366be45b.jpg?1788990628"
+			}
+		},
+		"Dazzling Theater // Prop Room": {
+			"id": "1b8e0e7a-a37b-4b20-a843-413a6da740f0",
+			"oracle_id": "c46a02db-13d6-477f-9da0-822599470168",
+			"name": "Dazzling Theater // Prop Room",
+			"mana_cost": "{3}{W} // {2}{W}",
+			"cmc": 7,
+			"type_line": "Enchantment — Room",
+			"oracle_text": "Creature spells you cast have convoke. (Your creatures can help cast those spells. Each creature you tap while casting a creature spell pays for {1} or one mana of that creature's color.)\n(You may cast either half. That door unlocks on the battlefield. As a sorcery, you may pay the mana cost of a locked door to unlock it.)",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "split",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/b/1b8e0e7a-a37b-4b20-a843-413a6da740f0.jpg?1788990767",
+				"normal": "https://cards.scryfall.io/normal/front/1/b/1b8e0e7a-a37b-4b20-a843-413a6da740f0.jpg?1788990767",
+				"large": "https://cards.scryfall.io/large/front/1/b/1b8e0e7a-a37b-4b20-a843-413a6da740f0.jpg?1788990767",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/b/1b8e0e7a-a37b-4b20-a843-413a6da740f0.jpg?1788990767"
+			},
+			"faces": [
+				{
+					"name": "Dazzling Theater",
+					"mana_cost": "{3}{W}",
+					"type_line": "Enchantment — Room",
+					"oracle_text": "Creature spells you cast have convoke. (Your creatures can help cast those spells. Each creature you tap while casting a creature spell pays for {1} or one mana of that creature's color.)\n(You may cast either half. That door unlocks on the battlefield. As a sorcery, you may pay the mana cost of a locked door to unlock it.)",
+					"power": "",
+					"toughness": ""
+				},
+				{
+					"name": "Prop Room",
+					"mana_cost": "{2}{W}",
+					"type_line": "Enchantment — Room",
+					"oracle_text": "Untap each creature you control during each other player's untap step.\n(You may cast either half. That door unlocks on the battlefield. As a sorcery, you may pay the mana cost of a locked door to unlock it.)",
+					"power": "",
+					"toughness": ""
+				}
+			]
+		},
+		"Ajani's Pridemate": {
+			"id": "814bc057-dc2d-4630-86d2-6dfaadeba4c7",
+			"oracle_id": "95e94dea-5ac0-4d6f-adec-ca147aee861f",
+			"name": "Ajani's Pridemate",
+			"mana_cost": "{1}{W}",
+			"cmc": 2,
+			"type_line": "Creature — Cat Soldier",
+			"oracle_text": "Whenever you gain life, put a +1/+1 counter on this creature.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "2",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/8/1/814bc057-dc2d-4630-86d2-6dfaadeba4c7.jpg?1788990787",
+				"normal": "https://cards.scryfall.io/normal/front/8/1/814bc057-dc2d-4630-86d2-6dfaadeba4c7.jpg?1788990787",
+				"large": "https://cards.scryfall.io/large/front/8/1/814bc057-dc2d-4630-86d2-6dfaadeba4c7.jpg?1788990787",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/8/1/814bc057-dc2d-4630-86d2-6dfaadeba4c7.jpg?1788990787"
+			}
+		},
+		"Silverquill Lecturer": {
+			"id": "8a256374-7a0d-4ae2-9c9b-fb962a6d9fc4",
+			"oracle_id": "ac230b68-f945-4a1a-bd89-33e6d62e3c36",
+			"name": "Silverquill Lecturer",
+			"mana_cost": "{4}{W}",
+			"cmc": 5,
+			"type_line": "Creature — Kor Wizard",
+			"oracle_text": "Creature spells you cast have demonstrate. (Whenever you cast a creature spell, you may copy it. If you do, choose an opponent to also copy it. Each copy becomes a token.)",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "3",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/8/a/8a256374-7a0d-4ae2-9c9b-fb962a6d9fc4.jpg?1788991019",
+				"normal": "https://cards.scryfall.io/normal/front/8/a/8a256374-7a0d-4ae2-9c9b-fb962a6d9fc4.jpg?1788991019",
+				"large": "https://cards.scryfall.io/large/front/8/a/8a256374-7a0d-4ae2-9c9b-fb962a6d9fc4.jpg?1788991019",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/8/a/8a256374-7a0d-4ae2-9c9b-fb962a6d9fc4.jpg?1788991019"
+			}
+		},
+		"Llanowar Elves": {
+			"id": "0d903049-adaa-4c41-b790-28f2303ed564",
+			"oracle_id": "68954295-54e3-4303-a6bc-fc4547a4e3a3",
+			"name": "Llanowar Elves",
+			"mana_cost": "{G}",
+			"cmc": 1,
+			"type_line": "Creature — Elf Druid",
+			"oracle_text": "{T}: Add {G}.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/0/d/0d903049-adaa-4c41-b790-28f2303ed564.jpg?1788990820",
+				"normal": "https://cards.scryfall.io/normal/front/0/d/0d903049-adaa-4c41-b790-28f2303ed564.jpg?1788990820",
+				"large": "https://cards.scryfall.io/large/front/0/d/0d903049-adaa-4c41-b790-28f2303ed564.jpg?1788990820",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/0/d/0d903049-adaa-4c41-b790-28f2303ed564.jpg?1788990820"
+			}
+		},
+		"Sunpetal Grove": {
+			"id": "a6ee978a-1cde-4661-bfe0-4c0d24211fa1",
+			"oracle_id": "402ec768-76fb-474e-ae74-babc90d833c4",
+			"name": "Sunpetal Grove",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "This land enters tapped unless you control a Forest or a Plains.\n{T}: Add {G} or {W}.",
+			"colors": [],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/a/6/a6ee978a-1cde-4661-bfe0-4c0d24211fa1.jpg?1788990461",
+				"normal": "https://cards.scryfall.io/normal/front/a/6/a6ee978a-1cde-4661-bfe0-4c0d24211fa1.jpg?1788990461",
+				"large": "https://cards.scryfall.io/large/front/a/6/a6ee978a-1cde-4661-bfe0-4c0d24211fa1.jpg?1788990461",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/a/6/a6ee978a-1cde-4661-bfe0-4c0d24211fa1.jpg?1788990461"
+			}
+		},
+		"Pest Infestation": {
+			"id": "4a45bf1f-748d-4075-976d-cc355fce1862",
+			"oracle_id": "1b704798-0c69-4c18-ac7e-42933ce90028",
+			"name": "Pest Infestation",
+			"mana_cost": "{X}{X}{G}",
+			"cmc": 1,
+			"type_line": "Sorcery",
+			"oracle_text": "Destroy up to X target artifacts and/or enchantments. Create twice X 1/1 black and green Pest creature tokens with \"When this token dies, you gain 1 life.\"",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/a/4a45bf1f-748d-4075-976d-cc355fce1862.jpg?1788990613",
+				"normal": "https://cards.scryfall.io/normal/front/4/a/4a45bf1f-748d-4075-976d-cc355fce1862.jpg?1788990613",
+				"large": "https://cards.scryfall.io/large/front/4/a/4a45bf1f-748d-4075-976d-cc355fce1862.jpg?1788990613",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/a/4a45bf1f-748d-4075-976d-cc355fce1862.jpg?1788990613"
+			}
+		},
+		"Healing Technique": {
+			"id": "27b36061-a6d1-4d80-80fc-f536757eebee",
+			"oracle_id": "1b99c32d-1d02-410e-84bf-9db2ca05f576",
+			"name": "Healing Technique",
+			"mana_cost": "{3}{G}",
+			"cmc": 4,
+			"type_line": "Sorcery",
+			"oracle_text": "Demonstrate (When you cast this spell, you may copy it. If you do, choose an opponent to also copy it. Players may choose new targets for their copies.)\nReturn target card from your graveyard to your hand. You gain life equal to that card's mana value. Exile Healing Technique.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [
+				"Demonstrate"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/7/27b36061-a6d1-4d80-80fc-f536757eebee.jpg?1788990598",
+				"normal": "https://cards.scryfall.io/normal/front/2/7/27b36061-a6d1-4d80-80fc-f536757eebee.jpg?1788990598",
+				"large": "https://cards.scryfall.io/large/front/2/7/27b36061-a6d1-4d80-80fc-f536757eebee.jpg?1788990598",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/7/27b36061-a6d1-4d80-80fc-f536757eebee.jpg?1788990598"
+			}
+		},
+		"Ghalta and Mavren": {
+			"id": "05e1189b-837d-4c1f-85a2-35d229c4dee8",
+			"oracle_id": "756042c5-e444-45d7-8dc6-ae7c83c98438",
+			"name": "Ghalta and Mavren",
+			"mana_cost": "{3}{G}{G}{W}{W}",
+			"cmc": 7,
+			"type_line": "Legendary Creature — Dinosaur Vampire",
+			"oracle_text": "Trample\nWhenever you attack, choose one —\n• Create a tapped and attacking X/X green Dinosaur creature token with trample, where X is the greatest power among other attacking creatures.\n• Create X 1/1 white Vampire creature tokens with lifelink, where X is the number of other attacking creatures.",
+			"colors": [
+				"G",
+				"W"
+			],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [
+				"Trample"
+			],
+			"power": "12",
+			"toughness": "12",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/0/5/05e1189b-837d-4c1f-85a2-35d229c4dee8.jpg?1788991158",
+				"normal": "https://cards.scryfall.io/normal/front/0/5/05e1189b-837d-4c1f-85a2-35d229c4dee8.jpg?1788991158",
+				"large": "https://cards.scryfall.io/large/front/0/5/05e1189b-837d-4c1f-85a2-35d229c4dee8.jpg?1788991158",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/0/5/05e1189b-837d-4c1f-85a2-35d229c4dee8.jpg?1788991158"
+			}
+		},
+		"Canopy Vista": {
+			"id": "79ca8982-826a-4c23-9e3a-04721d2e6466",
+			"oracle_id": "dcb7e046-f01b-497c-88e5-57794eb30ce5",
+			"name": "Canopy Vista",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land — Forest Plains",
+			"oracle_text": "({T}: Add {G} or {W}.)\nThis land enters tapped unless you control two or more basic lands.",
+			"colors": [],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/7/9/79ca8982-826a-4c23-9e3a-04721d2e6466.jpg?1788990888",
+				"normal": "https://cards.scryfall.io/normal/front/7/9/79ca8982-826a-4c23-9e3a-04721d2e6466.jpg?1788990888",
+				"large": "https://cards.scryfall.io/large/front/7/9/79ca8982-826a-4c23-9e3a-04721d2e6466.jpg?1788990888",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/7/9/79ca8982-826a-4c23-9e3a-04721d2e6466.jpg?1788990888"
+			}
+		},
+		"Sapseep Forest": {
+			"id": "ec4e782f-55fa-448d-9c9e-ed2d1a8972d0",
+			"oracle_id": "8d4dcab0-86e5-4ff8-a90f-78a062664e16",
+			"name": "Sapseep Forest",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land — Forest",
+			"oracle_text": "({T}: Add {G}.)\nThis land enters tapped.\n{G}, {T}: You gain 1 life. Activate only if you control two or more green permanents.",
+			"colors": [],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/c/ec4e782f-55fa-448d-9c9e-ed2d1a8972d0.jpg?1788990568",
+				"normal": "https://cards.scryfall.io/normal/front/e/c/ec4e782f-55fa-448d-9c9e-ed2d1a8972d0.jpg?1788990568",
+				"large": "https://cards.scryfall.io/large/front/e/c/ec4e782f-55fa-448d-9c9e-ed2d1a8972d0.jpg?1788990568",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/c/ec4e782f-55fa-448d-9c9e-ed2d1a8972d0.jpg?1788990568"
+			}
+		},
+		"Grove of the Guardian": {
+			"id": "d41f7539-738f-4e27-a538-a442e0d2fe84",
+			"oracle_id": "f746612a-fbed-44ca-b2cc-5928e10cf4bb",
+			"name": "Grove of the Guardian",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "{T}: Add {C}.\n{3}{G}{W}, {T}, Tap two untapped creatures you control, Sacrifice this land: Create an 8/8 green and white Elemental creature token with vigilance.",
+			"colors": [],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/d/4/d41f7539-738f-4e27-a538-a442e0d2fe84.jpg?1788990806",
+				"normal": "https://cards.scryfall.io/normal/front/d/4/d41f7539-738f-4e27-a538-a442e0d2fe84.jpg?1788990806",
+				"large": "https://cards.scryfall.io/large/front/d/4/d41f7539-738f-4e27-a538-a442e0d2fe84.jpg?1788990806",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/d/4/d41f7539-738f-4e27-a538-a442e0d2fe84.jpg?1788990806"
+			}
+		},
+		"Rogue's Passage": {
+			"id": "f5fc17a9-4e12-40b1-b08a-0322bbcf8718",
+			"oracle_id": "f29dc596-2121-4421-8463-15f6c2e8b9b3",
+			"name": "Rogue's Passage",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "{T}: Add {C}.\n{4}, {T}: Target creature can't be blocked this turn.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/f/5/f5fc17a9-4e12-40b1-b08a-0322bbcf8718.jpg?1788990536",
+				"normal": "https://cards.scryfall.io/normal/front/f/5/f5fc17a9-4e12-40b1-b08a-0322bbcf8718.jpg?1788990536",
+				"large": "https://cards.scryfall.io/large/front/f/5/f5fc17a9-4e12-40b1-b08a-0322bbcf8718.jpg?1788990536",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/f/5/f5fc17a9-4e12-40b1-b08a-0322bbcf8718.jpg?1788990536"
+			}
+		},
+		"Angelic Chorus": {
+			"id": "06271dfc-e1af-4a98-a647-41873fc0046e",
+			"oracle_id": "e66b12ff-45da-46dc-9148-bd8ea9b7fde0",
+			"name": "Angelic Chorus",
+			"mana_cost": "{3}{W}{W}",
+			"cmc": 5,
+			"type_line": "Enchantment",
+			"oracle_text": "Whenever a creature you control enters, you gain life equal to its toughness.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/0/6/06271dfc-e1af-4a98-a647-41873fc0046e.jpg?1788990277",
+				"normal": "https://cards.scryfall.io/normal/front/0/6/06271dfc-e1af-4a98-a647-41873fc0046e.jpg?1788990277",
+				"large": "https://cards.scryfall.io/large/front/0/6/06271dfc-e1af-4a98-a647-41873fc0046e.jpg?1788990277",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/0/6/06271dfc-e1af-4a98-a647-41873fc0046e.jpg?1788990277"
+			}
+		},
+		"Avacyn's Pilgrim": {
+			"id": "716a6199-5bcd-45f5-8e9c-1cd1b67f6029",
+			"oracle_id": "069f6530-e65c-4d52-85f3-e0a2acd148c5",
+			"name": "Avacyn's Pilgrim",
+			"mana_cost": "{G}",
+			"cmc": 1,
+			"type_line": "Creature — Human Monk",
+			"oracle_text": "{T}: Add {W}.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/7/1/716a6199-5bcd-45f5-8e9c-1cd1b67f6029.jpg?1788991072",
+				"normal": "https://cards.scryfall.io/normal/front/7/1/716a6199-5bcd-45f5-8e9c-1cd1b67f6029.jpg?1788991072",
+				"large": "https://cards.scryfall.io/large/front/7/1/716a6199-5bcd-45f5-8e9c-1cd1b67f6029.jpg?1788991072",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/7/1/716a6199-5bcd-45f5-8e9c-1cd1b67f6029.jpg?1788991072"
+			}
+		},
+		"Invincible Hymn": {
+			"id": "fade917b-5e44-438e-949c-d3909cb6d037",
+			"oracle_id": "cc7d99e8-f9dc-47d3-b6c0-e9308d33c3c0",
+			"name": "Invincible Hymn",
+			"mana_cost": "{6}{W}{W}",
+			"cmc": 8,
+			"type_line": "Sorcery",
+			"oracle_text": "Count the number of cards in your library. Your life total becomes that number.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/f/a/fade917b-5e44-438e-949c-d3909cb6d037.jpg?1788990247",
+				"normal": "https://cards.scryfall.io/normal/front/f/a/fade917b-5e44-438e-949c-d3909cb6d037.jpg?1788990247",
+				"large": "https://cards.scryfall.io/large/front/f/a/fade917b-5e44-438e-949c-d3909cb6d037.jpg?1788990247",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/f/a/fade917b-5e44-438e-949c-d3909cb6d037.jpg?1788990247"
+			}
+		},
+		"Blossoming Bogbeast": {
+			"id": "abccd29b-02c9-429e-a9c4-c18008e8b578",
+			"oracle_id": "30f3c3be-0fe9-463d-a245-e44701aec7f2",
+			"name": "Blossoming Bogbeast",
+			"mana_cost": "{4}{G}",
+			"cmc": 5,
+			"type_line": "Creature — Beast",
+			"oracle_text": "Whenever this creature attacks, you gain 2 life. Then creatures you control gain trample and get +X/+X until end of turn, where X is the amount of life you gained this turn.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [],
+			"power": "3",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/a/b/abccd29b-02c9-429e-a9c4-c18008e8b578.jpg?1788990583",
+				"normal": "https://cards.scryfall.io/normal/front/a/b/abccd29b-02c9-429e-a9c4-c18008e8b578.jpg?1788990583",
+				"large": "https://cards.scryfall.io/large/front/a/b/abccd29b-02c9-429e-a9c4-c18008e8b578.jpg?1788990583",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/a/b/abccd29b-02c9-429e-a9c4-c18008e8b578.jpg?1788990583"
+			}
+		},
+		"Blossoming Sands": {
+			"id": "a5fab5db-0b2c-4721-9692-f0a402cb26a8",
+			"oracle_id": "45429b2c-be3b-4b2e-9bab-a059ccbda8cd",
+			"name": "Blossoming Sands",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "This land enters tapped.\nWhen this land enters, you gain 1 life.\n{T}: Add {G} or {W}.",
+			"colors": [],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/a/5/a5fab5db-0b2c-4721-9692-f0a402cb26a8.jpg?1788991172",
+				"normal": "https://cards.scryfall.io/normal/front/a/5/a5fab5db-0b2c-4721-9692-f0a402cb26a8.jpg?1788991172",
+				"large": "https://cards.scryfall.io/large/front/a/5/a5fab5db-0b2c-4721-9692-f0a402cb26a8.jpg?1788991172",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/a/5/a5fab5db-0b2c-4721-9692-f0a402cb26a8.jpg?1788991172"
+			}
+		},
+		"Gavony Township": {
+			"id": "fe0dbf31-79b1-4c8a-ba24-8ed3730724bf",
+			"oracle_id": "8a44e4e7-dfa2-427b-bbff-11c398fa60bb",
+			"name": "Gavony Township",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "{T}: Add {C}.\n{2}{G}{W}, {T}: Put a +1/+1 counter on each creature you control.",
+			"colors": [],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/f/e/fe0dbf31-79b1-4c8a-ba24-8ed3730724bf.jpg?1788991131",
+				"normal": "https://cards.scryfall.io/normal/front/f/e/fe0dbf31-79b1-4c8a-ba24-8ed3730724bf.jpg?1788991131",
+				"large": "https://cards.scryfall.io/large/front/f/e/fe0dbf31-79b1-4c8a-ba24-8ed3730724bf.jpg?1788991131",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/f/e/fe0dbf31-79b1-4c8a-ba24-8ed3730724bf.jpg?1788991131"
+			}
+		},
+		"Boon Reflection": {
+			"id": "65587afb-4edd-4a57-9968-8a91a1b07861",
+			"oracle_id": "b86d3142-568a-4eea-b1ae-5fcfc1453533",
+			"name": "Boon Reflection",
+			"mana_cost": "{4}{W}",
+			"cmc": 5,
+			"type_line": "Enchantment",
+			"oracle_text": "If you would gain life, you gain twice that much life instead.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/5/65587afb-4edd-4a57-9968-8a91a1b07861.jpg?1788990196",
+				"normal": "https://cards.scryfall.io/normal/front/6/5/65587afb-4edd-4a57-9968-8a91a1b07861.jpg?1788990196",
+				"large": "https://cards.scryfall.io/large/front/6/5/65587afb-4edd-4a57-9968-8a91a1b07861.jpg?1788990196",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/5/65587afb-4edd-4a57-9968-8a91a1b07861.jpg?1788990196"
+			}
+		},
+		"Radiant Fountain": {
+			"id": "41caa041-a5f3-44ba-a509-681a2fcdf5ed",
+			"oracle_id": "6db442e5-fbcc-4456-a4c5-bea1aee3fc8e",
+			"name": "Radiant Fountain",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "When this land enters, you gain 2 life.\n{T}: Add {C}.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/1/41caa041-a5f3-44ba-a509-681a2fcdf5ed.jpg?1788990984",
+				"normal": "https://cards.scryfall.io/normal/front/4/1/41caa041-a5f3-44ba-a509-681a2fcdf5ed.jpg?1788990984",
+				"large": "https://cards.scryfall.io/large/front/4/1/41caa041-a5f3-44ba-a509-681a2fcdf5ed.jpg?1788990984",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/1/41caa041-a5f3-44ba-a509-681a2fcdf5ed.jpg?1788990984"
+			}
+		},
+		"Springleaf Drum": {
+			"id": "4b2ec79e-a545-4b26-9c81-e81626fd7073",
+			"oracle_id": "bdeb440d-a714-40e8-9038-f651e6ae45fb",
+			"name": "Springleaf Drum",
+			"mana_cost": "{1}",
+			"cmc": 1,
+			"type_line": "Artifact",
+			"oracle_text": "{T}, Tap an untapped creature you control: Add one mana of any color.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/b/4b2ec79e-a545-4b26-9c81-e81626fd7073.jpg?1788990970",
+				"normal": "https://cards.scryfall.io/normal/front/4/b/4b2ec79e-a545-4b26-9c81-e81626fd7073.jpg?1788990970",
+				"large": "https://cards.scryfall.io/large/front/4/b/4b2ec79e-a545-4b26-9c81-e81626fd7073.jpg?1788990970",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/b/4b2ec79e-a545-4b26-9c81-e81626fd7073.jpg?1788990970"
+			}
+		},
+		"Sundering Growth": {
+			"id": "6dfde7ce-4741-4ace-b6b3-6e90f62d235c",
+			"oracle_id": "a2a380d8-4df7-4357-862c-ed3fb795db6c",
+			"name": "Sundering Growth",
+			"mana_cost": "{G/W}{G/W}",
+			"cmc": 2,
+			"type_line": "Instant",
+			"oracle_text": "Destroy target artifact or enchantment, then populate. (Create a token that's a copy of a creature token you control.)",
+			"colors": [
+				"G",
+				"W"
+			],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [
+				"Populate"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/d/6dfde7ce-4741-4ace-b6b3-6e90f62d235c.jpg?1788990505",
+				"normal": "https://cards.scryfall.io/normal/front/6/d/6dfde7ce-4741-4ace-b6b3-6e90f62d235c.jpg?1788990505",
+				"large": "https://cards.scryfall.io/large/front/6/d/6dfde7ce-4741-4ace-b6b3-6e90f62d235c.jpg?1788990505",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/d/6dfde7ce-4741-4ace-b6b3-6e90f62d235c.jpg?1788990505"
+			}
+		},
+		"Resplendent Angel": {
+			"id": "1740ef90-42a6-454d-bb85-b495bb149ca6",
+			"oracle_id": "2ac93092-1a57-4cf7-8f03-1dca86d5c476",
+			"name": "Resplendent Angel",
+			"mana_cost": "{1}{W}{W}",
+			"cmc": 3,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying\nAt the beginning of each end step, if you gained 5 or more life this turn, create a 4/4 white Angel creature token with flying and vigilance.\n{3}{W}{W}{W}: Until end of turn, this creature gets +2/+2 and gains lifelink.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "3",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/7/1740ef90-42a6-454d-bb85-b495bb149ca6.jpg?1788990949",
+				"normal": "https://cards.scryfall.io/normal/front/1/7/1740ef90-42a6-454d-bb85-b495bb149ca6.jpg?1788990949",
+				"large": "https://cards.scryfall.io/large/front/1/7/1740ef90-42a6-454d-bb85-b495bb149ca6.jpg?1788990949",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/7/1740ef90-42a6-454d-bb85-b495bb149ca6.jpg?1788990949"
+			}
+		},
+		"Mirari's Wake": {
+			"id": "92736247-ba8d-47dd-91e9-30ae47212cb9",
+			"oracle_id": "852657c0-18a4-4b28-b9ae-7728acdb5044",
+			"name": "Mirari's Wake",
+			"mana_cost": "{3}{G}{W}",
+			"cmc": 5,
+			"type_line": "Enchantment",
+			"oracle_text": "Creatures you control get +1/+1.\nWhenever you tap a land for mana, add one mana of any type that land produced.",
+			"colors": [
+				"G",
+				"W"
+			],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/9/2/92736247-ba8d-47dd-91e9-30ae47212cb9.jpg?1788991039",
+				"normal": "https://cards.scryfall.io/normal/front/9/2/92736247-ba8d-47dd-91e9-30ae47212cb9.jpg?1788991039",
+				"large": "https://cards.scryfall.io/large/front/9/2/92736247-ba8d-47dd-91e9-30ae47212cb9.jpg?1788991039",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/9/2/92736247-ba8d-47dd-91e9-30ae47212cb9.jpg?1788991039"
+			}
+		},
+		"Seraph Sanctuary": {
+			"id": "e6ed2004-936c-4967-a9c2-82f270ac5bb6",
+			"oracle_id": "0b504dc6-61cc-4a72-907c-145fa4c72466",
+			"name": "Seraph Sanctuary",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "When this land enters, you gain 1 life.\nWhenever an Angel you control enters, you gain 1 life.\n{T}: Add {C}.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/6/e6ed2004-936c-4967-a9c2-82f270ac5bb6.jpg?1788990696",
+				"normal": "https://cards.scryfall.io/normal/front/e/6/e6ed2004-936c-4967-a9c2-82f270ac5bb6.jpg?1788990696",
+				"large": "https://cards.scryfall.io/large/front/e/6/e6ed2004-936c-4967-a9c2-82f270ac5bb6.jpg?1788990696",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/6/e6ed2004-936c-4967-a9c2-82f270ac5bb6.jpg?1788990696"
+			}
+		},
+		"Shamanic Revelation": {
+			"id": "4a6d7336-6713-442b-a10d-a357f306b604",
+			"oracle_id": "d1d171de-1c6d-4fb9-817a-9c689c709f3d",
+			"name": "Shamanic Revelation",
+			"mana_cost": "{3}{G}{G}",
+			"cmc": 5,
+			"type_line": "Sorcery",
+			"oracle_text": "Draw a card for each creature you control.\nFerocious — You gain 4 life for each creature you control with power 4 or greater.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [
+				"Ferocious"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/a/4a6d7336-6713-442b-a10d-a357f306b604.jpg?1788990419",
+				"normal": "https://cards.scryfall.io/normal/front/4/a/4a6d7336-6713-442b-a10d-a357f306b604.jpg?1788990419",
+				"large": "https://cards.scryfall.io/large/front/4/a/4a6d7336-6713-442b-a10d-a357f306b604.jpg?1788990419",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/a/4a6d7336-6713-442b-a10d-a357f306b604.jpg?1788990419"
+			}
+		},
+		"Command Tower": {
+			"id": "e11a301d-27a3-4306-82e8-9e9b0b437415",
+			"oracle_id": "0895c9b7-ae7d-4bb3-af17-3b75deb50a25",
+			"name": "Command Tower",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "{T}: Add one mana of any color in your commander's color identity.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/1/e11a301d-27a3-4306-82e8-9e9b0b437415.jpg?1788990746",
+				"normal": "https://cards.scryfall.io/normal/front/e/1/e11a301d-27a3-4306-82e8-9e9b0b437415.jpg?1788990746",
+				"large": "https://cards.scryfall.io/large/front/e/1/e11a301d-27a3-4306-82e8-9e9b0b437415.jpg?1788990746",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/1/e11a301d-27a3-4306-82e8-9e9b0b437415.jpg?1788990746"
+			}
+		},
+		"Explore": {
+			"id": "bb2d6c1a-16f9-4807-aab2-73fed094a2a6",
+			"oracle_id": "b8f566ea-8283-4afa-9ac8-737e26419283",
+			"name": "Explore",
+			"mana_cost": "{1}{G}",
+			"cmc": 2,
+			"type_line": "Sorcery",
+			"oracle_text": "You may play an additional land this turn.\nDraw a card.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/b/b/bb2d6c1a-16f9-4807-aab2-73fed094a2a6.jpg?1788990399",
+				"normal": "https://cards.scryfall.io/normal/front/b/b/bb2d6c1a-16f9-4807-aab2-73fed094a2a6.jpg?1788990399",
+				"large": "https://cards.scryfall.io/large/front/b/b/bb2d6c1a-16f9-4807-aab2-73fed094a2a6.jpg?1788990399",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/b/b/bb2d6c1a-16f9-4807-aab2-73fed094a2a6.jpg?1788990399"
+			}
+		},
+		"Graypelt Refuge": {
+			"id": "f5130ca9-d8b4-4d0c-a0fa-9b7ce7c2a548",
+			"oracle_id": "60b36821-0fad-423c-98c4-f64d991719f3",
+			"name": "Graypelt Refuge",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "This land enters tapped.\nWhen this land enters, you gain 1 life.\n{T}: Add {G} or {W}.",
+			"colors": [],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/f/5/f5130ca9-d8b4-4d0c-a0fa-9b7ce7c2a548.jpg?1788990521",
+				"normal": "https://cards.scryfall.io/normal/front/f/5/f5130ca9-d8b4-4d0c-a0fa-9b7ce7c2a548.jpg?1788990521",
+				"large": "https://cards.scryfall.io/large/front/f/5/f5130ca9-d8b4-4d0c-a0fa-9b7ce7c2a548.jpg?1788990521",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/f/5/f5130ca9-d8b4-4d0c-a0fa-9b7ce7c2a548.jpg?1788990521"
+			}
+		},
+		"Hour of Reckoning": {
+			"id": "5e234ce4-e179-45b8-851c-76a7371044aa",
+			"oracle_id": "3bc13640-03f8-4b19-b0a4-7e7cb5271c0c",
+			"name": "Hour of Reckoning",
+			"mana_cost": "{4}{W}{W}{W}",
+			"cmc": 7,
+			"type_line": "Sorcery",
+			"oracle_text": "Convoke (Your creatures can help cast this spell. Each creature you tap while casting this spell pays for {1} or one mana of that creature's color.)\nDestroy all nontoken creatures.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Convoke"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/e/5e234ce4-e179-45b8-851c-76a7371044aa.jpg?1788991089",
+				"normal": "https://cards.scryfall.io/normal/front/5/e/5e234ce4-e179-45b8-851c-76a7371044aa.jpg?1788991089",
+				"large": "https://cards.scryfall.io/large/front/5/e/5e234ce4-e179-45b8-851c-76a7371044aa.jpg?1788991089",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/e/5e234ce4-e179-45b8-851c-76a7371044aa.jpg?1788991089"
+			}
+		},
+		"Lathiel, the Bounteous Dawn": {
+			"id": "744a260d-d546-48e8-8991-c355c719f2b3",
+			"oracle_id": "d3c56fc4-3611-41b1-952e-4c5311b1510b",
+			"name": "Lathiel, the Bounteous Dawn",
+			"mana_cost": "{2}{G}{W}",
+			"cmc": 4,
+			"type_line": "Legendary Creature — Unicorn",
+			"oracle_text": "Lifelink\nAt the beginning of each end step, if you gained life this turn, distribute up to that many +1/+1 counters among any number of other target creatures.",
+			"colors": [
+				"G",
+				"W"
+			],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [
+				"Lifelink"
+			],
+			"power": "2",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/7/4/744a260d-d546-48e8-8991-c355c719f2b3.jpg?1788990665",
+				"normal": "https://cards.scryfall.io/normal/front/7/4/744a260d-d546-48e8-8991-c355c719f2b3.jpg?1788990665",
+				"large": "https://cards.scryfall.io/large/front/7/4/744a260d-d546-48e8-8991-c355c719f2b3.jpg?1788990665",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/7/4/744a260d-d546-48e8-8991-c355c719f2b3.jpg?1788990665"
+			}
+		},
+		"Sol Ring": {
+			"id": "3b6a6593-b08f-4627-99a5-45d68f6e1c59",
+			"oracle_id": "6ad8011d-3471-4369-9d68-b264cc027487",
+			"name": "Sol Ring",
+			"mana_cost": "{1}",
+			"cmc": 1,
+			"type_line": "Artifact",
+			"oracle_text": "{T}: Add {C}{C}.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/3/b/3b6a6593-b08f-4627-99a5-45d68f6e1c59.jpg?1788990335",
+				"normal": "https://cards.scryfall.io/normal/front/3/b/3b6a6593-b08f-4627-99a5-45d68f6e1c59.jpg?1788990335",
+				"large": "https://cards.scryfall.io/large/front/3/b/3b6a6593-b08f-4627-99a5-45d68f6e1c59.jpg?1788990335",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/3/b/3b6a6593-b08f-4627-99a5-45d68f6e1c59.jpg?1788990335"
+			}
+		},
+		"Suture Priest": {
+			"id": "f1229d97-bd56-4b53-802d-be74c3374aaf",
+			"oracle_id": "c4d36522-3ace-4bfb-bf2d-1a366f458698",
+			"name": "Suture Priest",
+			"mana_cost": "{1}{W}",
+			"cmc": 2,
+			"type_line": "Creature — Phyrexian Cleric",
+			"oracle_text": "Whenever another creature you control enters, you may gain 1 life.\nWhenever a creature an opponent controls enters, you may have that player lose 1 life.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/f/1/f1229d97-bd56-4b53-802d-be74c3374aaf.jpg?1788991103",
+				"normal": "https://cards.scryfall.io/normal/front/f/1/f1229d97-bd56-4b53-802d-be74c3374aaf.jpg?1788991103",
+				"large": "https://cards.scryfall.io/large/front/f/1/f1229d97-bd56-4b53-802d-be74c3374aaf.jpg?1788991103",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/f/1/f1229d97-bd56-4b53-802d-be74c3374aaf.jpg?1788991103"
+			}
+		},
+		"Temple of Plenty": {
+			"id": "ba751c9b-d6a1-40d4-b74c-b8d0e511eeaa",
+			"oracle_id": "e521322b-0e83-458c-8936-7021a80ee279",
+			"name": "Temple of Plenty",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "This land enters tapped.\nWhen this land enters, scry 1. (Look at the top card of your library. You may put that card on the bottom.)\n{T}: Add {G} or {W}.",
+			"colors": [],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [
+				"Scry"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/b/a/ba751c9b-d6a1-40d4-b74c-b8d0e511eeaa.jpg?1788990484",
+				"normal": "https://cards.scryfall.io/normal/front/b/a/ba751c9b-d6a1-40d4-b74c-b8d0e511eeaa.jpg?1788990484",
+				"large": "https://cards.scryfall.io/large/front/b/a/ba751c9b-d6a1-40d4-b74c-b8d0e511eeaa.jpg?1788990484",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/b/a/ba751c9b-d6a1-40d4-b74c-b8d0e511eeaa.jpg?1788990484"
+			}
+		},
+		"Vorinclex, Voice of Hunger": {
+			"id": "6aebcc3b-504e-40fc-b232-a2aa21a0521b",
+			"oracle_id": "dbf0ad03-ab31-49d2-89b1-05b45948a61f",
+			"name": "Vorinclex, Voice of Hunger",
+			"mana_cost": "{6}{G}{G}",
+			"cmc": 8,
+			"type_line": "Legendary Creature — Phyrexian Praetor",
+			"oracle_text": "Trample\nWhenever you tap a land for mana, add one mana of any type that land produced.\nWhenever an opponent taps a land for mana, that land doesn't untap during its controller's next untap step.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [
+				"Trample"
+			],
+			"power": "7",
+			"toughness": "6",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/a/6aebcc3b-504e-40fc-b232-a2aa21a0521b.jpg?1786456461",
+				"normal": "https://cards.scryfall.io/normal/front/6/a/6aebcc3b-504e-40fc-b232-a2aa21a0521b.jpg?1786456461",
+				"large": "https://cards.scryfall.io/large/front/6/a/6aebcc3b-504e-40fc-b232-a2aa21a0521b.jpg?1786456461",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/a/6aebcc3b-504e-40fc-b232-a2aa21a0521b.jpg?1786456461"
+			}
+		},
+		"Shalai, Voice of Plenty": {
+			"id": "b459b25c-647b-4353-932e-f590f26ab973",
+			"oracle_id": "a0c47ab6-dfb4-46ee-a3f7-9e1521b4bb4b",
+			"name": "Shalai, Voice of Plenty",
+			"mana_cost": "{3}{W}",
+			"cmc": 4,
+			"type_line": "Legendary Creature — Angel",
+			"oracle_text": "Flying\nYou, planeswalkers you control, and other creatures you control have hexproof.\n{4}{G}{G}: Put a +1/+1 counter on each creature you control.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "3",
+			"toughness": "4",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/b/4/b459b25c-647b-4353-932e-f590f26ab973.jpg?1787659656",
+				"normal": "https://cards.scryfall.io/normal/front/b/4/b459b25c-647b-4353-932e-f590f26ab973.jpg?1787659656",
+				"large": "https://cards.scryfall.io/large/front/b/4/b459b25c-647b-4353-932e-f590f26ab973.jpg?1787659656",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/b/4/b459b25c-647b-4353-932e-f590f26ab973.jpg?1787659656"
+			}
+		},
+		"Cultivate": {
+			"id": "ff0d8624-1f83-4150-8ef4-ce8345f8067f",
+			"oracle_id": "8b755881-a72d-4e21-a369-d2924eb4585a",
+			"name": "Cultivate",
+			"mana_cost": "{2}{G}",
+			"cmc": 3,
+			"type_line": "Sorcery",
+			"oracle_text": "Search your library for up to two basic land cards, reveal those cards, put one onto the battlefield tapped and the other into your hand, then shuffle.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/f/f/ff0d8624-1f83-4150-8ef4-ce8345f8067f.jpg?1786456478",
+				"normal": "https://cards.scryfall.io/normal/front/f/f/ff0d8624-1f83-4150-8ef4-ce8345f8067f.jpg?1786456478",
+				"large": "https://cards.scryfall.io/large/front/f/f/ff0d8624-1f83-4150-8ef4-ce8345f8067f.jpg?1786456478",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/f/f/ff0d8624-1f83-4150-8ef4-ce8345f8067f.jpg?1786456478"
+			}
+		},
+		"Archangel of Thune": {
+			"id": "4ce95099-9032-4c44-af25-ab02e60af168",
+			"oracle_id": "4f2d4538-dc1d-4c09-964b-b0d7c240fb7d",
+			"name": "Archangel of Thune",
+			"mana_cost": "{3}{W}{W}",
+			"cmc": 5,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying\nLifelink (Damage dealt by this creature also causes you to gain that much life.)\nWhenever you gain life, put a +1/+1 counter on each creature you control.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Lifelink"
+			],
+			"power": "3",
+			"toughness": "4",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/c/4ce95099-9032-4c44-af25-ab02e60af168.jpg?1786456579",
+				"normal": "https://cards.scryfall.io/normal/front/4/c/4ce95099-9032-4c44-af25-ab02e60af168.jpg?1786456579",
+				"large": "https://cards.scryfall.io/large/front/4/c/4ce95099-9032-4c44-af25-ab02e60af168.jpg?1786456579",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/c/4ce95099-9032-4c44-af25-ab02e60af168.jpg?1786456579"
+			}
+		},
+		"Song of the Worldsoul": {
+			"id": "ea9d7b34-7c68-470e-88e1-6d3216fea368",
+			"oracle_id": "fbb70f54-8c33-4de0-b05c-f0bff9ffa6ce",
+			"name": "Song of the Worldsoul",
+			"mana_cost": "{4}{W}{W}",
+			"cmc": 6,
+			"type_line": "Enchantment",
+			"oracle_text": "Whenever you cast a spell, populate. (Create a token that's a copy of a creature token you control.)",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Populate"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/a/ea9d7b34-7c68-470e-88e1-6d3216fea368.jpg?1787659641",
+				"normal": "https://cards.scryfall.io/normal/front/e/a/ea9d7b34-7c68-470e-88e1-6d3216fea368.jpg?1787659641",
+				"large": "https://cards.scryfall.io/large/front/e/a/ea9d7b34-7c68-470e-88e1-6d3216fea368.jpg?1787659641",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/a/ea9d7b34-7c68-470e-88e1-6d3216fea368.jpg?1787659641"
+			}
+		},
+		"Halo Fountain": {
+			"id": "af542837-77a1-462e-8dd6-b4fa8b21bb33",
+			"oracle_id": "36a9de4c-8073-475d-8679-e50844eef09e",
+			"name": "Halo Fountain",
+			"mana_cost": "{2}{W}",
+			"cmc": 3,
+			"type_line": "Artifact",
+			"oracle_text": "{W}, {T}, Untap a tapped creature you control: Create a 1/1 green and white Citizen creature token.\n{W}{W}, {T}, Untap two tapped creatures you control: Draw a card.\n{W}{W}{W}{W}{W}, {T}, Untap fifteen tapped creatures you control: You win the game.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/a/f/af542837-77a1-462e-8dd6-b4fa8b21bb33.jpg?1786456585",
+				"normal": "https://cards.scryfall.io/normal/front/a/f/af542837-77a1-462e-8dd6-b4fa8b21bb33.jpg?1786456585",
+				"large": "https://cards.scryfall.io/large/front/a/f/af542837-77a1-462e-8dd6-b4fa8b21bb33.jpg?1786456585",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/a/f/af542837-77a1-462e-8dd6-b4fa8b21bb33.jpg?1786456585"
+			}
+		},
+		"Bountiful Promenade": {
+			"id": "91ede26e-8784-4631-b9e7-f8f97b2904ac",
+			"oracle_id": "761cb262-f83b-4a99-9345-b773182a7671",
+			"name": "Bountiful Promenade",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "This land enters tapped unless you have two or more opponents.\n{T}: Add {G} or {W}.",
+			"colors": [],
+			"color_identity": [
+				"G",
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/9/1/91ede26e-8784-4631-b9e7-f8f97b2904ac.jpg?1786456430",
+				"normal": "https://cards.scryfall.io/normal/front/9/1/91ede26e-8784-4631-b9e7-f8f97b2904ac.jpg?1786456430",
+				"large": "https://cards.scryfall.io/large/front/9/1/91ede26e-8784-4631-b9e7-f8f97b2904ac.jpg?1786456430",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/9/1/91ede26e-8784-4631-b9e7-f8f97b2904ac.jpg?1786456430"
+			}
+		},
+		"Soul Warden": {
+			"id": "53b54485-37e2-4ae0-be91-c77ec02c5fe0",
+			"oracle_id": "f3fad295-1af2-4ecc-8546-b121ad6be27b",
+			"name": "Soul Warden",
+			"mana_cost": "{W}",
+			"cmc": 1,
+			"type_line": "Creature — Human Cleric",
+			"oracle_text": "Whenever another creature enters, you gain 1 life.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/3/53b54485-37e2-4ae0-be91-c77ec02c5fe0.jpg?1786456647",
+				"normal": "https://cards.scryfall.io/normal/front/5/3/53b54485-37e2-4ae0-be91-c77ec02c5fe0.jpg?1786456647",
+				"large": "https://cards.scryfall.io/large/front/5/3/53b54485-37e2-4ae0-be91-c77ec02c5fe0.jpg?1786456647",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/3/53b54485-37e2-4ae0-be91-c77ec02c5fe0.jpg?1786456647"
+			}
+		},
+		"Finale of Devastation": {
+			"id": "721ea98f-4150-4fde-a0af-4f454695e927",
+			"oracle_id": "69872a9a-fe54-4e58-940c-89395af71acd",
+			"name": "Finale of Devastation",
+			"mana_cost": "{X}{G}{G}",
+			"cmc": 2,
+			"type_line": "Sorcery",
+			"oracle_text": "Search your library and/or graveyard for a creature card with mana value X or less and put it onto the battlefield. If you search your library this way, shuffle. If X is 10 or more, creatures you control get +X/+X and gain haste until end of turn.",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/7/2/721ea98f-4150-4fde-a0af-4f454695e927.jpg?1786456468",
+				"normal": "https://cards.scryfall.io/normal/front/7/2/721ea98f-4150-4fde-a0af-4f454695e927.jpg?1786456468",
+				"large": "https://cards.scryfall.io/large/front/7/2/721ea98f-4150-4fde-a0af-4f454695e927.jpg?1786456468",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/7/2/721ea98f-4150-4fde-a0af-4f454695e927.jpg?1786456468"
+			}
+		},
+		"Break Down": {
+			"id": "acfe026f-75a7-45b9-b7e8-e1a76855ea94",
+			"oracle_id": "73094bde-5466-41a4-88f9-a98e67f5ed2e",
+			"name": "Break Down",
+			"mana_cost": "{2}{G}",
+			"cmc": 3,
+			"type_line": "Instant",
+			"oracle_text": "Destroy target artifact or enchantment. Create a Junk token. (It's an artifact with \"{T}, Sacrifice this token: Exile the top card of your library. You may play that card this turn. Activate only as a sorcery.\")",
+			"colors": [
+				"G"
+			],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/a/c/acfe026f-75a7-45b9-b7e8-e1a76855ea94.jpg?1786456486",
+				"normal": "https://cards.scryfall.io/normal/front/a/c/acfe026f-75a7-45b9-b7e8-e1a76855ea94.jpg?1786456486",
+				"large": "https://cards.scryfall.io/large/front/a/c/acfe026f-75a7-45b9-b7e8-e1a76855ea94.jpg?1786456486",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/a/c/acfe026f-75a7-45b9-b7e8-e1a76855ea94.jpg?1786456486"
+			}
+		},
+		"Grand Crescendo": {
+			"id": "59e34237-1ef5-4376-b671-11692693fc61",
+			"oracle_id": "dc600c06-8239-409e-b53d-20f813a3f5e7",
+			"name": "Grand Crescendo",
+			"mana_cost": "{X}{W}{W}",
+			"cmc": 2,
+			"type_line": "Instant",
+			"oracle_text": "Create X 1/1 green and white Citizen creature tokens. Creatures you control gain indestructible until end of turn.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/9/59e34237-1ef5-4376-b671-11692693fc61.jpg?1787465376",
+				"normal": "https://cards.scryfall.io/normal/front/5/9/59e34237-1ef5-4376-b671-11692693fc61.jpg?1787465376",
+				"large": "https://cards.scryfall.io/large/front/5/9/59e34237-1ef5-4376-b671-11692693fc61.jpg?1787465376",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/9/59e34237-1ef5-4376-b671-11692693fc61.jpg?1787465376"
+			}
+		},
+		"Forest": {
+			"id": "8dd6cfef-6eac-4fa2-b9f3-808bd5502f27",
+			"oracle_id": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+			"name": "Forest",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Basic Land — Forest",
+			"oracle_text": "({T}: Add {G}.)",
+			"colors": [],
+			"color_identity": [
+				"G"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/8/d/8dd6cfef-6eac-4fa2-b9f3-808bd5502f27.jpg?1787156246",
+				"normal": "https://cards.scryfall.io/normal/front/8/d/8dd6cfef-6eac-4fa2-b9f3-808bd5502f27.jpg?1787156246",
+				"large": "https://cards.scryfall.io/large/front/8/d/8dd6cfef-6eac-4fa2-b9f3-808bd5502f27.jpg?1787156246",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/8/d/8dd6cfef-6eac-4fa2-b9f3-808bd5502f27.jpg?1787156246"
+			}
+		},
+		"Plains": {
+			"id": "e2289fd7-19bb-4034-a6dd-267c4914975b",
+			"oracle_id": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+			"name": "Plains",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Basic Land — Plains",
+			"oracle_text": "({T}: Add {W}.)",
+			"colors": [],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/2/e2289fd7-19bb-4034-a6dd-267c4914975b.jpg?1787156241",
+				"normal": "https://cards.scryfall.io/normal/front/e/2/e2289fd7-19bb-4034-a6dd-267c4914975b.jpg?1787156241",
+				"large": "https://cards.scryfall.io/large/front/e/2/e2289fd7-19bb-4034-a6dd-267c4914975b.jpg?1787156241",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/2/e2289fd7-19bb-4034-a6dd-267c4914975b.jpg?1787156241"
+			}
+		}
+	},
+	"validation": {
+		"ok": true,
+		"errors": [],
+		"warnings": [],
+		"total": 100
+	}
+}

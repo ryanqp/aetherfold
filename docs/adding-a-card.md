@@ -104,11 +104,14 @@ Allowed keys: `kind`, `params`
 | `CREATE_TOKEN` | `token`, `count` | `token` is a `TokenCatalog` id. `count` is an int **or** a `{ "query": { … } }` |
 | `COUNTER_SPELL` | `target` | Index into this ability’s `targets` array |
 | `MOVE_ZONE` | `target`, `to` | `to` is a zone name (`HAND`, `GRAVEYARD`, …) |
-| `ADD_MANA` | `mana` | e.g. `"{R}"` |
+| `ADD_MANA` | `mana` | e.g. `"{R}"`. Choices: `"{R|G}"` (one of), `"{W|U|B|R|G}"` (any color), `"{CI}"` (a color in your commander's identity) |
 | `TAP` | `target` | |
 | `UNTAP` | `target` | |
 | `DEAL_DAMAGE` | `n`, `target` | |
 | `LOSE_LIFE` | `n`, `target` | That object's controller loses `n` life. Not damage. |
+| `GAIN_LIFE` | `n`, `target` | Omit `target` and the effect's controller gains `n` life. With `target`, that player (or that object's controller) does |
+| `DESTROY` | `target` | CR 701.7. Goes to the owner's graveyard unless indestructible. Not a regenerate or "can't be destroyed" check beyond that |
+| `PUMP` | `target`, `power`, `toughness`, `keywords`, `duration` | Temporary +X/+Y and keywords on one creature. `duration` defaults to `END_OF_TURN` |
 | `CREATE_CONTINUOUS_EFFECT` | `layer`, `mod`, `duration`, `query` | |
 | `SCRY` | `n` | Loader accepts it; Opt still marks Scry `unparsed` |
 | `LOOK` | `n` | |
@@ -155,6 +158,42 @@ Known `kind` values in the authored cards:
 
 - `SPELL_ON_STACK` — Counterspell / Cancel
 - `PERMANENT` — Unsummon (`query.type = "creature"`)
+
+Target `query` accepts `type`, `not_type`, `subtype`, and `controller`: `SOURCE_CONTROLLER`, `OPPONENT` ("you don't control"), or `ANY`.
+
+## 6b. Cards you don't have to write
+
+`engine/cards/oracle_ir.gd` (`OracleIr`) reads plain Oracle text into IR when a card has no `ir/*.json`. Hand-written IR always wins. Cards from any source (Moxfield, Archidekt, Scryfall) work this way: the engine finds the wording and responds.
+
+**Instants and sorceries** are all-or-nothing: every sentence must match or the card stays unimplemented. **Permanents** are read line by line; a line that isn't understood is skipped and listed under "not coded" in History, and the card keeps its other abilities. Reminder text is ignored, the card's name / "this creature" becomes `~`, and ability words ("Landfall —") are stripped.
+
+| Oracle wording | Becomes |
+| --- | --- |
+| `{T}: Add {G}.` / `{R} or {G}` / `one mana of any color` | mana ability |
+| `Equip {N}` + `Equipped creature gets +X/+Y and has <keywords>` | `ATTACH` (sorcery speed) + static boost |
+| `Other Dinosaurs you control get +1/+1`, `... of the chosen type` | static `STATIC` |
+| `Dinosaur spells you cast cost {1} less` | static cost reduction |
+| `When ~ enters / dies / attacks / deals combat damage to a player / is dealt damage` | trigger |
+| `Whenever another Dinosaur you control enters / dies / attacks`, `you cast a <type> spell`, `you gain life` | trigger with a filter |
+| `At the beginning of your upkeep / end step / combat` | step trigger |
+| `deals N damage to <target / each opponent / each other creature>` | `DEAL_DAMAGE` / `DEAL_DAMAGE_EACH` |
+| `Destroy target …`, `Destroy all creatures` | `DESTROY` / `DESTROY_ALL` |
+| `Exile target …`, `Return target … to its owner's hand` | `MOVE_ZONE` |
+| `Return target <type> card from your graveyard to your hand / the battlefield` | `RETURN_FROM_GRAVEYARD` |
+| `Draw N cards`, `You gain / lose N life`, `Each opponent loses N life` | `DRAW`, `GAIN_LIFE`, `LOSE_LIFE` |
+| `Create a Treasure / Food / Clue`, `Create a 3/3 green Dinosaur creature token [with trample]` | `CREATE_TOKEN` |
+| `Put N +1/+1 counters on <~ / target / each creature you control>` | `PUT_COUNTER` |
+| `<target> gets +X/+Y [and gains <keywords>] until end of turn` | `PUMP` |
+| `Search your library for a basic land card, put it onto the battlefield tapped` | `SEARCH_LIBRARY` |
+| `Scry N`, `Untap …`, `Counter target spell`, `~ fights target …` | `SCRY`, `UNTAP`, `COUNTER_SPELL`, `FIGHT` |
+| `Prowess`, `As ~ enters, choose a creature type`, `~ enters with N +1/+1 counters` | built in |
+
+| `~ costs {2} less to cast if it targets a Dinosaur you control` | spell discount (`cost_reduction_if_target`) |
+| `enters tapped unless you control …`, "reveal a Mountain or Forest", "pay 2 life" | `EtbRules`, applied as the land arrives |
+
+Keywords are looked up in `engine/cards/keyword_db.gd` (`KeywordDb`): each has a status (ENFORCED, READ, NONE or MISSING). Missing ones show in History as "(ward: not enforced yet)". When you implement one, change its status there. Reveal and pay-life choices have no prompt yet: revealing always happens when you can, life is paid while you have 8 or more.
+
+Up to three targets per card; each is chosen one at a time. Targets are picked automatically (see CLAUDE.md). Not read yet: Auras, X costs, modal "choose one", conditional ("if ...") triggers, discover / monarch. Keywords are covered in §10. To teach it a new wording, add the pattern to `OracleIr._sentence` (or `_header` for triggers) and a row to `tests/engine/fixtures.gd`; to cover a card it can't read, write IR as below.
 
 ## 7. Triggers
 
@@ -238,3 +277,58 @@ godot --headless --path . -s res://tools/run_tests.gd -- --suite=engine_ir
 ```
 
 A load error from `IrLoader` (unknown key / unknown effect kind) means the JSON does not match the tables above — fix the file, don’t special-case the loader.
+
+### Hideaway, mill, discard, surveil (BF-42)
+
+| Oracle wording | Effect kind |
+| --- | --- |
+| `Hideaway N` | trigger on enter: `HIDEAWAY {n}` (exiles the best of the top N, rest to the bottom) |
+| `play the exiled card without paying its mana cost [if creatures you control have total power N or greater]` | `PLAY_HIDDEN {min_total_power}` |
+| `each opponent mills N cards` / `you mill N cards` | `MILL {n, who}` |
+| `each opponent discards N cards` / `you discard N cards` | `DISCARD {n, who}` (auto-picks the cheapest) |
+| `surveil N` | `SURVEIL {n}` (spare lands go to the graveyard) |
+
+Fear, intimidate and skulk are enforced when blocking. Unread lines print as `UNIMPLEMENTED_MECHANIC: <Card> — <line>` in the Godot Output panel.
+
+### Keyword abilities that are read (BF-44)
+
+| Keyword line / sentence | What the engine does |
+| --- | --- |
+| `Exalted` | trigger `ATTACKS_ALONE`: the lone attacker gets +1/+1 |
+| `Battle cry` | on attack, each other attacking creature gets +1/+0 |
+| `Afterlife N`, `Annihilator N` | dies: N 1/1 Spirit fliers; attacks: defending player sacrifices N (they choose) |
+| `Evolve`, `Renown N`, `Fabricate N` | counters (fabricate asks counters or Servo tokens) |
+| `Undying`, `Persist` | returns from the graveyard with a +1/+1 / -1/-1 counter if it had none |
+| `Cascade` | exile to a cheaper nonland card, cast it free (you choose) |
+| `investigate`, `proliferate`, `explores`, `amass N`, `bolster N`, `populate` | sentences inside any trigger or spell |
+| `Infect`, `Toxic N`, poison | poison counters, ten lose (CR 704.5c); infect damage to creatures is -1/-1 counters |
+| `Shadow`, `Horsemanship`, "can't be blocked." | blocking restrictions |
+| `Changeling`, `Affinity for X` | every creature type; cost reduction |
+
+Everything in that list is now implemented; see §10.
+
+
+## 10. All keywords (BF-45)
+
+Every keyword in `KeywordDb` is READ or ENFORCED. Nothing needs IR; the Oracle line is enough.
+
+| Where | What |
+|---|---|
+| `engine/cards/keyword_lines.gd` | Parses keyword lines into `CardDefinition.kw()` (kicker, flashback, escape, retrace, madness, miracle, dash, prowl, emerge, morph, ninjutsu, echo, suspend, cycling, convoke, delve, ward, crew ...). Costs are matched lower-case and returned upper-case. |
+| `engine/keywords/keyword_rules.gd` | `plan()` works out the cost of a cast (kicker, alternative costs, hybrid, escape/retrace/emerge extras); `affordable_options()` is what the table shows as playable; `special_actions()` lists cycle, suspend, ninjutsu, turn face up and crew; `on_untap` / `on_step_begin` run phasing, suspend, rebound and dash. |
+| `engine/abilities/keyword_effects.gd` | Effects for echo, cumulative upkeep, extort, enlist, flanking, rampage, ward, madness, miracle, adapt, connive, learn, incubate, support, manifest/cloak, suspect, goad, fateseal. |
+| `GameSession.card_menu(id)` | The pick menu: ways to cast (only payable ones), special actions, activated abilities. `zone_menu()` lists flashback/escape/retrace casts from graveyard or exile. |
+
+A card shows the gold "playable" border only when some cast option can actually be paid (colors, hybrid, Phyrexian life, convoke, delve, commander tax, cost reductions). To add a keyword: add its line pattern to `KeywordLines`, rules to `KeywordRules`, a row in `KeywordDb`, a fixture in `tests/engine/fixtures.gd` and a test in `test_engine_keywords_more.gd`.
+
+### Also read now (BF-46)
+
+- Additional cost "reveal a Dinosaur card from your hand or pay {1}" (`KeywordLines`, `reveal_or_pay`), searches that end "..., then shuffle" or say "that card".
+- "Draw a card for each other Dinosaur you control", "Its controller creates / may search ..." after a destroy or exile (`for: "TARGET_CONTROLLER"`).
+- "If you cast it [from your hand], ..." gates (`if_cast`, `if_cast_from_hand`, from `GameObject.cast_from`).
+- "Enters tapped unless you control two or more basic lands" (`EtbRules` MIN_BASIC), "Creatures your opponents control enter tapped", "You may play an additional land on each of your turns" (`RulesEngine.extra_land_drops`).
+- History lines carry the cards they name (hover shows the whole card); questions about specific cards (discover, cascade, scry, surveil, explore, fateseal, hideaway) show the card face in the pick screen (`PlayerDecision.show_ids`).
+
+## 6c. Effects in `engine/abilities/card_effects.gd`
+
+Effect kinds added for cards that need more than the basic list: `MODAL` (choose N modes at resolution; `choose`, `repeat`, `both_if_commander`, `any_up_to`, `modes`), `POWER_DAMAGE_EACH`, `CAST_FREE_FROM_HAND` (`max_mv`), `PAY_OPTIONAL` (+ `if_link` gate on later effects), `GRANT_FLASH`, `GAIN_KEYWORD_CHOICE`, `BECOME_COPY`, `EXILE_CARD`, `GRAVEYARD_EXILED_WITH`, `REVEAL_TOP_CAST_FREE`, `EXILE_TOP_EACH_CAST_FREE`, `RIOT`. Value expressions also include `X`, `GREATEST_POWER` and `TARGET_POWER`. New gates: `if_link`, `if_exiled_creature`, `if_exiled_noncreature`, `if_trigger_subtype`. Rules read straight from Oracle text (no IR): "can't be countered" (`RulesEngine.cant_be_countered`), riot, Wayta's doubled damage triggers, Temple Altisaur's damage prevention, finality counters (`ZoneManager.move`).

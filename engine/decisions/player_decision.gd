@@ -14,3 +14,9 @@ var min_count: int = 1
 var max_count: int = 1
 var optional: bool = false
 var candidates: Array = []
+
+## Text for the choice screen, keyed by str(candidate): {label, detail}.
+var info: Dictionary = {}
+
+## Card objects the question is about; the table shows them face up while the player decides.
+var show_ids: Array = []

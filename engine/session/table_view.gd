@@ -21,7 +21,19 @@ var step_name: String = "Main"
 var game_over: bool = false
 var winners: Array = []
 var prompt: String = ""
+var history: Array = []
+var coin_flip: bool = false
+var flip_called: bool = false
+var coin_heads: bool = true
+var you_called_heads: bool = true
+var first_is_you: bool = true
 var match_start: int = 0
+## You are choosing blockers against the opponent's attack.
+var blocking_mode: bool = false
+## You are picking attackers.
+var attack_mode: bool = false
+## Where the turn is: upkeep, draw, main1, combat, main2 or end. Drives the phase tracker.
+var turn_track: String = "main1"
 
 
 func header_text() -> String:
@@ -33,7 +45,10 @@ func header_text() -> String:
 		for card in stack:
 			names.append(str(card.get("name", "spell")))
 		extra = " · Stack: %s" % ", ".join(names)
-	return "Turn %d — %s · %s%s" % [turn, active_name(), phase_name_str, extra]
+	var where := phase_name_str
+	if step_name != "" and step_name != phase_name_str and not step_name.begins_with("Main"):
+		where = "%s: %s" % [phase_name_str, step_name]
+	return "Turn %d — %s · %s%s" % [turn, active_name(), where, extra]
 
 
 func phase_name() -> String:
@@ -75,6 +90,7 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 		seat = int(session.you_seat)
 	v.your_priority = int(st.awaiting.get("player_id", -1)) == seat
 	v.attacker_count = engine.legal_attacker_ids(seat).size()
+	v.turn_track = _track_of(st.phase)
 	v.can_attack = v.attacker_count > 0 and st.active_player_id == seat and (
 		st.step == EngineEnums.Step.DECLARE_ATTACKERS or st.phase == EngineEnums.Phase.MAIN_1
 	)
@@ -83,11 +99,22 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 		v.difficulty = session.difficulty
 		v.you_drew_this_turn = not session.pending_draw_anim
 		v.prompt = session.prompt_text()
+		v.history = session.history.lines
+		v.coin_flip = session.match_start == GameSession.MatchStart.COIN_FLIP
+		v.flip_called = session.flip_called
+		v.coin_heads = session.coin_heads
+		v.you_called_heads = session.you_called_heads
+		v.first_is_you = session.first_player == session.you_seat
 		v.match_start = session.match_start
+		v.blocking_mode = session.awaiting_blocks
+		v.attack_mode = session.choosing_attackers
 	var cat := _catalog()
 	var other := 1 if seat == 0 else 0
 	v.you = _player_dict(engine, seat, cat)
 	v.rival = _player_dict(engine, other, cat)
+	var can_act := session != null and session.match_start == GameSession.MatchStart.MAIN_GAME \
+		and not session.draw_waiting() and not session.awaiting_blocks and not session.choosing_attackers
+	_mark_playable(engine, seat, v.you, can_act)
 	v.stack = _stack_cards(engine, cat)
 	return v
 
@@ -111,6 +138,9 @@ func to_plain() -> Dictionary:
 		winners = winners,
 		prompt = prompt,
 		match_start = match_start,
+		blocking_mode = blocking_mode,
+		attack_mode = attack_mode,
+		turn_track = turn_track,
 	}
 
 
@@ -159,6 +189,9 @@ static func from_plain(d: Dictionary) -> TableView:
 	v.winners = d.get("winners", [])
 	v.prompt = str(d.get("prompt", ""))
 	v.match_start = int(d.get("match_start", 0))
+	v.blocking_mode = bool(d.get("blocking_mode", false))
+	v.attack_mode = bool(d.get("attack_mode", false))
+	v.turn_track = str(d.get("turn_track", "main1"))
 	return v
 
 
@@ -195,7 +228,113 @@ static func _player_dict(engine: RulesEngine, player_id: int, cat: Object) -> Di
 		hand = _zone_cards(engine, EngineEnums.ZoneId.HAND, player_id, cat),
 		untapped_lands = _untapped_lands(lands),
 		mana = (p.mana as ManaPool).total() if p.mana is ManaPool else 0,
+		status = _status(engine, player_id),
+		cmdr_damage = _commander_damage(p),
+		cmdr_need = engine.state.rules.commander_damage_to_lose if engine.state.rules else 21,
+		lost = p.lost,
+		lose_reason = _lose_reason(engine, p),
 	}
+
+
+## Commander damage this player has taken, one entry per opposing commander: [{name, amount}] (CR 903.10a).
+static func _commander_damage(p: PlayerState) -> Array:
+	var out: Array = []
+	for k in p.commander_damage_from.keys():
+		var amount := int(p.commander_damage_from[k])
+		if amount > 0:
+			out.append({name = str(k).substr(str(k).find(":") + 1), amount = amount})
+	return out
+
+
+## Why this player lost, for the game-over banner ("" while they are still in).
+static func _lose_reason(engine: RulesEngine, p: PlayerState) -> String:
+	if not p.lost:
+		return ""
+	var need := engine.state.rules.commander_damage_to_lose if engine.state.rules else 21
+	for k in p.commander_damage_from.keys():
+		if int(p.commander_damage_from[k]) >= need:
+			return "%d commander damage from %s" % [int(p.commander_damage_from[k]), str(k).substr(str(k).find(":") + 1)]
+	if p.poison >= 10:
+		return "%d poison counters" % p.poison
+	if p.life <= 0:
+		return "life reached %d" % p.life
+	return "drew from an empty library"
+
+
+## The player's designations and counters for the life box: poison, monarch, the initiative, speed, dungeon room,
+## the Ring, emblems, and (shown for both) day or night.
+static func _status(engine: RulesEngine, player_id: int) -> String:
+	var st := engine.state
+	if player_id >= st.players.size():
+		return ""
+	var p: PlayerState = st.players[player_id]
+	var parts: PackedStringArray = []
+	if p.poison > 0:
+		parts.append("☠%d" % p.poison)
+	if p.enduring_story:
+		parts.append("Enduring story")
+	if st.monarch_id == player_id:
+		parts.append("Monarch")
+	if st.initiative_id == player_id:
+		parts.append("Initiative")
+	if p.speed > 0:
+		parts.append("Speed %d" % p.speed)
+	if p.dungeon != "":
+		parts.append("%s: %s" % [p.dungeon.capitalize(), p.dungeon_room.capitalize()])
+	if p.ring_level > 0:
+		parts.append("Ring %d" % p.ring_level)
+	var em := 0
+	for e in st.emblems:
+		if e is Dictionary and int((e as Dictionary).get("player_id", -1)) == player_id:
+			em += 1
+	if em > 0:
+		parts.append("%d emblem%s" % [em, "s" if em > 1 else ""])
+	if st.day_night != "":
+		parts.append(st.day_night.capitalize())
+	return " · ".join(parts)
+
+
+## Which phase chip lights up in the tracker.
+static func _track_of(phase: int) -> String:
+	match phase:
+		EngineEnums.Phase.UNTAP, EngineEnums.Phase.UPKEEP:
+			return "upkeep"
+		EngineEnums.Phase.DRAW:
+			return "draw"
+		EngineEnums.Phase.MAIN_1:
+			return "main1"
+		EngineEnums.Phase.COMBAT:
+			return "combat"
+		EngineEnums.Phase.MAIN_2:
+			return "main2"
+		_:
+			return "end"
+
+
+## Marks the hand and command-zone cards you could play right now (gold border on the table).
+## Playable = the rules allow it at this moment (timing, land drop, priority) AND your untapped mana
+## sources and floating mana can pay its cost, colors included (commander tax is added as generic).
+static func _mark_playable(engine: RulesEngine, seat: int, you: Dictionary, can_act: bool) -> void:
+	var castable := {}
+	if can_act:
+		for act in engine.legal_actions(seat):
+			var ga := act as GameAction
+			if ga == null:
+				continue
+			if ga.kind == GameAction.Kind.CAST_SPELL or ga.kind == GameAction.Kind.PLAY_LAND:
+				castable[ga.object_id] = true
+	for key in ["hand", "command"]:
+		for card in you.get(key, []):
+			var ok: bool = castable.has(int(str(card.get("id", "0"))))
+			if ok and str(card.get("kind", "")) != "land":
+				## Playable only when some way of casting it is payable now: colors, hybrid/Phyrexian, convoke, delve,
+				## commander tax and cost reductions are all inside kw.plan / kw.afford.
+				var card_obj: GameObject = engine.state.objects.get(int(str(card.get("id", "0"))))
+				var opts: Array = engine.kw.affordable_options(seat, card_obj) if card_obj != null else []
+				ok = not opts.is_empty()
+				card["cast_option_count"] = opts.size()
+				card["cost_note"] = "Cost: %s  ·  Your mana: %s" % [str(card.get("mana_cost", "")), engine.mana_summary(seat)]
+			card["playable"] = ok
 
 
 static func _zone_cards(engine: RulesEngine, zone_id: int, player_id: int, cat: Object) -> Array:
@@ -230,13 +369,27 @@ static func _card_dict(engine: RulesEngine, obj: GameObject, cat: Object) -> Dic
 		tapped = obj.tapped,
 		sick = obj.summoned_this_turn,
 		zone = _zone_key(obj.zone),
-		power = str(snap.get("power", "")) if def != null and def.is_creature() else "",
-		toughness = str(snap.get("toughness", "")) if def != null and def.is_creature() else "",
+		power = str(snap.get("power", "")) if def != null and (engine.is_creature_now(obj) if obj.zone == EngineEnums.ZoneId.BATTLEFIELD else def.is_creature()) else "",
+		toughness = str(snap.get("toughness", "")) if def != null and (engine.is_creature_now(obj) if obj.zone == EngineEnums.ZoneId.BATTLEFIELD else def.is_creature()) else "",
+		counters = obj.counters.duplicate(),
+		badge = _badge(engine, obj, snap) if obj.zone == EngineEnums.ZoneId.BATTLEFIELD else "",
 		is_token = obj.is_token,
+		attacking = _is_attacking(engine, obj),
+		## CR 302.6: a creature can't attack unless you've controlled it since your turn began.
+		summoning_sick = obj.zone == EngineEnums.ZoneId.BATTLEFIELD and obj.summoned_this_turn and engine.is_creature_now(obj) and not engine.has_keyword(obj, "Haste"),
+		ready_to_attack = obj.zone == EngineEnums.ZoneId.BATTLEFIELD and engine.legal_attacker_ids(obj.controller_id).has(obj.object_id),
+		blocking = _blocking_target(engine, obj),
 		scryfall_id = "",
 		imageUrl = "",
 		images = {},
+		playable = false,
+		commander_tax = 0,
 	}
+	## CR 903.8: each earlier cast of a commander from the command zone adds {2}.
+	if obj.zone == EngineEnums.ZoneId.COMMAND and def != null and obj.owner_id < engine.state.players.size():
+		var ckey := def.oracle_id if def.oracle_id != "" else def.name
+		var casts := int(engine.state.players[obj.owner_id].commander_cast_count.get(ckey, 0))
+		d["commander_tax"] = casts * engine.state.rules.commander_tax_step
 	if cat != null and cat.has_method("find_by_name"):
 		var found: Variant = cat.find_by_name(str(d.name))
 		if found is Dictionary and not (found as Dictionary).is_empty():
@@ -250,6 +403,47 @@ static func _card_dict(engine: RulesEngine, obj: GameObject, cat: Object) -> Dic
 			if str(d.get("mana_cost", "")) == "" and row.has("mana_cost"):
 				d["mana_cost"] = str(row.get("mana_cost", ""))
 	return d
+
+
+## A short line drawn on a permanent: loyalty, counters, current P/T and what it is attached to or marked with.
+static func _badge(engine: RulesEngine, obj: GameObject, snap: Dictionary) -> String:
+	var parts: PackedStringArray = []
+	if obj.counters.has("loyalty"):
+		parts.append("◆%d" % int(obj.counters["loyalty"]))
+	for k in obj.counters.keys():
+		var n := int(obj.counters[k])
+		if str(k) == "loyalty" or n == 0:
+			continue
+		parts.append("%s×%d" % [str(k), n])
+	if engine.is_creature_now(obj):
+		parts.append("%d/%d" % [int(snap.get("power", 0)), int(snap.get("toughness", 0))])
+	if obj.attached_to != 0 and engine.state.objects.has(obj.attached_to):
+		var host: GameObject = engine.state.objects[obj.attached_to]
+		if host.definition is CardDefinition:
+			parts.append("on %s" % (host.definition as CardDefinition).name)
+	if obj.face_down:
+		parts.append("face down")
+	for flag in engine.designations(obj):
+		parts.append(str(flag))
+	return "  ".join(parts).strip_edges()
+
+
+static func _is_attacking(engine: RulesEngine, obj: GameObject) -> bool:
+	if engine.state.phase != EngineEnums.Phase.COMBAT or not (engine.state.combat is CombatState):
+		return false
+	return (engine.state.combat as CombatState).attacker_ids.has(obj.object_id)
+
+
+## Id (as a string) of the attacker this creature blocks, or "".
+static func _blocking_target(engine: RulesEngine, obj: GameObject) -> String:
+	if engine.state.phase != EngineEnums.Phase.COMBAT or not (engine.state.combat is CombatState):
+		return ""
+	var blocks: Dictionary = (engine.state.combat as CombatState).blockers
+	for aid in blocks.keys():
+		var group: Variant = blocks[aid]
+		if group is Array and (group as Array).has(obj.object_id):
+			return str(aid)
+	return ""
 
 
 static func _color(def: CardDefinition) -> Color:

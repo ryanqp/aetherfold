@@ -1,12 +1,11 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 30
+const BUILD := 52
+const Mats := preload("res://engine/session/playmat_catalog.gd")
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
 const RivalAI := preload("res://scripts/rival_ai.gd")
-const ThemeMusicScript := preload("res://scripts/theme_music.gd")
-const TavernSfxScript := preload("res://scripts/tavern_sfx.gd")
 const CardFaceScript := preload("res://scripts/card_face.gd")
 const RIVAL_TEAL := Color(0.18, 0.42, 0.48)
 const YOU_EMBER := Color(0.42, 0.18, 0.08)
@@ -18,7 +17,14 @@ const HAND_CHIP := Vector2(80, 112)
 const BOARD_CHIP := Vector2(48, 68)
 const SIDE_W := 228
 const TURN_GREEN := Color(0.18, 0.78, 0.32)
+## Gold border: a card you can play right now. Light blue border: the card you have selected.
+const PLAYABLE_GOLD := Color(1.0, 0.84, 0.18)
+const SELECT_BLUE := Color(0.62, 0.84, 1.0)
+const COMMAND_CHIP := Vector2(72, 100)
+const TRACK := [["upkeep", "Upkeep"], ["draw", "Draw"], ["main1", "Main 1"], ["combat", "Combat"], ["main2", "Main 2"], ["end", "End"]]
 const TURN_RED := Color(0.86, 0.16, 0.14)
+const ATTACK_RED := Color(0.92, 0.22, 0.16)
+const BLOCK_BLUE := Color(0.30, 0.62, 0.98)
 const DIFFICULTY_HINTS := [
 	"Misses draws, rarely attacks.",
 	"Plays a land and one spell.",
@@ -32,16 +38,17 @@ var header_label: Label
 var you_life: Label
 var rival_life: Label
 var rival_title_label: Label
+var you_title_label: Label
 var inspector_art: TextureRect
 var inspector_title: Label
 var inspector_type: Label
 var inspector_text: Label
 var log_label: Label
 var mute_button: Button
-var sfx_button: Button
 var quit_dialog: ConfirmationDialog
 var music
-var sfx
+## Sound effects were removed (they cost frames); _tap_sfx stays as a no-op so the call sites don't change.
+var sfx = null
 var you_zones: Dictionary = {}
 var rival_zones: Dictionary = {}
 var hand_row: HBoxContainer
@@ -56,12 +63,44 @@ var hover_printed: Control
 var you_library_btn: Button
 var draw_btn: Button
 var deck_btn: Button
+var _deck_style: StyleBoxFlat
+## Border styles of the cards you can play right now; pulsed every frame so they flash.
+var _playable_styles: Array = []
+## F3 shows the developer log over the board. Off by default.
+var _show_debug := false
+var _deck_flashing := false
+var phase_chips: Dictionary = {}
+var turn_owner_label: Label
+var hint_label: Label
+var next_turn_btn: Button
+var history_panel: PanelContainer
+var history_button: Button
+var coin_overlay: ColorRect
+var coin_face: Label
+var coin_status: Label
+var coin_call_row: HBoxContainer
+var coin_continue: Button
+var _coin_state := 0
+var history_text: RichTextLabel
+var _history_cards: Dictionary = {}
+var _history_shown := 0
+var declare_btn: Button
+var _rival_target: PanelContainer
+var _hint_hold := 0.0
+var you_cmd_row: HBoxContainer
+var rival_cmd_row: HBoxContainer
 var play_btn: Button
 var ability_box: VBoxContainer
 var pass_btn: Button
 var attack_btn: Button
 var _flash_t := 0.0
 var _was_tapped: Dictionary = {}
+## Blocks you are lining up while the opponent attacks: attacker id -> Array of your creature ids.
+var _pending_blocks: Dictionary = {}
+## Your creature picked to block, waiting for you to click an attacker.
+var _block_pick: String = ""
+## Creatures you have clicked to attack with, while picking attackers.
+var _pending_attackers: Array = []
 var dice_overlay: ColorRect
 var _dice_busy: Dictionary = {}
 var mulligan_overlay: ColorRect
@@ -75,19 +114,18 @@ var draw_preview: Control
 var draw_preview_host: CenterContainer
 var _mulligan_sig := ""
 var import_overlay: ImportOverlay
+var you_cmdr_label: Label
+var rival_cmdr_label: Label
+var gameover_overlay: ColorRect
+var gameover_title: Label
+var gameover_sub: Label
+var gameover_again: Button
+var _gameover_shown := false
 
 func _ready() -> void:
 	clip_contents = true
 	set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	music = ThemeMusicScript.new()
-	music.name = "ThemeMusic"
-	add_child(music)
-	sfx = TavernSfxScript.new()
-	sfx.name = "TavernSfx"
-	add_child(sfx)
-	var app := get_node_or_null("/root/AppState")
-	if app != null and bool(app.sfx_muted):
-		sfx.set_muted(true)
+	music = get_node_or_null("/root/Music")
 	var cat := _catalog()
 	if cat and cat.has_signal("art_updated") and not cat.art_updated.is_connected(_on_art_updated):
 		cat.art_updated.connect(_on_art_updated)
@@ -97,6 +135,8 @@ func _ready() -> void:
 	add_to_group("aetherfold_table")
 	if USE_ENGINE:
 		session = GameSession.new()
+		session.manual_draw = true
+		session.coin_flip = true
 		session.debug_enabled = DEBUG_MATCH
 		_start_from_app_state()
 	else:
@@ -130,6 +170,8 @@ func _start_from_app_state() -> void:
 	var app := get_node_or_null("/root/AppState")
 	if session == null:
 		session = GameSession.new()
+		session.manual_draw = true
+		session.coin_flip = true
 		session.debug_enabled = DEBUG_MATCH
 	if app != null:
 		session.difficulty = int(app.difficulty)
@@ -188,6 +230,10 @@ func apply_net_action(kind: String, payload: Dictionary, player_id: int) -> void
 func _set_status(text: String) -> void:
 	if log_label:
 		log_label.text = text
+	## The side log is easy to miss, so the same message shows beside the phase bar for a few seconds.
+	if hint_label and text != "":
+		hint_label.text = text
+		_hint_hold = 7.0
 
 func _hydrate_from_scryfall() -> void:
 	var cat := _catalog()
@@ -235,6 +281,7 @@ func _build() -> void:
 	add_child(root)
 
 	root.add_child(_build_header())
+	root.add_child(_build_phase_track())
 
 	var body := HBoxContainer.new()
 	body.size_flags_vertical = SIZE_EXPAND_FILL
@@ -263,12 +310,15 @@ func _build() -> void:
 	_build_turn_border()
 	_build_hover()
 	_build_deck_pile()
+	_build_history_panel()
 	_build_draw_button()
 	_build_dice_tray()
 	_build_menu()
+	_build_gameover()
 	_build_quit_confirm()
 	_build_draw_preview()
 	_build_mulligan_overlay()
+	_build_coin_overlay()
 	_build_debug_label()
 	_paint_turn_border()
 
@@ -285,25 +335,31 @@ func _build_header() -> Control:
 	row.add_theme_constant_override("separation", 8)
 	header_label = Label.new()
 	header_label.size_flags_horizontal = SIZE_EXPAND_FILL
+	## Clipped so a long header ("... · GAME OVER") can never make the row wider than the window and push the sidebar off-screen.
+	header_label.custom_minimum_size = Vector2(0, 0)
+	header_label.clip_text = true
+	header_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	header_label.add_theme_font_size_override("font_size", 18)
 	header_label.add_theme_color_override("font_color", INK)
 	row.add_child(header_label)
-	pass_btn = _header_button("Pass", GOLD, Color(0.12, 0.10, 0.04), _on_next_stage, 88)
+	pass_btn = _header_button("Next phase ▶", Color(0.20, 0.42, 0.18), Color(0.95, 1.0, 0.92), _on_next_phase, 150)
+	pass_btn.tooltip_text = "Move to the next part of the turn: Upkeep, Draw, Main 1, Combat, Main 2, End."
 	row.add_child(pass_btn)
 	attack_btn = _header_button("Attack", Color(0.62, 0.16, 0.12), Color(0.98, 0.94, 0.88), _on_attack, 96)
 	attack_btn.tooltip_text = "Declare every creature that can attack. Space passes priority. Enter ends the turn."
 	row.add_child(attack_btn)
-	row.add_child(_header_button("End turn", Color(0.16, 0.17, 0.18), INK, _on_end_turn, 100))
+	next_turn_btn = _header_button("End turn", Color(0.16, 0.17, 0.18), INK, _on_end_turn, 100)
+	next_turn_btn.tooltip_text = "Skip the rest of your turn. The rival plays, then it is your turn again."
+	row.add_child(next_turn_btn)
 	mute_button = _header_button("Mute", Color(0.16, 0.17, 0.18), INK, _on_mute, 72)
 	row.add_child(mute_button)
-	sfx_button = _header_button("SFX", Color(0.16, 0.17, 0.18), INK, _on_sfx, 72)
-	row.add_child(sfx_button)
+	row.add_child(_volume_slider())
+	history_button = _header_button("Hide history", Color(0.16, 0.17, 0.18), INK, _toggle_history, 110)
+	row.add_child(history_button)
 	row.add_child(_header_button("Dice", Color(0.16, 0.17, 0.18), INK, _on_dice, 72))
 	row.add_child(_header_button("Menu", Color(0.16, 0.17, 0.18), INK, _on_menu, 72))
 	row.add_child(_header_button("Main menu", Color(0.16, 0.17, 0.18), INK, _on_main_menu, 100))
 	bar.add_child(row)
-	if sfx != null and sfx.muted and sfx_button:
-		sfx_button.text = "SFX off"
 	return bar
 
 func _header_button(text: String, bg: Color, fg: Color, cb: Callable, width: float = 120) -> Button:
@@ -329,6 +385,13 @@ func _make_field(parent: Control, tint: Color, zone_order: Array) -> Dictionary:
 	style.border_color = tint.lightened(0.15)
 	style.set_border_width_all(2)
 	field.add_theme_stylebox_override("panel", style)
+	## Felt playmat behind the zones; the picture is chosen from the commander's colors in _apply_mats.
+	var mat := TextureRect.new()
+	mat.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	mat.stretch_mode = TextureRect.STRETCH_SCALE  ## whole mat visible, every color of it
+	mat.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mat.modulate = Color(0.92, 0.92, 0.92)
+	field.add_child(mat)
 	var zones_col := VBoxContainer.new()
 	zones_col.clip_contents = true
 	var map := {}
@@ -358,6 +421,7 @@ func _make_field(parent: Control, tint: Color, zone_order: Array) -> Dictionary:
 		map[str(zone_name)] = cards
 	field.add_child(zones_col)
 	parent.add_child(field)
+	map["__mat"] = mat
 	return map
 
 func _build_hand() -> Control:
@@ -374,7 +438,7 @@ func _build_hand() -> Control:
 	var hand_inner := VBoxContainer.new()
 	hand_inner.add_theme_constant_override("separation", 2)
 	var hand_label := Label.new()
-	hand_label.text = "Hand — click a card to play it"
+	hand_label.text = "Hand — a gold border means you can play that card now"
 	hand_label.add_theme_color_override("font_color", MUTED)
 	hand_label.add_theme_font_size_override("font_size", 12)
 	hand_inner.add_child(hand_label)
@@ -416,6 +480,7 @@ func _build_sidebar() -> Control:
 	life_row.add_child(_life_block("Rival", "Talrand · Normal", false))
 	col.add_child(life_row)
 	col.add_child(_pile_table())
+	col.add_child(_build_command_panel())
 	col.add_child(_build_inspector())
 
 	ability_box = VBoxContainer.new()
@@ -428,6 +493,12 @@ func _build_sidebar() -> Control:
 	play_btn.custom_minimum_size = Vector2(0, 34)
 	play_btn.pressed.connect(_on_activate)
 	col.add_child(play_btn)
+	declare_btn = Button.new()
+	declare_btn.text = "Attack with this"
+	declare_btn.custom_minimum_size = Vector2(0, 34)
+	declare_btn.visible = false
+	declare_btn.pressed.connect(_on_declare_attack)
+	col.add_child(declare_btn)
 
 	log_label = Label.new()
 	log_label.add_theme_color_override("font_color", GOLD)
@@ -468,8 +539,244 @@ func _life_block(who: String, subtitle: String, is_you: bool) -> Control:
 	title_label.clip_text = true
 	if not is_you:
 		rival_title_label = title_label
+	else:
+		you_title_label = title_label
 	box.add_child(title_label)
+	## Commander damage taken from the opposing commander; 21 from one commander loses the game.
+	var cmdr := Label.new()
+	cmdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cmdr.add_theme_font_size_override("font_size", 11)
+	cmdr.clip_text = true
+	cmdr.mouse_filter = Control.MOUSE_FILTER_PASS
+	cmdr.tooltip_text = "Commander damage taken. 21 combat damage from a single commander loses the game."
+	cmdr.visible = false
+	box.add_child(cmdr)
+	if is_you:
+		you_cmdr_label = cmdr
+	else:
+		rival_cmdr_label = cmdr
+	if is_you:
+		return box
+	## The rival's life box is also the target of your attack: click it to send your attackers.
+	_rival_target = PanelContainer.new()
+	_rival_target.size_flags_horizontal = SIZE_EXPAND_FILL
+	_rival_target.mouse_filter = Control.MOUSE_FILTER_STOP
+	_rival_target.tooltip_text = "While you are attacking, click here to send your attackers at the rival."
+	_rival_target.add_theme_stylebox_override("panel", _target_style(0.0, false))
+	_rival_target.gui_input.connect(_on_rival_target_input)
+	_rival_target.add_child(box)
+	return _rival_target
+
+
+func _target_style(pulse: float, active: bool) -> StyleBoxFlat:
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.5, 0.08, 0.06, 0.25 + 0.2 * pulse) if active else Color(0, 0, 0, 0)
+	st.border_color = ATTACK_RED.lerp(Color(1, 1, 1), pulse * 0.6) if active else Color(0, 0, 0, 0)
+	st.set_border_width_all(4 if active else 2)
+	st.set_corner_radius_all(8)
+	return st
+
+
+func _on_rival_target_input(ev: InputEvent) -> void:
+	var mb := ev as InputEventMouseButton
+	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+		_on_rival_target_click()
+
+
+## Attack target. In a two-player game the rival player is the only legal target: creatures can't
+## be attacked (CR 506.2) and there are no planeswalkers or battles in the engine yet.
+func _on_rival_target_click() -> void:
+	if not _in_attack_mode():
+		_set_status("Pick a creature and press Attack with this first.")
+		return
+	if _pending_attackers.is_empty():
+		_set_status("Click one of your creatures first, then click the rival to attack.")
+		return
+	_confirm_attack()
+
+
+## Sidebar button: attack with the selected creature.
+func _on_declare_attack() -> void:
+	if not USE_ENGINE or session == null or session.view == null:
+		return
+	var sid := str(session.selected_id)
+	if sid == "":
+		return
+	if not _in_attack_mode():
+		if not session.can_play():
+			_set_status("Keep or Mulligan first.")
+			return
+		_pending_attackers.clear()
+		var r: SubmitResult = session.begin_attack()
+		if not r.ok:
+			_refresh()
+			_set_status(r.error)
+			return
+	if not _pending_attackers.has(sid):
+		_on_attack_click(sid)
+	else:
+		_refresh()
+	if _in_attack_mode() and not _pending_attackers.is_empty():
+		_set_status("Now click the rival (top right) to attack. Click more creatures first to send them too.")
+
+
+func _chip_style(bg: Color, border: Color) -> StyleBoxFlat:
+	var st := StyleBoxFlat.new()
+	st.bg_color = bg
+	st.border_color = border
+	st.set_border_width_all(2)
+	st.set_corner_radius_all(6)
+	st.content_margin_left = 8
+	st.content_margin_right = 8
+	return st
+
+## The turn at a glance: Upkeep, Draw, Main 1, Combat, Main 2, End. Draw, Combat and End are buttons.
+func _build_phase_track() -> Control:
+	var bar := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.06, 0.07)
+	style.content_margin_left = 14
+	style.content_margin_right = 10
+	style.content_margin_top = 4
+	style.content_margin_bottom = 4
+	bar.add_theme_stylebox_override("panel", style)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	turn_owner_label = Label.new()
+	turn_owner_label.custom_minimum_size = Vector2(130, 0)
+	turn_owner_label.add_theme_font_size_override("font_size", 15)
+	row.add_child(turn_owner_label)
+	for entry in TRACK:
+		var key: String = entry[0]
+		var chip := Button.new()
+		chip.text = entry[1]
+		chip.custom_minimum_size = Vector2(98, 28)
+		chip.focus_mode = Control.FOCUS_NONE
+		if key == "draw":
+			chip.pressed.connect(_on_click_library)
+			chip.tooltip_text = "Click your deck to draw your card for the turn."
+		elif key == "combat":
+			chip.pressed.connect(_on_attack)
+			chip.tooltip_text = "Go to combat, then click each creature you want to attack with."
+		elif key == "end":
+			chip.pressed.connect(_on_end_turn)
+			chip.tooltip_text = "End your turn."
+		row.add_child(chip)
+		phase_chips[key] = chip
+	hint_label = Label.new()
+	hint_label.size_flags_horizontal = SIZE_EXPAND_FILL
+	hint_label.clip_text = true
+	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	hint_label.add_theme_font_size_override("font_size", 15)
+	hint_label.add_theme_color_override("font_color", GOLD)
+	row.add_child(hint_label)
+	bar.add_child(row)
+	return bar
+
+func _paint_phase_track() -> void:
+	if turn_owner_label == null or session == null or session.view == null:
+		return
+	var v = session.view
+	var mine: bool = bool(v.active_is_you)
+	turn_owner_label.text = "YOUR TURN" if mine else "RIVAL'S TURN"
+	turn_owner_label.add_theme_color_override("font_color", TURN_GREEN if mine else TURN_RED)
+	for key in phase_chips.keys():
+		var chip: Button = phase_chips[key]
+		var now: bool = str(v.turn_track) == str(key)
+		var bg := Color(0.13, 0.14, 0.15)
+		var fg := MUTED
+		var border := Color(0.2, 0.21, 0.22)
+		if now:
+			bg = TURN_GREEN.darkened(0.15) if mine else TURN_RED.darkened(0.2)
+			fg = Color(0.04, 0.1, 0.04) if mine else Color(1, 0.94, 0.9)
+			border = GOLD
+		for sname in ["normal", "hover", "pressed", "disabled", "focus"]:
+			chip.add_theme_stylebox_override(sname, _chip_style(bg, border))
+		for cname in ["font_color", "font_hover_color", "font_pressed_color", "font_disabled_color"]:
+			chip.add_theme_color_override(cname, fg)
+
+## What to do next, in plain words, beside the phase bar.
+func _paint_hint() -> void:
+	if hint_label == null or session == null or session.view == null:
+		return
+	var v = session.view
+	var t := ""
+	if not session.can_play():
+		t = "Keep or Mulligan your hand."
+	elif not bool(v.active_is_you):
+		t = "Rival is taking their turn…"
+	elif session.draw_waiting():
+		t = "Click your deck to draw a card."
+	else:
+		match str(v.turn_track):
+			"main1", "main2":
+				t = "Play a land or spell (gold border = playable). Then Combat or Next turn."
+			"combat":
+				t = "Click creatures to attack with."
+			_:
+				t = "Press Pass to move on, or Next turn to end your turn."
+	hint_label.text = t
+
+## Both commanders, where you can see them. Click yours to cast it (the Gold border means you can).
+func _build_command_panel() -> Control:
+	var box := PanelContainer.new()
+	var st := StyleBoxFlat.new()
+	st.bg_color = PANEL
+	st.set_corner_radius_all(6)
+	st.content_margin_left = 8
+	st.content_margin_right = 8
+	st.content_margin_top = 6
+	st.content_margin_bottom = 6
+	box.add_theme_stylebox_override("panel", st)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	var title := Label.new()
+	title.text = "Command zone"
+	title.add_theme_font_size_override("font_size", 12)
+	title.add_theme_color_override("font_color", MUTED)
+	col.add_child(title)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var you_col := VBoxContainer.new()
+	you_col.add_theme_constant_override("separation", 2)
+	you_col.add_child(_mini("You", GOLD))
+	you_cmd_row = HBoxContainer.new()
+	you_col.add_child(you_cmd_row)
+	var rival_col := VBoxContainer.new()
+	rival_col.add_theme_constant_override("separation", 2)
+	rival_col.add_child(_mini("Rival", GOLD))
+	rival_cmd_row = HBoxContainer.new()
+	rival_col.add_child(rival_cmd_row)
+	row.add_child(you_col)
+	row.add_child(rival_col)
+	col.add_child(row)
+	box.add_child(col)
 	return box
+
+func _fill_command(container: HBoxContainer, cards: Array, mine: bool) -> void:
+	_clear(container)
+	if cards.is_empty():
+		var none := Label.new()
+		none.text = "on the table"
+		none.add_theme_font_size_override("font_size", 11)
+		none.add_theme_color_override("font_color", MUTED)
+		none.custom_minimum_size = Vector2(COMMAND_CHIP.x, 20)
+		container.add_child(none)
+		return
+	for card in cards:
+		var slot := VBoxContainer.new()
+		slot.add_theme_constant_override("separation", 1)
+		slot.add_child(_card_chip(card, false, mine, COMMAND_CHIP))
+		var note := Label.new()
+		note.add_theme_font_size_override("font_size", 11)
+		note.add_theme_color_override("font_color", PLAYABLE_GOLD if bool(card.get("playable", false)) else MUTED)
+		var tax := int(card.get("commander_tax", 0))
+		if mine:
+			note.text = "Click to cast" if bool(card.get("playable", false)) else ("Tax +%d" % tax if tax > 0 else "Not castable yet")
+		else:
+			note.text = "Tax +%d" % tax if tax > 0 else "Commander"
+		slot.add_child(note)
+		container.add_child(slot)
 
 func _pile_table() -> Control:
 	var box := PanelContainer.new()
@@ -508,6 +815,16 @@ func _pile_table() -> Control:
 			you_cmd.pressed.connect(_on_click_command)
 			grid.add_child(you_cmd)
 			pile_labels["you_command"] = you_cmd
+		elif key == "graveyard" or key == "exile":
+			var pile_btn := Button.new()
+			pile_btn.text = "0"
+			pile_btn.custom_minimum_size = Vector2(52, 22)
+			pile_btn.add_theme_font_size_override("font_size", 12)
+			pile_btn.tooltip_text = "Cast from here (flashback, escape, retrace, suspend)"
+			var zid: int = EngineEnums.ZoneId.GRAVEYARD if key == "graveyard" else EngineEnums.ZoneId.EXILE
+			pile_btn.pressed.connect(_on_click_pile.bind(zid, "your graveyard" if key == "graveyard" else "exile"))
+			grid.add_child(pile_btn)
+			pile_labels["you_%s" % key] = pile_btn
 		else:
 			var you_v := _mini("0", INK)
 			grid.add_child(you_v)
@@ -617,6 +934,96 @@ func _build_menu() -> void:
 	center.add_child(panel)
 	add_child(menu_overlay)
 
+## Victory / defeat banner shown when the game ends. It sits over the whole table (dimmed, still visible behind),
+## so the result and the way out are always on screen.
+func _build_gameover() -> void:
+	gameover_overlay = ColorRect.new()
+	gameover_overlay.color = Color(0.01, 0.01, 0.03, 0.72)
+	gameover_overlay.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	gameover_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	gameover_overlay.z_index = 40
+	gameover_overlay.visible = false
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	gameover_overlay.add_child(center)
+	var panel := PanelContainer.new()
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.07, 0.06, 0.10, 0.97)
+	st.set_corner_radius_all(16)
+	st.set_border_width_all(3)
+	st.border_color = GOLD
+	st.shadow_color = Color(0.6, 0.45, 1.0, 0.35)
+	st.shadow_size = 24
+	st.content_margin_left = 48
+	st.content_margin_right = 48
+	st.content_margin_top = 30
+	st.content_margin_bottom = 30
+	panel.add_theme_stylebox_override("panel", st)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 12)
+	gameover_title = Label.new()
+	gameover_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	gameover_title.add_theme_font_size_override("font_size", 52)
+	col.add_child(gameover_title)
+	gameover_sub = Label.new()
+	gameover_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	gameover_sub.add_theme_font_size_override("font_size", 18)
+	gameover_sub.add_theme_color_override("font_color", INK)
+	gameover_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	gameover_sub.custom_minimum_size = Vector2(440, 0)
+	col.add_child(gameover_sub)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+	gameover_again = _header_button("Play again", GOLD.darkened(0.15), Color(0.12, 0.10, 0.04), _on_play_again, 150)
+	row.add_child(gameover_again)
+	row.add_child(_header_button("View board", Color(0.16, 0.17, 0.18), INK, _on_view_board, 130))
+	row.add_child(_header_button("Main menu", Color(0.16, 0.17, 0.18), INK, _leave_to_menu, 130))
+	col.add_child(row)
+	panel.add_child(col)
+	center.add_child(panel)
+	add_child(gameover_overlay)
+
+
+func _refresh_gameover() -> void:
+	if gameover_overlay == null:
+		return
+	var b = _board()
+	if not bool(b.game_over):
+		_gameover_shown = false
+		gameover_overlay.visible = false
+		return
+	if _gameover_shown:
+		return
+	_gameover_shown = true
+	var app := get_node_or_null("/root/AppState")
+	var is_client: bool = app != null and app.is_mp_client()
+	var won: bool = (b.winners as Array).has(1 if is_client else 0)
+	gameover_title.text = "VICTORY" if won else "DEFEAT"
+	gameover_title.add_theme_color_override("font_color", GOLD if won else ATTACK_RED)
+	var why := str((b.rival if won else b.you).get("lose_reason", ""))
+	var who := "Your rival" if won else "You"
+	if why != "":
+		gameover_sub.text = "%s lost: %s." % [who, why]
+	else:
+		gameover_sub.text = "You won the game." if won else "You lost the game."
+	## Guests in a LAN room can't restart the host's table.
+	gameover_again.visible = not is_client
+	gameover_overlay.visible = true
+
+
+func _on_view_board() -> void:
+	gameover_overlay.visible = false
+
+
+func _on_play_again() -> void:
+	var app := get_node_or_null("/root/AppState")
+	if app != null and app.is_mp():
+		_leave_to_menu()
+		return
+	get_tree().reload_current_scene()
+
+
 func _build_turn_border() -> void:
 	turn_border = Panel.new()
 	turn_border.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
@@ -632,6 +1039,10 @@ func _waiting_for_draw() -> bool:
 func _process(dt: float) -> void:
 	_flash_t += dt
 	_paint_flash()
+	if _hint_hold > 0.0:
+		_hint_hold -= dt
+		if _hint_hold <= 0.0:
+			_paint_hint()
 
 func _paint_flash() -> void:
 	var wait := _waiting_for_draw()
@@ -645,6 +1056,33 @@ func _paint_flash() -> void:
 			draw_btn.add_theme_stylebox_override("normal", bst)
 			draw_btn.add_theme_stylebox_override("hover", bst)
 			draw_btn.add_theme_color_override("font_color", Color(0.06, 0.1, 0.04))
+	_playable_styles = _playable_styles.filter(func(x) -> bool: return x != null)
+	for pst in _playable_styles:
+		var sb := pst as StyleBoxFlat
+		sb.border_color = PLAYABLE_GOLD.lerp(Color(1, 1, 1), pulse * 0.7)
+		sb.shadow_color = Color(1.0, 0.84, 0.18, 0.3 + 0.5 * pulse)
+		sb.shadow_size = 8 + int(14.0 * pulse)
+	if _rival_target:
+		_rival_target.add_theme_stylebox_override("panel", _target_style(pulse, _in_attack_mode() and not _pending_attackers.is_empty()))
+	if deck_btn:
+		if wait:
+			var dst := StyleBoxFlat.new()
+			dst.bg_color = Color(0.38, 0.12, 0.08).lerp(Color(0.62, 0.3, 0.1), pulse)
+			dst.set_corner_radius_all(8)
+			dst.set_border_width_all(6)
+			dst.border_color = GOLD.lerp(Color(1, 1, 1), pulse)
+			dst.shadow_color = Color(1.0, 0.84, 0.18, 0.35 + 0.4 * pulse)
+			dst.shadow_size = 10 + int(10.0 * pulse)
+			deck_btn.add_theme_stylebox_override("normal", dst)
+			deck_btn.add_theme_stylebox_override("hover", dst)
+			deck_btn.pivot_offset = deck_btn.size * 0.5
+			deck_btn.scale = Vector2.ONE * (1.0 + 0.07 * pulse)
+			_deck_flashing = true
+		elif _deck_flashing:
+			_deck_flashing = false
+			deck_btn.scale = Vector2.ONE
+			deck_btn.add_theme_stylebox_override("normal", _deck_style)
+			deck_btn.add_theme_stylebox_override("hover", _deck_style)
 	if turn_border and wait:
 		var st := StyleBoxFlat.new()
 		st.bg_color = Color(0, 0, 0, 0)
@@ -652,6 +1090,134 @@ func _paint_flash() -> void:
 		st.set_border_width_all(10)
 		st.border_color = TURN_GREEN.lerp(Color(0.65, 1.0, 0.5), pulse)
 		turn_border.add_theme_stylebox_override("panel", st)
+
+## Scrollable play-by-play: casts, summons, activations, attacks, blocks, damage, life.
+func _build_history_panel() -> void:
+	history_panel = PanelContainer.new()
+	history_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	history_panel.anchor_left = 1.0
+	history_panel.anchor_right = 1.0
+	history_panel.anchor_top = 0.0
+	history_panel.anchor_bottom = 1.0
+	history_panel.offset_left = -(SIDE_W + 352)
+	history_panel.offset_right = -(SIDE_W + 10)
+	history_panel.offset_top = 92
+	history_panel.offset_bottom = -170
+	history_panel.z_index = 30
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.05, 0.06, 0.07, 0.94)
+	st.border_color = GOLD.darkened(0.3)
+	st.set_border_width_all(2)
+	st.set_corner_radius_all(8)
+	st.content_margin_left = 10
+	st.content_margin_right = 6
+	st.content_margin_top = 8
+	st.content_margin_bottom = 8
+	history_panel.add_theme_stylebox_override("panel", st)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	var head := HBoxContainer.new()
+	var title := Label.new()
+	title.text = "History"
+	title.size_flags_horizontal = SIZE_EXPAND_FILL
+	title.add_theme_color_override("font_color", GOLD)
+	title.add_theme_font_size_override("font_size", 15)
+	head.add_child(title)
+	var close := Button.new()
+	close.text = "Hide"
+	close.focus_mode = Control.FOCUS_NONE
+	close.pressed.connect(_toggle_history)
+	head.add_child(close)
+	col.add_child(head)
+	history_text = RichTextLabel.new()
+	history_text.bbcode_enabled = true
+	history_text.scroll_active = true
+	history_text.scroll_following = true
+	history_text.selection_enabled = true
+	history_text.size_flags_vertical = SIZE_EXPAND_FILL
+	history_text.add_theme_font_size_override("normal_font_size", 13)
+	history_text.add_theme_font_size_override("bold_font_size", 13)
+	history_text.meta_underlined = false
+	history_text.meta_hover_started.connect(_on_history_meta_hover)
+	history_text.meta_hover_ended.connect(func(_m: Variant) -> void: _on_unhover_card())
+	col.add_child(history_text)
+	history_panel.add_child(col)
+	history_panel.visible = true
+	add_child(history_panel)
+
+
+func _on_history_meta_hover(meta: Variant) -> void:
+	var card: Variant = _history_cards.get(str(meta))
+	if card is Dictionary:
+		if hover_wrap != null:
+			hover_wrap.z_index = 40
+		_on_hover_card(_with_catalog_art(card))
+
+
+## A card dictionary from the history (name, type, text) plus its Scryfall art when the catalog has it.
+func _with_catalog_art(card: Dictionary) -> Dictionary:
+	var d: Dictionary = card.duplicate()
+	var cat := _catalog()
+	if cat != null and cat.has_method("find_by_name"):
+		var found: Variant = cat.find_by_name(str(d.get("name", "")))
+		if found is Dictionary and not (found as Dictionary).is_empty():
+			var row: Dictionary = found
+			d["scryfall_id"] = str(row.get("id", ""))
+			var imgs: Variant = row.get("images", {})
+			if imgs is Dictionary:
+				d["images"] = imgs
+				d["imageUrl"] = str((imgs as Dictionary).get("normal", (imgs as Dictionary).get("small", "")))
+	return d
+
+
+func _toggle_history() -> void:
+	if history_panel:
+		history_panel.visible = not history_panel.visible
+		if history_button != null:
+			history_button.text = "Hide history" if history_panel.visible else "History"
+		_history_shown = -1
+		_paint_history()
+
+
+func _paint_history() -> void:
+	if history_text == null or history_panel == null or not history_panel.visible:
+		return
+	if session == null or session.view == null:
+		return
+	var lines: Array = session.view.history
+	if lines.size() == _history_shown:
+		return
+	_history_shown = lines.size()
+	var out := ""
+	_history_cards.clear()
+	for entry in lines:
+		var d: Dictionary = entry
+		var t := str(d.get("t", "")).replace("[", "(").replace("]", ")")
+		## Card names are links: hover one to see the whole card, art and rules text included.
+		var ci := 0
+		for c in d.get("cards", []):
+			var cd: Dictionary = c
+			var cname := str(cd.get("name", "")).replace("[", "(").replace("]", ")")
+			var at := t.find(cname)
+			if cname == "" or at < 0:
+				continue
+			var meta := "c%d_%d" % [_history_cards.size(), ci]
+			_history_cards[meta] = cd
+			ci += 1
+			t = t.substr(0, at) + "[url=%s][u]%s[/u][/url]" % [meta, cname] + t.substr(at + cname.length())
+		match str(d.get("k", "info")):
+			"turn":
+				out += "\n[b][color=#f2c94c]%s[/color][/b]\n" % t
+			"step":
+				out += "[color=#6f7a78]· %s[/color]\n" % t
+			"you":
+				out += "[color=#cfe9c6]%s[/color]\n" % t
+			"rival":
+				out += "[color=#f0a79c]%s[/color]\n" % t
+			_:
+				out += "[color=#b9c0bf]%s[/color]\n" % t
+	history_text.text = out
+
 
 func _build_deck_pile() -> void:
 	deck_btn = Button.new()
@@ -676,10 +1242,11 @@ func _build_deck_pile() -> void:
 	st.shadow_color = Color(0, 0, 0, 0.55)
 	st.shadow_size = 6
 	st.shadow_offset = Vector2(3, 4)
+	_deck_style = st
 	deck_btn.add_theme_stylebox_override("normal", st)
 	deck_btn.add_theme_color_override("font_color", GOLD)
 	deck_btn.pressed.connect(_on_click_library)
-	deck_btn.tooltip_text = "Your library. You draw one card at the start of your turn."
+	deck_btn.tooltip_text = "Your library. On your turn it flashes: click it to draw."
 	add_child(deck_btn)
 
 func _build_draw_button() -> void:
@@ -771,28 +1338,73 @@ func _on_unhover_card() -> void:
 	if hover_wrap:
 		hover_wrap.visible = false
 
-func _card_chip(card: Dictionary, compact: bool = false, from_hand: bool = false) -> Button:
+func _card_chip(card: Dictionary, compact: bool = false, from_hand: bool = false, chip_size: Vector2 = Vector2.ZERO) -> Button:
 	var b := Button.new()
 	b.clip_contents = true
-	b.custom_minimum_size = BOARD_CHIP if compact else HAND_CHIP
+	b.custom_minimum_size = chip_size if chip_size != Vector2.ZERO else (BOARD_CHIP if compact else HAND_CHIP)
 	var selected: bool = str(card.get("id", "")) == str(_board().selected_id)
 	var st := StyleBoxFlat.new()
 	st.bg_color = Color(0, 0, 0, 0)
+	st.draw_center = false
 	st.set_corner_radius_all(6)
 	st.set_border_width_all(2)
-	st.border_color = GOLD if selected else Color(0, 0, 0, 0.55)
+	st.border_color = SELECT_BLUE if selected else Color(0, 0, 0, 0.55)
+	if from_hand and bool(card.get("playable", false)):
+		## Gold border: the rules let you play this right now and you have the mana for it.
+		st.border_color = PLAYABLE_GOLD
+		st.set_border_width_all(8)
+		st.set_corner_radius_all(8)
+		st.shadow_color = Color(1.0, 0.84, 0.18, 0.55)
+		st.shadow_size = 12
+		_playable_styles.append(st)
+		b.tooltip_text = "You can play this now.\n%s" % str(card.get("cost_note", ""))
+	var combat_color: Variant = _combat_border(card)
+	if combat_color is Color:
+		st.border_color = combat_color
+		st.set_border_width_all(3)
+	if compact and bool(card.get("summoning_sick", false)):
+		## CR 302.6: shown dimmed until it can attack.
+		b.modulate = Color(1, 1, 1, 0.62)
+		b.tooltip_text = "Summoning sick — can attack (and use {T} abilities) on your next turn."
 	st.content_margin_left = 0
 	st.content_margin_right = 0
 	st.content_margin_top = 0
 	st.content_margin_bottom = 0
-	b.add_theme_stylebox_override("normal", st)
-	b.add_theme_stylebox_override("hover", st)
-	b.add_theme_stylebox_override("pressed", st)
+	var plain := StyleBoxEmpty.new()
+	b.add_theme_stylebox_override("normal", plain)
+	b.add_theme_stylebox_override("hover", plain)
+	b.add_theme_stylebox_override("pressed", plain)
+	b.add_theme_stylebox_override("focus", plain)
 	b.text = ""
 	var face := _make_card_face(card, b.custom_minimum_size)
 	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	b.add_child(face)
+	## The border is drawn on top of the card art. As the button's own style it sat underneath the art
+	## and only a thin sliver showed.
+	var frame := Panel.new()
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.add_theme_stylebox_override("panel", st)
+	b.add_child(frame)
+	## Loyalty, counters, current power/toughness and attachments, on a strip across the bottom of a permanent.
+	var badge := str(card.get("badge", ""))
+	if compact and badge != "":
+		var strip := Label.new()
+		strip.text = badge
+		strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		strip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		strip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		strip.add_theme_font_size_override("font_size", 11)
+		strip.add_theme_color_override("font_color", Color(1, 0.95, 0.75))
+		var sbg := StyleBoxFlat.new()
+		sbg.bg_color = Color(0, 0, 0, 0.72)
+		sbg.set_corner_radius_all(4)
+		strip.add_theme_stylebox_override("normal", sbg)
+		strip.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+		strip.offset_top = -22
+		b.add_child(strip)
+		b.tooltip_text = (b.tooltip_text + "\n" + badge).strip_edges()
 	var cid := str(card.get("id", ""))
 	b.mouse_entered.connect(_on_hover_card.bind(card.duplicate()))
 	b.mouse_exited.connect(_on_unhover_card)
@@ -836,17 +1448,46 @@ func _apply_tap_visual(chip: Control, card: Dictionary) -> void:
 		chip.rotation_degrees = 0.0
 	_was_tapped[cid] = now
 
+## Each player's field gets the playmat for their commander's color identity.
+func _apply_mats() -> void:
+	if session == null or session.engine == null:
+		return
+	_set_mat(you_zones, int(session.you_seat))
+	_set_mat(rival_zones, 1 - int(session.you_seat))
+
+func _set_mat(zones: Dictionary, seat: int) -> void:
+	var mat := zones.get("__mat") as TextureRect
+	if mat == null:
+		return
+	var file := Mats.file_for(session.engine.commander_identity(seat))
+	if str(mat.get_meta("file", "")) == file:
+		return
+	mat.set_meta("file", file)
+	mat.texture = Mats.texture(file)
+
 func _refresh() -> void:
 	var b = _board()
+	_apply_mats()
+	_playable_styles.clear()
 	header_label.text = "%s   BF-%d" % [b.header_text(), BUILD]
 	_paint_life(you_life, int(b.you["life"]))
 	_paint_life(rival_life, int(b.rival["life"]))
+	_paint_cmdr_damage(you_cmdr_label, b.you)
+	_paint_cmdr_damage(rival_cmdr_label, b.rival)
 	if rival_title_label:
 		rival_title_label.text = "Talrand · %s" % RivalAI.label(b.difficulty)
-	_fill_zone(you_zones["Creatures"], b.you["creatures"])
+		var rs := str(b.rival.get("status", ""))
+		if rs != "":
+			rival_title_label.text += " · " + rs
+		rival_title_label.tooltip_text = rs
+	if you_title_label:
+		var ys := str(b.you.get("status", ""))
+		you_title_label.text = ys
+		you_title_label.tooltip_text = ys
+	_fill_zone(you_zones["Creatures"], b.you["creatures"], true)
 	_fill_zone(you_zones["Non-creature permanents"], b.you["noncreatures"])
 	_fill_zone(you_zones["Lands"], b.you["lands"], true)
-	_fill_zone(rival_zones["Creatures"], b.rival["creatures"])
+	_fill_zone(rival_zones["Creatures"], b.rival["creatures"], true)
 	_fill_zone(rival_zones["Non-creature permanents"], b.rival["noncreatures"])
 	_fill_zone(rival_zones["Lands"], b.rival["lands"], true)
 	_clear(hand_row)
@@ -854,12 +1495,18 @@ func _refresh() -> void:
 		hand_row.add_child(_card_chip(card, false, true))
 	_set_pile("you", b.you)
 	_set_pile("rival", b.rival)
+	_fill_command(you_cmd_row, b.you["command"], true)
+	_fill_command(rival_cmd_row, b.rival["command"], false)
+	_paint_phase_track()
+	_paint_history()
+	if _hint_hold <= 0.0:
+		_paint_hint()
 	if deck_btn:
 		deck_btn.text = "Deck\n%d" % int(b.you["library"])
 		if _waiting_for_draw():
-			deck_btn.tooltip_text = "Click to take the one card you drew this turn."
+			deck_btn.tooltip_text = "Your draw step: click to draw a card."
 		else:
-			deck_btn.tooltip_text = "Library: %d cards. One draw per turn." % int(b.you["library"])
+			deck_btn.tooltip_text = "Library: %d cards." % int(b.you["library"])
 	var selected: Dictionary = b.find_card(b.selected_id)
 	if selected.is_empty() and not b.you["hand"].is_empty():
 		_set_selected(str(b.you["hand"].back()["id"]))
@@ -878,8 +1525,11 @@ func _refresh() -> void:
 	_paint_library_btn()
 	_paint_match_buttons()
 	_refresh_ability_panel()
+	_update_prompts()
 	_refresh_mulligan()
+	_refresh_coin()
 	_refresh_debug()
+	_refresh_gameover()
 	var app := get_node_or_null("/root/AppState")
 	var net := get_node_or_null("/root/GameNet")
 	if app != null and app.mp_role == "host" and net != null and session != null and session.view != null:
@@ -887,8 +1537,8 @@ func _refresh() -> void:
 	if USE_ENGINE and session != null and session.view != null:
 		if session.engine != null and session.engine.is_over():
 			_set_status(str(session.view.prompt))
-		elif not session.pending_draw_anim and str(session.view.prompt) != "":
-			_set_status(str(session.view.prompt))
+		elif not session.pending_draw_anim and str(session.view.prompt) != "" and log_label:
+			log_label.text = str(session.view.prompt)
 
 func _paint_difficulty_buttons() -> void:
 	for i in menu_diff_buttons.size():
@@ -928,8 +1578,181 @@ func _set_selected(card_id: String) -> void:
 
 
 func _on_select(card_id: String) -> void:
+	if _in_blocking_mode():
+		_on_block_click(card_id)
+		return
+	if _in_attack_mode():
+		_on_attack_click(card_id)
+		return
 	_set_selected(card_id)
 	_refresh()
+
+
+func _in_blocking_mode() -> bool:
+	return USE_ENGINE and session != null and session.awaiting_blocks
+
+
+func _in_attack_mode() -> bool:
+	return USE_ENGINE and session != null and session.choosing_attackers
+
+
+## Attack mode: click a creature to add or remove it from the attack.
+func _on_attack_click(card_id: String) -> void:
+	var v = session.view
+	var card: Dictionary = v.find_card(card_id)
+	if card.is_empty() or not _card_in(v.you.get("creatures", []), card_id):
+		_set_status("Pick your own creatures to attack with.")
+		return
+	var nm := str(card.get("name", "That creature"))
+	if _pending_attackers.has(card_id):
+		_pending_attackers.erase(card_id)
+		_set_status("%s stays home." % nm)
+		_refresh()
+		return
+	if not bool(card.get("ready_to_attack", false)):
+		if bool(card.get("summoning_sick", false)):
+			_set_status("%s has summoning sickness — it can attack on your next turn." % nm)
+		elif bool(card.get("tapped", false)):
+			_set_status("%s is tapped." % nm)
+		else:
+			_set_status("%s can't attack." % nm)
+		return
+	_pending_attackers.append(card_id)
+	_set_status("%s will attack. Click the rival (top right) to send %d attacker(s), or pick more creatures." % [nm, _pending_attackers.size()])
+	_refresh()
+
+
+func _confirm_attack() -> void:
+	var ids: Array = []
+	for cid in _pending_attackers:
+		ids.append(int(cid))
+	var life_bot := int(session.view.rival.get("life", 40))
+	var r: SubmitResult = session.attack_with(ids)
+	_pending_attackers.clear()
+	if not r.ok:
+		_set_status(r.error)
+		_refresh()
+		return
+	if not ids.is_empty():
+		_tap_sfx("hit")
+	_refresh()
+	var dealt := life_bot - int(session.view.rival.get("life", 40))
+	if ids.is_empty():
+		_set_status("No attack. " + str(session.view.prompt))
+	elif dealt > 0:
+		_set_status("Attack dealt %d damage. %s" % [dealt, str(session.view.prompt)])
+	else:
+		_set_status("Attack done. " + str(session.view.prompt))
+
+
+## Border for a creature in combat, or null when it should use the normal border.
+func _combat_border(card: Dictionary) -> Variant:
+	var cid := str(card.get("id", ""))
+	if cid == "":
+		return null
+	if cid == _block_pick:
+		return GOLD
+	if _pending_attackers.has(cid):
+		return ATTACK_RED
+	for group in _pending_blocks.values():
+		if (group as Array).has(cid):
+			return BLOCK_BLUE
+	if str(card.get("blocking", "")) != "":
+		return BLOCK_BLUE
+	if bool(card.get("attacking", false)):
+		return ATTACK_RED
+	return null
+
+
+## Blocking mode: click your creature, then the attacker it blocks. Click an assigned
+## blocker again to take it back.
+func _on_block_click(card_id: String) -> void:
+	var v = session.view
+	var card: Dictionary = v.find_card(card_id)
+	if card.is_empty():
+		return
+	var nm := str(card.get("name", "That creature"))
+	if _card_in(v.you.get("creatures", []), card_id):
+		if bool(card.get("tapped", false)):
+			_set_status("%s is tapped and can't block." % nm)
+			return
+		if _unassign_blocker(card_id):
+			_block_pick = ""
+			_set_status("%s won't block." % nm)
+		elif _block_pick == card_id:
+			_block_pick = ""
+			_set_status(str(v.prompt))
+		else:
+			_block_pick = card_id
+			_set_status("Now click the attacker %s should block." % nm)
+		_refresh()
+		return
+	if _card_in(v.rival.get("creatures", []), card_id) and bool(card.get("attacking", false)):
+		if _block_pick == "":
+			_set_status("Click one of your untapped creatures first, then %s." % nm)
+			return
+		var blocker: Dictionary = v.find_card(_block_pick)
+		var blocker_name := str(blocker.get("name", "Your creature"))
+		if not session.engine.can_block_attacker(int(_block_pick), int(card_id)):
+			_set_status("%s can't block %s (it may need flying or reach)." % [blocker_name, nm])
+			return
+		_unassign_blocker(_block_pick)
+		var group: Array = _pending_blocks.get(card_id, [])
+		group.append(_block_pick)
+		_pending_blocks[card_id] = group
+		_block_pick = ""
+		_set_status("%s blocks %s. Pick another, or Confirm blocks." % [blocker_name, nm])
+		_refresh()
+		return
+	_set_status("Blocking: click one of your creatures, then an attacking creature.")
+
+
+func _card_in(pile: Array, card_id: String) -> bool:
+	for c in pile:
+		if str(c.get("id", "")) == card_id:
+			return true
+	return false
+
+
+## Removes card_id from any pending block. Returns true if it was assigned.
+func _unassign_blocker(card_id: String) -> bool:
+	for aid in _pending_blocks.keys():
+		var group: Array = _pending_blocks[aid]
+		if group.has(card_id):
+			group.erase(card_id)
+			if group.is_empty():
+				_pending_blocks.erase(aid)
+			return true
+	return false
+
+
+func _confirm_blocks() -> void:
+	var life_you := int(session.view.you.get("life", 40))
+	var payload := {}
+	for aid in _pending_blocks.keys():
+		var ids: Array = []
+		for bid in _pending_blocks[aid]:
+			ids.append(int(bid))
+		payload[int(aid)] = ids
+	var r: SubmitResult = session.declare_blocks(payload)
+	if not r.ok:
+		if r.error == "menace needs two blockers":
+			_set_status("An attacker has menace — block it with two or more creatures, or not at all.")
+		else:
+			_set_status("Can't block like that: %s" % r.error)
+		_refresh()
+		return
+	_pending_blocks.clear()
+	_block_pick = ""
+	_tap_sfx("hit")
+	_refresh()
+	var lost := life_you - int(session.view.you.get("life", 40))
+	var msg := str(session.view.prompt)
+	if session.pending_draw_anim:
+		msg = "Your turn — click your deck to draw."
+	if lost > 0:
+		msg = "You lost %d life. " % lost + msg
+	_set_status(msg)
 
 func _zone_anchor(zone: String) -> Vector2:
 	if not you_zones.has(zone):
@@ -1025,12 +1848,27 @@ func _engine_play_card(card_id: String) -> void:
 	var zone := str(before.get("zone", "hand"))
 	var is_land := str(before.get("kind", "")) == "land"
 	var r: SubmitResult
+	## More than one way to cast it, or something besides casting to do with it: let the player pick.
+	if not is_land and (zone == "hand" or zone == "command" or zone == "battlefield"):
+		var menu: Array = session.card_menu(oid)
+		var plain_only: bool = menu.size() == 1 and str((menu[0] as Dictionary).kind) == "cast" and (menu[0] as Dictionary).extra.is_empty()
+		if menu.size() > 1 or (menu.size() == 1 and not plain_only and zone != "battlefield") or (zone == "battlefield" and menu.size() > 1):
+			_open_card_menu(oid, menu, str(before.get("name", "Card")), "Choose how to play it")
+			return
+		if zone == "battlefield" and menu.size() == 1:
+			r = session.run_card_entry(oid, menu[0])
+			_refresh()
+			_set_status(r.error if not r.ok else "Done.")
+			return
 	if zone == "battlefield":
 		r = session.activate_auto(oid)
 	elif is_land and zone == "hand":
 		r = session.play_land(oid)
 	else:
 		r = session.cast_auto(0, oid)
+	if r.ok and session.target_pending:
+		_refresh()
+		return
 	var msg := r.error if not r.ok else _play_ok_message(before, zone, is_land)
 	if r.ok:
 		_tap_sfx("card")
@@ -1058,11 +1896,36 @@ func _paint_match_buttons() -> void:
 	if not USE_ENGINE or session == null or session.view == null:
 		return
 	var v = session.view
-	if attack_btn:
-		attack_btn.disabled = not bool(v.can_attack) or not session.can_play()
-		attack_btn.tooltip_text = "Attack with every creature that can."
-	if pass_btn:
-		pass_btn.disabled = not session.can_play()
+	if _in_blocking_mode():
+		if attack_btn:
+			attack_btn.disabled = false
+			attack_btn.text = "Confirm blocks" if not _pending_blocks.is_empty() else "No blocks"
+			attack_btn.tooltip_text = "Lock in your blockers. Click your creature, then the attacker, to assign one."
+		if pass_btn:
+			pass_btn.disabled = true
+	elif _in_attack_mode():
+		if attack_btn:
+			attack_btn.disabled = false
+			attack_btn.text = ("Attack (%d)" % _pending_attackers.size()) if not _pending_attackers.is_empty() else "No attack"
+			attack_btn.tooltip_text = "Send the creatures you picked. Click a creature to add or remove it."
+		if pass_btn:
+			pass_btn.disabled = true
+	else:
+		if attack_btn:
+			attack_btn.text = "Attack"
+			attack_btn.disabled = not bool(v.can_attack) or not session.can_play()
+			attack_btn.tooltip_text = "Go to combat and choose which creatures attack."
+		if pass_btn:
+			pass_btn.disabled = not session.can_play()
+			pass_btn.text = _next_phase_label(v)
+	if declare_btn:
+		var dsel: Dictionary = v.find_card(str(v.selected_id))
+		var mine_creature: bool = not dsel.is_empty() and _card_in(v.you.get("creatures", []), str(dsel.get("id", "")))
+		declare_btn.visible = mine_creature and bool(v.active_is_you) and not _in_blocking_mode()
+		if declare_btn.visible:
+			var ready: bool = bool(dsel.get("ready_to_attack", false)) and session.can_play() and not session.draw_waiting()
+			declare_btn.disabled = not ready
+			declare_btn.text = "Attack with this ⚔" if ready else ("Summoning sick" if bool(dsel.get("summoning_sick", false)) else "Can't attack now")
 	if play_btn:
 		var sel: Dictionary = v.find_card(str(v.selected_id))
 		var zone := str(sel.get("zone", ""))
@@ -1083,24 +1946,85 @@ func _on_attack() -> void:
 		return
 	if not USE_ENGINE or session == null:
 		return
+	if _in_blocking_mode():
+		_confirm_blocks()
+		return
+	if _in_attack_mode():
+		_confirm_attack()
+		return
 	if not session.can_play():
 		_set_status("Keep or Mulligan first.")
 		return
-	var r: SubmitResult = session.attack_all()
-	_tap_sfx("hit")
+	_pending_attackers.clear()
+	var r: SubmitResult = session.begin_attack()
 	_refresh()
 	if not r.ok:
 		_set_status(r.error)
 		return
-	_set_status("Attackers declared.")
+	_set_status(str(session.view.prompt))
+
+
+## The green button: step to the next part of the turn.
+func _on_next_phase() -> void:
+	if not USE_ENGINE or session == null or session.view == null:
+		_on_next_stage()
+		return
+	if _client_net("pass"):
+		return
+	if not session.can_play():
+		_set_status("Keep or Mulligan first.")
+		return
+	if _in_blocking_mode():
+		_on_next_stage()
+		return
+	if _in_attack_mode():
+		_confirm_attack()
+		return
+	var v = session.view
+	if bool(v.active_is_you) and not session.draw_waiting() and str(v.turn_track) == "main1" and bool(v.can_attack):
+		_on_attack()
+		return
+	if bool(v.active_is_you) and str(v.turn_track) == "end":
+		## Past the end step comes the rival's turn, which End turn plays out.
+		_on_end_turn()
+		return
+	_on_next_stage()
+
+
+func _next_phase_label(v) -> String:
+	if not bool(v.active_is_you):
+		return "Rival's turn"
+	if session.draw_waiting():
+		return "Draw card ▶"
+	match str(v.turn_track):
+		"upkeep":
+			return "Draw ▶"
+		"draw":
+			return "Main 1 ▶"
+		"main1":
+			return "Combat ▶" if bool(v.can_attack) else "Main 2 ▶"
+		"combat":
+			return "Main 2 ▶"
+		"main2":
+			return "End step ▶"
+	return "Next turn ▶"
 
 
 func _on_next_stage() -> void:
 	if _client_net("pass"):
 		return
 	if USE_ENGINE:
+		if _in_blocking_mode():
+			_set_status("Choose your blockers, then Confirm blocks (or No blocks).")
+			return
+		if _in_attack_mode():
+			_set_status("Pick attackers, then press Attack — or press it with none picked to skip combat.")
+			return
 		if session == null or not session.can_play():
 			_set_status("Keep or Mulligan first.")
+			return
+		if session.draw_waiting():
+			_on_click_library()
 			return
 		session.pass_once()
 		_refresh()
@@ -1133,17 +2057,30 @@ func _on_end_turn() -> void:
 		if not session.can_play():
 			_set_status("Keep or Mulligan first.")
 			return
+		if _in_blocking_mode():
+			_set_status("Choose your blockers, then Confirm blocks (or No blocks).")
+			return
+		if session.draw_waiting():
+			_set_status("Draw first — click your deck.")
+			return
+		_pending_attackers.clear()
 		var life_you := int(session.view.you.get("life", 40))
 		var life_bot := int(session.view.rival.get("life", 40))
 		session.end_you_turn()
 		_tap_sfx("mug")
+		if session.awaiting_blocks:
+			_pending_blocks.clear()
+			_block_pick = ""
+			_refresh()
+			_set_status("You're being attacked! " + str(session.view.prompt))
+			return
 		_refresh()
 		var you_lost: int = life_you - int(session.view.you.get("life", 40))
 		var bot_lost: int = life_bot - int(session.view.rival.get("life", 40))
 		if session.engine.is_over():
 			_set_status(str(session.view.prompt))
 		elif session.pending_draw_anim:
-			var msg := "Your turn — click Draw."
+			var msg := "Your turn — click your deck to draw."
 			if you_lost > 0:
 				msg = "You lost %d life. " % you_lost + msg
 			_set_status(msg)
@@ -1158,7 +2095,7 @@ func _on_end_turn() -> void:
 	if not state.active_is_you:
 		return
 	if not state.you_drew_this_turn:
-		_set_status("Draw first — use the Draw button.")
+		_set_status("Draw first — click your deck.")
 		return
 	var life_you := int(state.you["life"])
 	var life_bot := int(state.rival["life"])
@@ -1174,7 +2111,7 @@ func _on_end_turn() -> void:
 	if int(state.you["life"]) <= 0:
 		msg += " You lost the game."
 	else:
-		msg += " Your turn — click Draw."
+		msg += " Your turn — click your deck to draw."
 	_tap_sfx("mug")
 	_refresh()
 	_set_status(msg)
@@ -1185,7 +2122,7 @@ func _on_click_library() -> void:
 			_set_status("Keep or Mulligan first.")
 			return
 		if not session.pending_draw_anim:
-			_set_status("One draw per turn. It happens at the start of your turn.")
+			_set_status("You have already drawn this turn.")
 			return
 		var drawn: Dictionary = session.ack_draw()
 		if drawn.is_empty():
@@ -1282,6 +2219,32 @@ func _tap_sfx(kind: String) -> void:
 		"dice":
 			sfx.play_dice()
 
+## Music volume bar for the header (0-100%, default 70%).
+func _volume_slider() -> Control:
+	var box := HBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	box.custom_minimum_size = Vector2(130, 32)
+	var lab := Label.new()
+	lab.text = "Vol"
+	lab.add_theme_font_size_override("font_size", 12)
+	lab.size_flags_vertical = SIZE_SHRINK_CENTER
+	box.add_child(lab)
+	var sl := HSlider.new()
+	sl.min_value = 0
+	sl.max_value = 100
+	sl.step = 1
+	sl.value = (music.volume if music != null else 0.7) * 100.0
+	sl.custom_minimum_size = Vector2(80, 20)
+	sl.size_flags_vertical = SIZE_SHRINK_CENTER
+	sl.tooltip_text = "Music volume"
+	sl.value_changed.connect(func(v: float) -> void:
+		if music != null:
+			music.set_volume(v / 100.0)
+	)
+	box.add_child(sl)
+	return box
+
+
 func _on_mute() -> void:
 	if music == null:
 		return
@@ -1289,15 +2252,28 @@ func _on_mute() -> void:
 	mute_button.text = "Music" if on else "Mute"
 	_set_status("Music off." if on else "Music on.")
 
-func _on_sfx() -> void:
-	if sfx == null:
+
+## Shows "⚔ 12/21 Krenko" under a life total once that player has taken commander damage.
+func _paint_cmdr_damage(label: Label, player: Dictionary) -> void:
+	if label == null:
 		return
-	var on: bool = sfx.toggle_mute()
-	sfx_button.text = "SFX off" if on else "SFX"
-	var app := get_node_or_null("/root/AppState")
-	if app != null:
-		app.sfx_muted = on
-	_set_status("Tavern sounds off." if on else "Tavern sounds on.")
+	var hits: Array = player.get("cmdr_damage", [])
+	if hits.is_empty():
+		label.visible = false
+		return
+	var need := int(player.get("cmdr_need", 21))
+	var worst: Dictionary = hits[0]
+	var lines: PackedStringArray = []
+	for h in hits:
+		if int(h.amount) > int(worst.amount):
+			worst = h
+		lines.append("%s: %d/%d" % [str(h.name), int(h.amount), need])
+	var n := str(worst.name)
+	var cut := n.find(",")
+	label.text = "⚔ %d/%d %s" % [int(worst.amount), need, n.substr(0, cut) if cut > 0 else n]
+	label.tooltip_text = "Commander damage taken — " + ", ".join(lines) + ". %d from one commander loses the game." % need
+	label.add_theme_color_override("font_color", ATTACK_RED if int(worst.amount) >= need - 6 else MUTED)
+	label.visible = true
 
 
 func _paint_life(label: Label, life: int) -> void:
@@ -1319,6 +2295,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif key.keycode == KEY_ENTER or key.keycode == KEY_KP_ENTER:
 		_on_end_turn()
+		get_viewport().set_input_as_handled()
+	elif key.keycode == KEY_F3:
+		_show_debug = not _show_debug
+		if debug_label:
+			debug_label.visible = _show_debug
+		_refresh_debug()
 		get_viewport().set_input_as_handled()
 
 func _on_dice() -> void:
@@ -1479,14 +2461,6 @@ func _refresh_ability_panel() -> void:
 			prompt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			prompt.add_theme_font_size_override("font_size", 12)
 			ability_box.add_child(prompt)
-			if dec.kind == &"OPTIONAL_YES_NO":
-				ability_box.add_child(_decision_button("Yes", true, null))
-				ability_box.add_child(_decision_button("No", false, null))
-			else:
-				for cand in dec.candidates:
-					ability_box.add_child(_decision_button(str(cand), true, cand))
-				if dec.optional:
-					ability_box.add_child(_decision_button("Decline", false, null))
 		return
 	var sid := str(session.selected_id)
 	if sid == "" or not sid.is_valid_int():
@@ -1520,6 +2494,176 @@ func _refresh_ability_panel() -> void:
 				parts.append("%s: %s" % [str((row2 as Dictionary).get("cost", "")), str((row2 as Dictionary).get("reason", ""))])
 		why.text = "\n".join(parts)
 		ability_box.add_child(why)
+
+
+## Pick screens: a land's optional reveal / life payment, targets, and the engine's own questions
+## (hideaway, discard, surveil, colors, discover ...). Shown over the table until answered.
+var _choice_dialog: ChoiceDialog = null
+## Pick menu for one card's ways to cast or use it (kicker, dash, flashback, cycling, crew, turn face up ...).
+var _menu_entries: Array = []
+var _menu_oid: int = 0
+
+
+func _open_card_menu(oid: int, entries: Array, title: String, sub: String = "") -> void:
+	_close_choice()
+	_menu_entries = entries
+	_menu_oid = oid
+	var options: Array = []
+	for i in entries.size():
+		var en: Dictionary = entries[i]
+		options.append({"value": i, "label": str(en.label), "detail": str(en.detail)})
+	_choice_dialog = ChoiceDialog.new()
+	_choice_dialog.signature = "menu:%d:%d" % [oid, entries.size()]
+	add_child(_choice_dialog)
+	_choice_dialog.show_choices(title, sub, options, "Cancel")
+	_choice_dialog.picked.connect(_on_menu_picked)
+	_choice_dialog.cancelled.connect(func() -> void:
+		_menu_entries = []
+		_close_choice()
+	)
+
+
+func _on_menu_picked(value: Variant) -> void:
+	var idx := int(value)
+	var entries: Array = _menu_entries
+	var oid := _menu_oid
+	_menu_entries = []
+	_close_choice()
+	if session == null or idx < 0 or idx >= entries.size():
+		return
+	var entry: Dictionary = entries[idx]
+	var target_oid := int(entry.get("object_id", oid))
+	var r: SubmitResult = session.run_card_entry(target_oid, entry)
+	_refresh()
+	if r.ok:
+		_tap_sfx("card")
+	_set_status(r.error if not r.ok else "%s." % str(entry.get("label", "Done")))
+
+
+func _on_click_pile(zone_id: int, title: String) -> void:
+	if not USE_ENGINE or session == null:
+		return
+	var entries: Array = session.zone_menu(zone_id)
+	if entries.is_empty():
+		_set_status("Nothing in %s can be cast right now." % title)
+		return
+	_open_card_menu(0, entries, "Cast from %s" % title)
+
+
+func _update_prompts() -> void:
+	if session == null or session.engine == null:
+		return
+	var want_sig := ""
+	var title := ""
+	var sub := ""
+	var options: Array = []
+	var cancel_text := ""
+	var kind := ""
+	var faces: Array = []
+	var eng: RulesEngine = session.engine
+	if not session.land_prompt.is_empty():
+		kind = "land"
+		var q: Dictionary = session.land_prompt
+		title = str(q.get("text", ""))
+		options = [{"value": true, "label": str(q.get("yes", "Yes"))}, {"value": false, "label": str(q.get("no", "No"))}]
+		want_sig = "land:%s" % str(q.get("object_id"))
+	elif not session.target_prompt.is_empty():
+		kind = "target"
+		var tp: Dictionary = session.target_prompt
+		title = str(tp.get("title", "Choose a target"))
+		sub = str(tp.get("sub", ""))
+		for o in tp.get("options", []):
+			options.append({"value": int(o.get("id")), "label": o.get("label", ""), "detail": o.get("detail", ""), "mine": o.get("mine", true)})
+		cancel_text = "Cancel"
+		want_sig = "target:%s:%d" % [title + sub, options.size()]
+	elif eng.state.mode == EngineEnums.EngineMode.AWAITING_DECISION and int(eng.state.awaiting.get("player_id", -1)) == 0 \
+			and eng.state.pending_decision is PlayerDecision:
+		kind = "decision"
+		var dec := eng.state.pending_decision as PlayerDecision
+		title = dec.prompt if dec.prompt != "" else "Choose"
+		want_sig = "decision:%d:%s:%s" % [dec.decision_id, dec.link, dec.prompt]
+		## Show the cards the question is about, face up, so you can read what they do.
+		for sid in dec.show_ids:
+			var so: GameObject = eng.state.objects.get(int(sid))
+			if so != null:
+				faces.append(_make_card_face(TableView._card_dict(eng, so, _catalog()), Vector2(210, 294)))
+		if dec.kind == &"OPTIONAL_YES_NO":
+			options = [{"value": true, "label": "Yes"}, {"value": false, "label": "No"}]
+		else:
+			for cand in dec.candidates:
+				var info: Dictionary = dec.info.get(str(cand), {})
+				var opt := {"value": cand, "label": str(info.get("label", cand)), "detail": str(info.get("detail", ""))}
+				var co: GameObject = eng.state.objects.get(int(cand)) if (cand is int) else null
+				if co != null and co.definition is CardDefinition:
+					opt["card"] = TableView._card_dict(eng, co, _catalog())
+				options.append(opt)
+			if dec.optional:
+				cancel_text = "Skip"
+	if want_sig == "" and not _menu_entries.is_empty():
+		return
+	if want_sig == "":
+		if _choice_dialog != null:
+			_choice_dialog.queue_free()
+			_choice_dialog = null
+		return
+	if _choice_dialog != null and _choice_dialog.signature == want_sig:
+		return
+	if _choice_dialog != null:
+		_choice_dialog.queue_free()
+	_choice_dialog = ChoiceDialog.new()
+	_choice_dialog.signature = want_sig
+	add_child(_choice_dialog)
+	_choice_dialog.show_choices(title, sub, options, cancel_text, faces)
+	_choice_dialog.option_hovered.connect(_on_dialog_option_hover)
+	_choice_dialog.option_unhovered.connect(_on_unhover_card)
+	_choice_dialog.picked.connect(_on_choice_picked.bind(kind))
+	_choice_dialog.cancelled.connect(_on_choice_cancelled.bind(kind))
+
+
+func _on_dialog_option_hover(card: Dictionary) -> void:
+	if hover_wrap != null:
+		hover_wrap.z_index = 120  ## above the pick screen
+	_on_hover_card(card)
+
+
+func _close_choice() -> void:
+	if _choice_dialog != null:
+		_choice_dialog.queue_free()
+		_choice_dialog = null
+
+
+func _on_choice_picked(value: Variant, kind: String) -> void:
+	_close_choice()
+	if session == null:
+		return
+	match kind:
+		"land":
+			var r: SubmitResult = session.answer_land(bool(value))
+			_refresh()
+			_set_status(r.error if not r.ok else "Land played.")
+		"target":
+			var r2: SubmitResult = session.choose_target(int(value))
+			_refresh()
+			_set_status(r2.error if not r2.ok else "Target chosen.")
+		"decision":
+			var dec: PlayerDecision = session.engine.state.pending_decision as PlayerDecision
+			if dec != null and dec.kind == &"OPTIONAL_YES_NO":
+				_on_decision_button(bool(value), null)
+			else:
+				_on_decision_button(true, value)
+
+
+func _on_choice_cancelled(kind: String) -> void:
+	_close_choice()
+	if session == null:
+		return
+	match kind:
+		"target":
+			session.cancel_target()
+			_refresh()
+			_set_status("Cancelled.")
+		"decision":
+			_on_decision_button(false, null)
 
 
 func _decision_button(label: String, accept: bool, choice: Variant) -> Button:
@@ -1570,12 +2714,12 @@ func _build_debug_label() -> void:
 	debug_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	debug_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	debug_label.z_index = 40
-	debug_label.visible = DEBUG_MATCH
+	debug_label.visible = _show_debug
 	add_child(debug_label)
 
 
 func _refresh_debug() -> void:
-	if debug_label == null or not DEBUG_MATCH or session == null or session.engine == null:
+	if debug_label == null or not _show_debug or session == null or session.engine == null:
 		if debug_label:
 			debug_label.visible = false
 		return
@@ -1595,6 +2739,141 @@ func _refresh_debug() -> void:
 			lines.append(str(report.get("text", "")))
 	debug_label.text = "\n".join(lines)
 	debug_label.offset_bottom = 560
+
+
+## Before the opening hands: call heads or tails to see who goes first (CR 103.1).
+func _build_coin_overlay() -> void:
+	coin_overlay = ColorRect.new()
+	coin_overlay.color = Color(0.02, 0.03, 0.04, 0.92)
+	coin_overlay.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	coin_overlay.offset_top = 44
+	coin_overlay.z_index = 90
+	coin_overlay.visible = false
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	coin_overlay.add_child(center)
+	var panel := PanelContainer.new()
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.08, 0.09, 0.10, 0.98)
+	st.set_corner_radius_all(12)
+	st.set_border_width_all(2)
+	st.border_color = GOLD
+	st.content_margin_left = 40
+	st.content_margin_right = 40
+	st.content_margin_top = 24
+	st.content_margin_bottom = 24
+	panel.add_theme_stylebox_override("panel", st)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 14)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	var title := Label.new()
+	title.text = "Coin flip"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", GOLD)
+	col.add_child(title)
+	coin_status = Label.new()
+	coin_status.text = "Call it. The winner goes first."
+	coin_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	coin_status.add_theme_font_size_override("font_size", 16)
+	coin_status.add_theme_color_override("font_color", MUTED)
+	col.add_child(coin_status)
+	var coin := PanelContainer.new()
+	coin.custom_minimum_size = Vector2(150, 150)
+	coin.size_flags_horizontal = SIZE_SHRINK_CENTER
+	var cst := StyleBoxFlat.new()
+	cst.bg_color = Color(0.86, 0.68, 0.16)
+	cst.set_corner_radius_all(75)
+	cst.set_border_width_all(8)
+	cst.border_color = Color(1.0, 0.9, 0.5)
+	coin.add_theme_stylebox_override("panel", cst)
+	coin_face = Label.new()
+	coin_face.text = "?"
+	coin_face.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	coin_face.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	coin_face.add_theme_font_size_override("font_size", 30)
+	coin_face.add_theme_color_override("font_color", Color(0.25, 0.16, 0.02))
+	coin.add_child(coin_face)
+	col.add_child(coin)
+	coin_call_row = HBoxContainer.new()
+	coin_call_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	coin_call_row.add_theme_constant_override("separation", 16)
+	for side in [["HEADS", true], ["TAILS", false]]:
+		var b := Button.new()
+		b.text = str(side[0])
+		b.custom_minimum_size = Vector2(150, 46)
+		b.add_theme_font_size_override("font_size", 18)
+		var bst := StyleBoxFlat.new()
+		bst.bg_color = TURN_GREEN.darkened(0.1)
+		bst.set_corner_radius_all(8)
+		b.add_theme_stylebox_override("normal", bst)
+		b.add_theme_color_override("font_color", Color(0.06, 0.12, 0.05))
+		b.pressed.connect(_on_coin_call.bind(bool(side[1])))
+		coin_call_row.add_child(b)
+	col.add_child(coin_call_row)
+	coin_continue = Button.new()
+	coin_continue.text = "Draw opening hands"
+	coin_continue.custom_minimum_size = Vector2(240, 46)
+	coin_continue.add_theme_font_size_override("font_size", 18)
+	coin_continue.visible = false
+	coin_continue.pressed.connect(_on_coin_continue)
+	col.add_child(coin_continue)
+	panel.add_child(col)
+	center.add_child(panel)
+	add_child(coin_overlay)
+
+
+func _refresh_coin() -> void:
+	if coin_overlay == null or session == null:
+		return
+	var show: bool = USE_ENGINE and session.match_start == GameSession.MatchStart.COIN_FLIP
+	coin_overlay.visible = show
+	if not show:
+		_coin_state = 0
+		return
+	if _coin_state == 0:
+		coin_face.text = "?"
+		coin_status.text = "Call it. The winner goes first."
+		coin_call_row.visible = true
+		coin_continue.visible = false
+
+
+func _on_coin_call(heads: bool) -> void:
+	if session == null or _coin_state != 0:
+		return
+	_coin_state = 1
+	session.call_coin(heads)
+	coin_call_row.visible = false
+	coin_status.text = "You called %s…" % ("heads" if heads else "tails")
+	_tap_sfx("dice")
+	var tw := create_tween()
+	var delay := 0.06
+	for i in 14:
+		var face_text := "HEADS" if i % 2 == 0 else "TAILS"
+		tw.tween_callback(func() -> void: coin_face.text = face_text)
+		tw.tween_interval(delay)
+		delay += 0.025
+	tw.tween_callback(_coin_landed)
+
+
+func _coin_landed() -> void:
+	if session == null:
+		return
+	coin_face.text = "HEADS" if session.coin_heads else "TAILS"
+	var wins: bool = session.first_player == session.you_seat
+	coin_status.text = ("It's %s. You go first!" if wins else "It's %s. Talrand goes first.") % ("heads" if session.coin_heads else "tails")
+	coin_continue.visible = true
+	_coin_state = 2
+
+
+func _on_coin_continue() -> void:
+	if session == null or _coin_state != 2:
+		return
+	session.finish_coin_flip()
+	_coin_state = 0
+	_refresh()
+	if session.first_player != session.you_seat:
+		_set_status("Talrand won the flip and goes first.")
 
 
 func _build_mulligan_overlay() -> void:
@@ -1688,8 +2967,11 @@ func _make_card_face(card: Dictionary, sz: Vector2) -> Control:
 		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		tr.custom_minimum_size = sz
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tr.name = "art_tex"
 		wrap.add_child(tr)
+		_upgrade_face_when_art_arrives(wrap, card, sz)
 		return wrap
+	_upgrade_face_when_art_arrives(wrap, card, sz)
 	var caption := CardFaceScript.art_caption(card)
 	var inner := VBoxContainer.new()
 	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1746,6 +3028,36 @@ func _make_card_face(card: Dictionary, sz: Vector2) -> Control:
 		inner.add_child(ptl)
 	wrap.add_child(inner)
 	return wrap
+
+
+## A card picture still downloading ("Loading art...") turns into the full card image as soon as it arrives,
+## and the small image is upgraded to the large one when that lands.
+func _upgrade_face_when_art_arrives(wrap: Control, card: Dictionary, sz: Vector2) -> void:
+	var cat := _catalog()
+	if cat == null or not cat.has_signal("art_updated") or not CardFaceScript.has_artwork(card):
+		return
+	var cb := func(_cid: String) -> void:
+		if not is_instance_valid(wrap):
+			return
+		var t: Texture2D = cat.texture_for(card, "normal")
+		if t == null:
+			return
+		var tr := wrap.get_node_or_null("art_tex") as TextureRect
+		if tr == null:
+			for ch in wrap.get_children():
+				ch.queue_free()
+			tr = TextureRect.new()
+			tr.name = "art_tex"
+			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+			tr.custom_minimum_size = sz
+			tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			wrap.add_child(tr)
+		tr.texture = t
+	cat.art_updated.connect(cb)
+	wrap.tree_exited.connect(func() -> void:
+		if cat.art_updated.is_connected(cb):
+			cat.art_updated.disconnect(cb))
 
 
 func _refresh_mulligan() -> void:
@@ -1880,6 +3192,8 @@ func _on_play_imported(deck: NormalizedDeck, rows: Dictionary) -> void:
 	_mulligan_sig = ""
 	if session == null:
 		session = GameSession.new()
+		session.manual_draw = true
+		session.coin_flip = true
 		session.debug_enabled = DEBUG_MATCH
 	session.start_imported(deck, rows)
 	_refresh()
@@ -1891,6 +3205,8 @@ func _on_new_game() -> void:
 	_mulligan_sig = ""
 	if USE_ENGINE:
 		session = GameSession.new()
+		session.manual_draw = true
+		session.coin_flip = true
 		session.difficulty = d
 		session.debug_enabled = DEBUG_MATCH
 		session.start_table_demo()

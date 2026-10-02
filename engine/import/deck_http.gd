@@ -54,7 +54,7 @@ static func get_sync(url: String, timeout_ms: int = 20000) -> Dictionary:
 		return {ok = false, status = code, text = text, error = "Deck not found."}
 	if code != 200:
 		return {ok = false, status = code, text = text, error = "HTTP %d." % code}
-	return {ok = true, status = code, text = text, error = ""}
+	return {ok = true, status = code, text = text, bytes = body, error = ""}
 
 
 static func post_sync(url: String, json_body: String, timeout_ms: int = 20000) -> Dictionary:

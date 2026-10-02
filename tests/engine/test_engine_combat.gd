@@ -155,7 +155,7 @@ func test_tapped_creature_cannot_block() -> void:
 	assert_eq(r.error, "illegal blocker")
 
 
-func test_two_blockers_on_one_attacker_rejected() -> void:
+func test_two_blockers_on_one_attacker_allowed() -> void:
 	var engine := Fixtures.empty_engine_1v1()
 	var piker := _ready_attacker(engine, "Goblin Piker")
 	var a := _ready_blocker(engine, "Goblin Piker")
@@ -164,9 +164,21 @@ func test_two_blockers_on_one_attacker_rejected() -> void:
 	act.kind = GameAction.Kind.DECLARE_BLOCKERS
 	act.player_id = 1
 	act.extra = {blockers = {piker.object_id: [a.object_id, b.object_id]}}
+	assert_true(engine.submit(act).ok)
+
+
+func test_one_creature_cannot_block_two_attackers() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var first := _ready_attacker(engine, "Goblin Piker")
+	var second := _ready_attacker(engine, "Goblin Piker")
+	var wall := _ready_blocker(engine, "Krenko, Mob Boss")
+	var act := GameAction.new()
+	act.kind = GameAction.Kind.DECLARE_BLOCKERS
+	act.player_id = 1
+	act.extra = {blockers = {first.object_id: [wall.object_id], second.object_id: [wall.object_id]}}
 	var r := engine.submit(act)
 	assert_false(r.ok)
-	assert_eq(r.error, "one blocker per attacker")
+	assert_eq(r.error, "blocker already assigned")
 
 
 func test_two_attackers_hit_two_defenders() -> void:

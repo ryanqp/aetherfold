@@ -20,3 +20,8 @@ var set_toughness: int = 0
 ## Layer 6.
 var add_keywords: PackedStringArray = PackedStringArray()
 var gain_ability_ids: Array = []
+
+## Layer 4: card types added (a crewed Vehicle becomes an artifact creature).
+var add_types: PackedStringArray = PackedStringArray()
+## Abilities (Ability objects) the affected permanents gain (backup, "gains '...'").
+var add_abilities: Array = []

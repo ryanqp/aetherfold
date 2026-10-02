@@ -13,6 +13,8 @@ var text: String = ""
 var unparsed: bool = false
 ## Printed on the card but not active until a continuous effect grants it (CR 113.3d / 611.2c).
 var granted: bool = false
+## STATIC abilities: what they change while the permanent is on the battlefield (see LayerManager).
+var static_spec: Dictionary = {}
 
 
 func is_mana() -> bool:
@@ -21,6 +23,10 @@ func is_mana() -> bool:
 
 func is_activated() -> bool:
 	return kind == &"ACTIVATED" and not unparsed
+
+
+func has_sacrifice_cost() -> bool:
+	return _has_cost(&"SACRIFICE_SELF")
 
 
 func has_tap_cost() -> bool:

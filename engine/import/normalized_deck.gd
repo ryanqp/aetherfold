@@ -16,6 +16,13 @@ func add_main(card_name: String, quantity: int = 1) -> void:
 	_add_to(mainboard, card_name, quantity)
 
 
+## Drops every copy of a card from the mainboard (tokens that a list site includes by mistake).
+func remove_main(card_name: String) -> void:
+	for i in range(mainboard.size() - 1, -1, -1):
+		if str((mainboard[i] as Dictionary).get("name", "")) == card_name:
+			mainboard.remove_at(i)
+
+
 func commander_names() -> PackedStringArray:
 	var out := PackedStringArray()
 	for e in commanders:

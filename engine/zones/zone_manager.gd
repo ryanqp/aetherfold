@@ -6,6 +6,8 @@ extends RefCounted
 var _state_ref: WeakRef
 var _shared: Dictionary = {}
 var _player_zones: Array = []
+## Optional: Callable(obj) -> {power, toughness} read just before a permanent leaves (last known information).
+var lki_fn: Callable = Callable()
 
 
 static func is_shared(zone_id: int) -> bool:
@@ -70,7 +72,7 @@ func create(owner_id: int, zone_id: int, opts: Dictionary = {}) -> GameObject:
 	obj.is_commander = bool(opts.get("is_commander", false))
 	obj.tapped = bool(opts.get("tapped", false))
 	if zone_id == EngineEnums.ZoneId.BATTLEFIELD and not opts.has("tapped"):
-		obj.tapped = _etb_tapped(obj.definition)
+		obj.tapped = _etb_tapped(obj.definition, owner_id)
 	obj.summoned_this_turn = bool(opts.get(
 		"summoned_this_turn", zone_id == EngineEnums.ZoneId.BATTLEFIELD
 	))
@@ -80,7 +82,24 @@ func create(owner_id: int, zone_id: int, opts: Dictionary = {}) -> GameObject:
 	gs.objects[obj.object_id] = obj
 	_insert(zone, obj.object_id)
 	_add_commander_id(obj)
+	if zone_id == EngineEnums.ZoneId.BATTLEFIELD:
+		_on_enter(gs, obj)
 	return obj
+
+
+## What a permanent has as it enters (CR 614.12-style "enters with"): a planeswalker's loyalty counters
+## (CR 306.5b), an impending permanent's time counters (CR 702.176a), and the count of nonland permanents
+## that entered under each player's control this turn (celebration).
+func _on_enter(gs: GameState, obj: GameObject) -> void:
+	if not (obj.definition is CardDefinition):
+		return
+	var def := obj.definition as CardDefinition
+	if def.type_line.contains("Planeswalker") and not obj.counters.has("loyalty") and not obj.face_down:
+		obj.counters["loyalty"] = int(def.loyalty) if def.loyalty.is_valid_int() else 0
+	if obj.cast_mode == "impending" and def.kw().has("impending"):
+		obj.counters["time"] = int(def.kw().impending.n)
+	if not def.is_land() and obj.controller_id >= 0 and obj.controller_id < gs.players.size():
+		gs.players[obj.controller_id].nonland_entered_this_turn += 1
 
 
 func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip_replacement: bool = false) -> GameObject:
@@ -88,6 +107,14 @@ func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip
 	if gs == null or not gs.objects.has(object_id):
 		return null
 	var old: GameObject = gs.objects[object_id]
+	## Finality counter (CR 122.1g): a permanent with one that would go to a graveyard from the battlefield is exiled instead.
+	if dest_zone == EngineEnums.ZoneId.GRAVEYARD and old.zone == EngineEnums.ZoneId.BATTLEFIELD and int(old.counters.get("finality", 0)) > 0:
+		dest_zone = EngineEnums.ZoneId.EXILE
+	## Unearth (CR 702.84a) and disturb / warp-style "exile it instead": leaving for anywhere but exile, it's exiled.
+	if old.zone == EngineEnums.ZoneId.BATTLEFIELD and dest_zone != EngineEnums.ZoneId.EXILE and (old.unearthed or bool(old.marks.get("exile if it would leave", false))):
+		dest_zone = EngineEnums.ZoneId.EXILE
+	if dest_zone == EngineEnums.ZoneId.GRAVEYARD and bool(old.marks.get("exile instead of graveyard", false)):
+		dest_zone = EngineEnums.ZoneId.EXILE
 	if not skip_replacement and gs.replacement != null and gs.replacement.has_method("rewrite"):
 		var rewritten: int = gs.replacement.rewrite(gs, old, dest_zone)
 		if rewritten < 0:
@@ -105,6 +132,7 @@ func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip
 	src.object_ids.erase(object_id)
 	_detach_from_hosts(object_id)
 	_drop_commander_id(old)
+	var last_known := _last_known(old)
 	if old.is_token and dest_zone != EngineEnums.ZoneId.BATTLEFIELD:
 		gs.objects.erase(object_id)
 		var ceased := gs.log.append(EngineEnums.EventType.ZONE_CHANGE, old.owner_id, {
@@ -113,6 +141,10 @@ func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip
 			from_zone = old.zone,
 			to_zone = dest_zone,
 			linked_from = old.object_id,
+			definition = old.definition,
+			from_controller = old.controller_id,
+			was_token = true,
+			lki = last_known,
 		})
 		ceased.object_ids.append(old.object_id)
 		return null
@@ -125,7 +157,8 @@ func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip
 	else:
 		new_obj.controller_id = dest_player
 	new_obj.zone = dest_zone
-	new_obj.definition = old.definition
+	## A transformed double-faced card is its front face again anywhere but the battlefield (CR 712.8).
+	new_obj.definition = old.front_def if old.front_def != null else old.definition
 	new_obj.timestamp = gs.next_timestamp
 	gs.next_timestamp += 1
 	new_obj.linked_from = old.object_id
@@ -133,27 +166,139 @@ func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip
 	new_obj.face_id = old.face_id
 	new_obj.is_token = old.is_token
 	new_obj.is_commander = old.is_commander
-	new_obj.tapped = dest_zone == EngineEnums.ZoneId.BATTLEFIELD and _etb_tapped(old.definition)
+	new_obj.tapped = dest_zone == EngineEnums.ZoneId.BATTLEFIELD and _etb_tapped(old.definition, new_obj.controller_id)
 	new_obj.summoned_this_turn = dest_zone == EngineEnums.ZoneId.BATTLEFIELD
 	new_obj.damage_marked = 0
+	## What a spell carries onto the battlefield: kicker, how it was cast, face-down status, dash and suspend haste.
+	if old.zone == EngineEnums.ZoneId.STACK and dest_zone == EngineEnums.ZoneId.BATTLEFIELD:
+		new_obj.kicked = old.kicked
+		new_obj.cast_from = old.cast_from
+		new_obj.cast_mode = old.cast_mode
+		new_obj.face_down = old.face_down
+		new_obj.dashed = old.dashed
+		new_obj.granted_haste = old.granted_haste
+		new_obj.ward_extra = old.ward_extra
+		new_obj.gift_promised = old.gift_promised
+		new_obj.x_paid = old.x_paid
+		new_obj.mana_spent = old.mana_spent
+		new_obj.colors_spent = old.colors_spent.duplicate()
+		new_obj.bestowed = old.bestowed
+		for mk in ["exile instead of graveyard", "evoked", "blitzed", "warped", "bargained", "evidence collected",
+				"offspring paid", "squad", "teamwork", "prototyped", "converted", "disturbed", "cleaved", "mutating", "sneaked",
+				"bestowing", "sneak_defender", "copies_on_resolve", "evidence", "phyrexian_life"]:
+			if old.marks.has(mk):
+				new_obj.marks[mk] = old.marks[mk]
+		if old.front_def != null:
+			new_obj.front_def = old.front_def
+			new_obj.definition = old.definition
+	if old.zone == EngineEnums.ZoneId.BATTLEFIELD and dest_zone == EngineEnums.ZoneId.GRAVEYARD:
+		gs.died_this_turn += 1
 	gs.objects.erase(object_id)
 	gs.objects[new_obj.object_id] = new_obj
 	_insert(dst, new_obj.object_id)
 	_add_commander_id(new_obj)
+	if dest_zone == EngineEnums.ZoneId.BATTLEFIELD:
+		_on_enter(gs, new_obj)
+	## A merged (mutated) permanent's other cards go to the same zone (CR 721.3 / 702.140).
+	if old.zone == EngineEnums.ZoneId.BATTLEFIELD and not old.merged.is_empty() and dest_zone != EngineEnums.ZoneId.BATTLEFIELD:
+		for md in old.merged:
+			var part := GameObject.new()
+			part.object_id = gs.next_object_id
+			gs.next_object_id += 1
+			part.owner_id = old.owner_id
+			part.controller_id = dest_player if dest_player >= 0 else old.owner_id
+			part.zone = dest_zone
+			part.definition = md
+			part.timestamp = gs.next_timestamp
+			gs.next_timestamp += 1
+			part.instance_uuid = "o%d" % part.object_id
+			gs.objects[part.object_id] = part
+			_insert(dst, part.object_id)
 	var ev := gs.log.append(EngineEnums.EventType.ZONE_CHANGE, new_obj.owner_id, {
 		from_id = old.object_id,
 		to_id = new_obj.object_id,
 		from_zone = old.zone,
 		to_zone = dest_zone,
 		linked_from = old.object_id,
+		definition = old.definition,
+		from_controller = old.controller_id,
+		was_token = old.is_token,
+		lki = last_known,
 	})
 	ev.object_ids.append(old.object_id)
 	ev.object_ids.append(new_obj.object_id)
 	return new_obj
 
 
-func _etb_tapped(definition) -> bool:
-	return definition is CardDefinition and (definition as CardDefinition).enters_tapped()
+func _last_known(old: GameObject) -> Dictionary:
+	if old.zone != EngineEnums.ZoneId.BATTLEFIELD or not lki_fn.is_valid():
+		return {}
+	var out: Variant = lki_fn.call(old)
+	return out if out is Dictionary else {}
+
+
+## -1 = automatic, 0 = the player declined the optional reveal/payment, 1 = accepted. Set by the table around a land play.
+var etb_choice: int = -1
+
+
+## "Creatures your opponents control enter tapped." (CR 614.1d), read from the permanents' Oracle text.
+func _opponents_make_creatures_tapped(controller: int) -> bool:
+	var gs := _gs()
+	var bz := get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if gs == null or bz == null:
+		return false
+	for oid in bz.object_ids:
+		var o: GameObject = gs.objects.get(oid)
+		if o != null and o.controller_id != controller and o.definition is CardDefinition and not o.face_down and not o.phased_out:
+			if (o.definition as CardDefinition).oracle_text.to_lower().contains("creatures your opponents control enter tapped"):
+				return true
+	return false
+
+
+func _etb_tapped(definition, controller: int) -> bool:
+	if not (definition is CardDefinition):
+		return false
+	var def := definition as CardDefinition
+	if def.enters_tapped():
+		return true
+	if def.is_creature() and _opponents_make_creatures_tapped(controller):
+		return true
+	var rule := EtbRules.parse(def)
+	if rule.is_empty():
+		return false
+	var gs := _gs()
+	if gs == null:
+		return false
+	var hand: Array = []
+	var hz := get_zone(EngineEnums.ZoneId.HAND, controller)
+	if hz != null:
+		for oid in hz.object_ids:
+			hand.append(gs.objects.get(oid))
+	var mine: Array = []
+	var bz := get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bz != null:
+		for oid in bz.object_ids:
+			var o: GameObject = gs.objects.get(oid)
+			if o != null and o.controller_id == controller:
+				mine.append(o)
+	var life := int(gs.players[controller].life) if controller >= 0 and controller < gs.players.size() else 0
+	var kind := str(rule.get("kind"))
+	## The player's own answer ("reveal a card?", "pay life?") when the table asked; otherwise automatic.
+	if etb_choice >= 0 and (kind == "REVEAL" or kind == "PAY_LIFE"):
+		if etb_choice == 0:
+			return true
+		if kind == "REVEAL":
+			return not EtbRules._any_has(hand, rule.get("types", []))
+		if life <= int(rule.get("n", 0)):
+			return true
+		gs.players[controller].life -= int(rule.get("n", 0))
+		gs.log.append(EngineEnums.EventType.LIFE_CHANGE, controller, {to_player = controller, amount = int(rule.get("n", 0))})
+		return false
+	var tapped := EtbRules.tapped_on_entry(rule, hand, mine, life)
+	if str(rule.get("kind")) == "PAY_LIFE" and not tapped:
+		gs.players[controller].life -= int(rule.get("n", 0))
+		gs.log.append(EngineEnums.EventType.LIFE_CHANGE, controller, {to_player = controller, amount = int(rule.get("n", 0))})
+	return tapped
 
 
 func _gs() -> GameState:

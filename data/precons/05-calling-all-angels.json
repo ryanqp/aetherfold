@@ -1,0 +1,2398 @@
+{
+	"name": "Calling All Angels",
+	"source": "moxfield_commander_precons",
+	"sourceUrl": "https://moxfield.com/decks/STCkf8pBDE-Xxi1hgsZKiQ",
+	"source_url": "https://moxfield.com/decks/STCkf8pBDE-Xxi1hgsZKiQ",
+	"source_key": "precon:STCkf8pBDE-Xxi1hgsZKiQ",
+	"source_deck_id": "STCkf8pBDE-Xxi1hgsZKiQ",
+	"precon_id": "calling-all-angels",
+	"precon_order": 5,
+	"precon_set": "Foundations Commander",
+	"precon_version": 1,
+	"source_commander": "Giada, Font of Hope",
+	"scryfall_commander_id": "4ebc7622-08a1-4f43-92dd-8675d395e8f6",
+	"is_imported": true,
+	"commander": [
+		{
+			"cardId": "4ebc7622-08a1-4f43-92dd-8675d395e8f6",
+			"name": "Giada, Font of Hope",
+			"oracle_id": "48e6d3d8-2f27-4017-acdd-40bce8cdbc02",
+			"quantity": 1,
+			"scryfall_id": "4ebc7622-08a1-4f43-92dd-8675d395e8f6"
+		}
+	],
+	"mainboard": [
+		{
+			"cardId": "4ef17ed4-a9b5-4b8e-b4cb-2ecb7e5898c3",
+			"name": "Plains",
+			"oracle_id": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+			"quantity": 32,
+			"scryfall_id": "4ef17ed4-a9b5-4b8e-b4cb-2ecb7e5898c3"
+		},
+		{
+			"cardId": "ee7710cf-e73d-479f-bc8d-0e78a0e324d9",
+			"name": "Arcane Signet",
+			"oracle_id": "0bc7f093-bef0-4f1a-852c-4b75ebf54838",
+			"quantity": 1,
+			"scryfall_id": "ee7710cf-e73d-479f-bc8d-0e78a0e324d9"
+		},
+		{
+			"cardId": "eb25d007-aeff-4282-9623-621302b99bfe",
+			"name": "Heraldic Banner",
+			"oracle_id": "3525e263-e29a-49bf-a29f-fb3ce43bbd33",
+			"quantity": 1,
+			"scryfall_id": "eb25d007-aeff-4282-9623-621302b99bfe"
+		},
+		{
+			"cardId": "14adbcbf-830e-4df6-b5d3-851e266e60ba",
+			"name": "Tome of Legends",
+			"oracle_id": "cada2a1c-5db2-4702-9a57-cbe7da1bf208",
+			"quantity": 1,
+			"scryfall_id": "14adbcbf-830e-4df6-b5d3-851e266e60ba"
+		},
+		{
+			"cardId": "095bbeb1-edf4-485e-bd2f-2b8f48b7aaa3",
+			"name": "Secluded Steppe",
+			"oracle_id": "8dec6fcf-1254-4b1b-ba23-7a3e492a7241",
+			"quantity": 1,
+			"scryfall_id": "095bbeb1-edf4-485e-bd2f-2b8f48b7aaa3"
+		},
+		{
+			"cardId": "a8c5b900-650b-4655-b8f8-a7d454b20207",
+			"name": "Angelic Destiny",
+			"oracle_id": "8ba36878-0816-44c7-b543-8ebfc28c2ecd",
+			"quantity": 1,
+			"scryfall_id": "a8c5b900-650b-4655-b8f8-a7d454b20207"
+		},
+		{
+			"cardId": "808b7b00-7072-4587-8383-2bf64a9bb38b",
+			"name": "Grasp of Fate",
+			"oracle_id": "1b26a54f-6c27-4940-b77e-2a66175c5eff",
+			"quantity": 1,
+			"scryfall_id": "808b7b00-7072-4587-8383-2bf64a9bb38b"
+		},
+		{
+			"cardId": "62901ae9-98dd-466b-8358-f5abd765b3c0",
+			"name": "Mind Stone",
+			"oracle_id": "c97361b5-af16-4a7b-af85-a429dbaf4ad2",
+			"quantity": 1,
+			"scryfall_id": "62901ae9-98dd-466b-8358-f5abd765b3c0"
+		},
+		{
+			"cardId": "4f152dd9-2b35-45b2-90fe-8c71d0634226",
+			"name": "Sol Ring",
+			"oracle_id": "6ad8011d-3471-4369-9d68-b264cc027487",
+			"quantity": 1,
+			"scryfall_id": "4f152dd9-2b35-45b2-90fe-8c71d0634226"
+		},
+		{
+			"cardId": "36959f2b-75b5-4d68-b193-ada980822fd9",
+			"name": "Swords to Plowshares",
+			"oracle_id": "b1544f21-7e98-461b-aed5-e748b0168c52",
+			"quantity": 1,
+			"scryfall_id": "36959f2b-75b5-4d68-b193-ada980822fd9"
+		},
+		{
+			"cardId": "6c68b939-8971-43ea-8ad6-8bca631e24dc",
+			"name": "Temple of the False God",
+			"oracle_id": "cfdd5dc6-593e-495a-8cfe-3a56b3c4c7df",
+			"quantity": 1,
+			"scryfall_id": "6c68b939-8971-43ea-8ad6-8bca631e24dc"
+		},
+		{
+			"cardId": "9ab17fb1-98ed-4c8e-985d-a453d236095d",
+			"name": "Radiant Fountain",
+			"oracle_id": "6db442e5-fbcc-4456-a4c5-bea1aee3fc8e",
+			"quantity": 1,
+			"scryfall_id": "9ab17fb1-98ed-4c8e-985d-a453d236095d"
+		},
+		{
+			"cardId": "2c4d0c8c-5bf7-494f-859b-334ff54b16eb",
+			"name": "Speaker of the Heavens",
+			"oracle_id": "e4bacf1b-0a45-4c73-857d-dffadb7e6fa5",
+			"quantity": 1,
+			"scryfall_id": "2c4d0c8c-5bf7-494f-859b-334ff54b16eb"
+		},
+		{
+			"cardId": "dbb38f33-9f51-48cb-9f69-9a62f2c4b907",
+			"name": "Angel of Vitality",
+			"oracle_id": "635fe908-6f58-4c9e-ac55-0775a7c6f278",
+			"quantity": 1,
+			"scryfall_id": "dbb38f33-9f51-48cb-9f69-9a62f2c4b907"
+		},
+		{
+			"cardId": "e4a34101-1be3-44ae-b709-f0398998d4c4",
+			"name": "Bishop of Wings",
+			"oracle_id": "af4684cf-f109-44be-adfb-7c551a36635e",
+			"quantity": 1,
+			"scryfall_id": "e4a34101-1be3-44ae-b709-f0398998d4c4"
+		},
+		{
+			"cardId": "dd9723a6-51e1-41c3-9fbd-3e18c3ffead3",
+			"name": "Sephara, Sky's Blade",
+			"oracle_id": "ac8952c9-bd30-48cd-b964-7e6271f9cbc8",
+			"quantity": 1,
+			"scryfall_id": "dd9723a6-51e1-41c3-9fbd-3e18c3ffead3"
+		},
+		{
+			"cardId": "a2f126c3-ef62-421b-8d3e-2ae2f2d4f000",
+			"name": "Commander's Sphere",
+			"oracle_id": "0b67c4e2-f88b-4e01-85a1-9d5f5b8db13b",
+			"quantity": 1,
+			"scryfall_id": "a2f126c3-ef62-421b-8d3e-2ae2f2d4f000"
+		},
+		{
+			"cardId": "c193aab3-e53a-40ff-bd30-892170a88ff9",
+			"name": "Swiftfoot Boots",
+			"oracle_id": "c8b143ad-43ec-4e0d-a440-e348daa31391",
+			"quantity": 1,
+			"scryfall_id": "c193aab3-e53a-40ff-bd30-892170a88ff9"
+		},
+		{
+			"cardId": "1718ebac-641f-4115-bb13-d58732cf3464",
+			"name": "Endless Atlas",
+			"oracle_id": "cb923c4d-1d2e-4039-90bb-72d1981b9738",
+			"quantity": 1,
+			"scryfall_id": "1718ebac-641f-4115-bb13-d58732cf3464"
+		},
+		{
+			"cardId": "8384c346-17f5-458f-bd56-6b0f04d6f375",
+			"name": "Reya Dawnbringer",
+			"oracle_id": "08d1a5d1-141d-48e3-ac22-c2529191cb13",
+			"quantity": 1,
+			"scryfall_id": "8384c346-17f5-458f-bd56-6b0f04d6f375"
+		},
+		{
+			"cardId": "103029b9-4b0e-47c7-a714-ff93fc2ba66b",
+			"name": "Marble Diamond",
+			"oracle_id": "910488bf-66ab-415e-973b-1262b2ab7454",
+			"quantity": 1,
+			"scryfall_id": "103029b9-4b0e-47c7-a714-ff93fc2ba66b"
+		},
+		{
+			"cardId": "3b3307b6-e597-4f2c-8ad8-f8602e0ac461",
+			"name": "Day of Judgment",
+			"oracle_id": "d057289d-5e28-43d5-8ff3-4a1bc723477d",
+			"quantity": 1,
+			"scryfall_id": "3b3307b6-e597-4f2c-8ad8-f8602e0ac461"
+		},
+		{
+			"cardId": "ed1e014c-8cf9-4193-ac8e-86a7b2311f59",
+			"name": "Angel of Finality",
+			"oracle_id": "48d14b5c-711a-4f8a-9de5-55415cb7a79a",
+			"quantity": 1,
+			"scryfall_id": "ed1e014c-8cf9-4193-ac8e-86a7b2311f59"
+		},
+		{
+			"cardId": "08ef3822-592f-456f-823d-a4d5cc85ddf9",
+			"name": "Emeria Shepherd",
+			"oracle_id": "473da1b6-232b-4428-a66d-30262246b47a",
+			"quantity": 1,
+			"scryfall_id": "08ef3822-592f-456f-823d-a4d5cc85ddf9"
+		},
+		{
+			"cardId": "1c9a58d6-e1d8-4f9a-816f-d5ba7c84ca3e",
+			"name": "Always Watching",
+			"oracle_id": "c2153115-bc12-458d-baeb-538ec61e1242",
+			"quantity": 1,
+			"scryfall_id": "1c9a58d6-e1d8-4f9a-816f-d5ba7c84ca3e"
+		},
+		{
+			"cardId": "97021da6-7008-4271-a83b-459e5c9691fa",
+			"name": "Metallic Mimic",
+			"oracle_id": "1f91297a-ec2b-4ea8-9198-aa1daac20ff8",
+			"quantity": 1,
+			"scryfall_id": "97021da6-7008-4271-a83b-459e5c9691fa"
+		},
+		{
+			"cardId": "2b5e1bb7-14a3-4737-bdac-8da4c3746e7d",
+			"name": "Sunblast Angel",
+			"oracle_id": "8b34d1df-4024-497d-bd28-a7caa8c3fa24",
+			"quantity": 1,
+			"scryfall_id": "2b5e1bb7-14a3-4737-bdac-8da4c3746e7d"
+		},
+		{
+			"cardId": "675c227e-3da0-452c-aea2-5c9a7c55f5ca",
+			"name": "Segovian Angel",
+			"oracle_id": "50372c54-359c-4ee6-9e21-1e40ba53652d",
+			"quantity": 1,
+			"scryfall_id": "675c227e-3da0-452c-aea2-5c9a7c55f5ca"
+		},
+		{
+			"cardId": "7b46929d-f63c-4026-8223-e2a4a159e017",
+			"name": "Cleansing Nova",
+			"oracle_id": "aff34f28-f707-4458-8af3-1bd5b13a6b10",
+			"quantity": 1,
+			"scryfall_id": "7b46929d-f63c-4026-8223-e2a4a159e017"
+		},
+		{
+			"cardId": "a47d6756-400c-4d45-8708-8a8e95c926c8",
+			"name": "Austere Command",
+			"oracle_id": "09cc8709-fe10-472a-b05c-e89f3523018d",
+			"quantity": 1,
+			"scryfall_id": "a47d6756-400c-4d45-8708-8a8e95c926c8"
+		},
+		{
+			"cardId": "16a9ebf9-694e-484b-a1b0-adf5192ca7a7",
+			"name": "Valorous Stance",
+			"oracle_id": "1f938353-9081-4dc1-b8e7-d18ece038bd4",
+			"quantity": 1,
+			"scryfall_id": "16a9ebf9-694e-484b-a1b0-adf5192ca7a7"
+		},
+		{
+			"cardId": "fd18cc57-9c28-4cd5-9ac0-389c4992eaff",
+			"name": "Serra Avenger",
+			"oracle_id": "b91b65b3-b35c-460e-a49b-333000a9a519",
+			"quantity": 1,
+			"scryfall_id": "fd18cc57-9c28-4cd5-9ac0-389c4992eaff"
+		},
+		{
+			"cardId": "7cfeb33d-65c7-4aa2-a1d8-964e6cd73b82",
+			"name": "Bonders' Enclave",
+			"oracle_id": "f33ce38a-34ec-4b65-a0fc-160484a02007",
+			"quantity": 1,
+			"scryfall_id": "7cfeb33d-65c7-4aa2-a1d8-964e6cd73b82"
+		},
+		{
+			"cardId": "46643da0-44a9-4df5-a7d0-076af2c7c132",
+			"name": "Defy Death",
+			"oracle_id": "dbf9c3e8-35dd-4b80-bd23-f43e21cfd991",
+			"quantity": 1,
+			"scryfall_id": "46643da0-44a9-4df5-a7d0-076af2c7c132"
+		},
+		{
+			"cardId": "5bba2910-975b-46d4-9d50-4d9a83caaa77",
+			"name": "Herald of War",
+			"oracle_id": "1228bd6f-565d-4ad5-bd24-e5aa1ead5dee",
+			"quantity": 1,
+			"scryfall_id": "5bba2910-975b-46d4-9d50-4d9a83caaa77"
+		},
+		{
+			"cardId": "cef8e044-6cc0-4988-9d5f-bf9a0ab1c66f",
+			"name": "Seraph Sanctuary",
+			"oracle_id": "0b504dc6-61cc-4a72-907c-145fa4c72466",
+			"quantity": 1,
+			"scryfall_id": "cef8e044-6cc0-4988-9d5f-bf9a0ab1c66f"
+		},
+		{
+			"cardId": "3dbfbdba-52d0-4b49-8c86-8f1686e2285b",
+			"name": "Seraph of the Sword",
+			"oracle_id": "84ee74e9-b3e3-4f47-8b3c-5c1a70f5cad6",
+			"quantity": 1,
+			"scryfall_id": "3dbfbdba-52d0-4b49-8c86-8f1686e2285b"
+		},
+		{
+			"cardId": "b4f751ad-336d-479a-b63c-d2d193a42ccf",
+			"name": "Angelic Field Marshal",
+			"oracle_id": "502575f4-7c56-44bc-a77f-ae28d66c8e1f",
+			"quantity": 1,
+			"scryfall_id": "b4f751ad-336d-479a-b63c-d2d193a42ccf"
+		},
+		{
+			"cardId": "5699c00b-99a0-4db6-a592-e93efbe391bf",
+			"name": "Archangel of Tithes",
+			"oracle_id": "ff5caed4-0276-476d-8fae-edae2536df7f",
+			"quantity": 1,
+			"scryfall_id": "5699c00b-99a0-4db6-a592-e93efbe391bf"
+		},
+		{
+			"cardId": "3c31c48d-7833-4235-bc49-7e12a4ed607a",
+			"name": "Linvala, the Preserver",
+			"oracle_id": "64f5689d-504d-40e9-bdb5-36dcefd257e2",
+			"quantity": 1,
+			"scryfall_id": "3c31c48d-7833-4235-bc49-7e12a4ed607a"
+		},
+		{
+			"cardId": "15e10422-44e9-421c-b9ec-4006245f71a2",
+			"name": "Lyra Dawnbringer",
+			"oracle_id": "592c91fc-6430-4c76-9460-65f047350f67",
+			"quantity": 1,
+			"scryfall_id": "15e10422-44e9-421c-b9ec-4006245f71a2"
+		},
+		{
+			"cardId": "2d9d2b52-8f33-4936-927a-4c71ddd8acb8",
+			"name": "Invoke the Divine",
+			"oracle_id": "87bd0fdb-c5b9-46ea-9858-1a870960351f",
+			"quantity": 1,
+			"scryfall_id": "2d9d2b52-8f33-4936-927a-4c71ddd8acb8"
+		},
+		{
+			"cardId": "8eae5f95-909e-4de7-b767-8a16bdba5ede",
+			"name": "Vanquisher's Banner",
+			"oracle_id": "8cf38025-5821-45a0-9483-266353b7e82d",
+			"quantity": 1,
+			"scryfall_id": "8eae5f95-909e-4de7-b767-8a16bdba5ede"
+		},
+		{
+			"cardId": "f0deb485-4895-4a3e-b1a7-e3c969593f97",
+			"name": "Court of Grace",
+			"oracle_id": "f63c2438-27d4-449a-828f-f0a2ea86ff16",
+			"quantity": 1,
+			"scryfall_id": "f0deb485-4895-4a3e-b1a7-e3c969593f97"
+		},
+		{
+			"cardId": "b2593c45-585f-4eaf-bb08-e91a4fc2d425",
+			"name": "War Room",
+			"oracle_id": "71c52bf5-2a5d-488e-8b15-7ef290e4b77d",
+			"quantity": 1,
+			"scryfall_id": "b2593c45-585f-4eaf-bb08-e91a4fc2d425"
+		},
+		{
+			"cardId": "5a99580f-bdf5-41fd-8281-c615c6568826",
+			"name": "Starnheim Aspirant",
+			"oracle_id": "e7b92789-47a9-430a-ad57-be7b6c3d63cb",
+			"quantity": 1,
+			"scryfall_id": "5a99580f-bdf5-41fd-8281-c615c6568826"
+		},
+		{
+			"cardId": "9577d16a-e6ed-4d98-b90f-2abfc9b9586a",
+			"name": "Youthful Valkyrie",
+			"oracle_id": "6d37ba4b-ff56-4eec-9dc2-2d7f357dc9c9",
+			"quantity": 1,
+			"scryfall_id": "9577d16a-e6ed-4d98-b90f-2abfc9b9586a"
+		},
+		{
+			"cardId": "c43a1592-2d28-4244-a579-4deab02e92b5",
+			"name": "Righteous Valkyrie",
+			"oracle_id": "891d2690-7144-4f87-b6ef-96f2469780a9",
+			"quantity": 1,
+			"scryfall_id": "c43a1592-2d28-4244-a579-4deab02e92b5"
+		},
+		{
+			"cardId": "c62d5dc4-f89c-43a9-924c-5d7361ddfacb",
+			"name": "Secret Rendezvous",
+			"oracle_id": "34b90d3e-f48c-41ff-b3e4-5cab7a9cd597",
+			"quantity": 1,
+			"scryfall_id": "c62d5dc4-f89c-43a9-924c-5d7361ddfacb"
+		},
+		{
+			"cardId": "3a3f00d5-5847-4fc8-8c76-81ea11ce4376",
+			"name": "Angel of the Ruins",
+			"oracle_id": "14878a5f-7983-4133-a1a7-9d539531e092",
+			"quantity": 1,
+			"scryfall_id": "3a3f00d5-5847-4fc8-8c76-81ea11ce4376"
+		},
+		{
+			"cardId": "0b85b4a9-ce44-443f-9a5d-4b75fcbad076",
+			"name": "Thraben Watcher",
+			"oracle_id": "53cd9d9f-c1a7-404e-9934-4542415e3431",
+			"quantity": 1,
+			"scryfall_id": "0b85b4a9-ce44-443f-9a5d-4b75fcbad076"
+		},
+		{
+			"cardId": "ec91933d-8da0-4044-87d3-52d509756e7d",
+			"name": "Search the Premises",
+			"oracle_id": "0232418d-1c52-4573-b488-c62345ca1c8d",
+			"quantity": 1,
+			"scryfall_id": "ec91933d-8da0-4044-87d3-52d509756e7d"
+		},
+		{
+			"cardId": "168a41be-fa21-4d09-baf8-af3afd516d9b",
+			"name": "Fateful Absence",
+			"oracle_id": "35bba442-1aec-4d33-b502-4c580d61644b",
+			"quantity": 1,
+			"scryfall_id": "168a41be-fa21-4d09-baf8-af3afd516d9b"
+		},
+		{
+			"cardId": "d04d0a9b-a5a7-423a-bc27-8ea9b2cbff75",
+			"name": "Inspiring Overseer",
+			"oracle_id": "d646e42b-5635-4798-b633-29c093b66a55",
+			"quantity": 1,
+			"scryfall_id": "d04d0a9b-a5a7-423a-bc27-8ea9b2cbff75"
+		},
+		{
+			"cardId": "68905611-fb68-421a-84b6-b41e379a6361",
+			"name": "Angelic Sleuth",
+			"oracle_id": "2579e9e0-b00f-4a1b-8fce-15d06bb7fe5a",
+			"quantity": 1,
+			"scryfall_id": "68905611-fb68-421a-84b6-b41e379a6361"
+		},
+		{
+			"cardId": "6db24e22-d0b6-4f27-9fff-fce027fadf15",
+			"name": "Cut a Deal",
+			"oracle_id": "8b5cffd5-5db3-4151-9275-d91387554412",
+			"quantity": 1,
+			"scryfall_id": "6db24e22-d0b6-4f27-9fff-fce027fadf15"
+		},
+		{
+			"cardId": "c927db80-2711-4546-970e-7c2e89a0fb2f",
+			"name": "Destroy Evil",
+			"oracle_id": "b75e667a-1ceb-445a-acf4-ae1fd2dae9e7",
+			"quantity": 1,
+			"scryfall_id": "c927db80-2711-4546-970e-7c2e89a0fb2f"
+		},
+		{
+			"cardId": "c7459da4-1081-4550-88c4-936f3662c5c8",
+			"name": "Norn's Choirmaster",
+			"oracle_id": "bad6a5a9-7010-418d-b042-182926aa999d",
+			"quantity": 1,
+			"scryfall_id": "c7459da4-1081-4550-88c4-936f3662c5c8"
+		},
+		{
+			"cardId": "62cef25e-0a24-43f8-9d88-53f9d38c854f",
+			"name": "Firemane Commando",
+			"oracle_id": "ac675899-25bb-4f06-9c8c-bf188024495f",
+			"quantity": 1,
+			"scryfall_id": "62cef25e-0a24-43f8-9d88-53f9d38c854f"
+		},
+		{
+			"cardId": "2ea3aa21-0999-4178-928a-5216b66b1a24",
+			"name": "Metropolis Reformer",
+			"oracle_id": "baec04a1-3bc9-4618-afab-e42013e36648",
+			"quantity": 1,
+			"scryfall_id": "2ea3aa21-0999-4178-928a-5216b66b1a24"
+		},
+		{
+			"cardId": "59f11982-7822-4847-ab0f-de2022e750a7",
+			"name": "Wojek Investigator",
+			"oracle_id": "ab41243d-b178-4ebe-a7ac-bea37427be99",
+			"quantity": 1,
+			"scryfall_id": "59f11982-7822-4847-ab0f-de2022e750a7"
+		},
+		{
+			"cardId": "45cb7d19-0cdb-4e6a-b1ba-59c74306105b",
+			"name": "Merchant of Truth",
+			"oracle_id": "84275aab-f718-4896-b61c-63bf49fb483b",
+			"quantity": 1,
+			"scryfall_id": "45cb7d19-0cdb-4e6a-b1ba-59c74306105b"
+		},
+		{
+			"cardId": "205c527c-0055-4d2a-86b1-18d1c58a898d",
+			"name": "Patchwork Banner",
+			"oracle_id": "4fb00dbe-1f82-4ba6-b18c-97e816d10d3a",
+			"quantity": 1,
+			"scryfall_id": "205c527c-0055-4d2a-86b1-18d1c58a898d"
+		},
+		{
+			"cardId": "be5b4b1d-fd4e-4783-9393-85e08d9ae0df",
+			"name": "Exorcise",
+			"oracle_id": "58916455-844c-4d97-908f-8205bdc117c0",
+			"quantity": 1,
+			"scryfall_id": "be5b4b1d-fd4e-4783-9393-85e08d9ae0df"
+		},
+		{
+			"cardId": "bdcddceb-6b5e-4c19-9069-457c3736932d",
+			"name": "Herald of Eternal Dawn",
+			"oracle_id": "4080f7e3-06d3-4d3d-9929-4e826cb66713",
+			"quantity": 1,
+			"scryfall_id": "bdcddceb-6b5e-4c19-9069-457c3736932d"
+		},
+		{
+			"cardId": "4331836b-fa3c-4505-9361-a0b82aef63f5",
+			"name": "Exemplar of Light",
+			"oracle_id": "9ad730b5-8950-4215-9319-387e2970dd22",
+			"quantity": 1,
+			"scryfall_id": "4331836b-fa3c-4505-9361-a0b82aef63f5"
+		},
+		{
+			"cardId": "e545bc61-02f9-4f3f-b5ba-f9d32ea515d2",
+			"name": "Vanguard Seraph",
+			"oracle_id": "3250466f-82a4-45e1-9722-ff247ddf8c15",
+			"quantity": 1,
+			"scryfall_id": "e545bc61-02f9-4f3f-b5ba-f9d32ea515d2"
+		},
+		{
+			"cardId": "a1a8cc0d-c2ac-4dfe-a0a1-996bfadb7d54",
+			"name": "Dazzling Angel",
+			"oracle_id": "7de464e3-fae3-44cc-8233-776fc727c00a",
+			"quantity": 1,
+			"scryfall_id": "a1a8cc0d-c2ac-4dfe-a0a1-996bfadb7d54"
+		}
+	],
+	"cards": {
+		"Giada, Font of Hope": {
+			"id": "4ebc7622-08a1-4f43-92dd-8675d395e8f6",
+			"oracle_id": "48e6d3d8-2f27-4017-acdd-40bce8cdbc02",
+			"name": "Giada, Font of Hope",
+			"mana_cost": "{1}{W}",
+			"cmc": 2,
+			"type_line": "Legendary Creature — Angel",
+			"oracle_text": "Flying, vigilance\nEach other Angel you control enters with an additional +1/+1 counter on it for each Angel you already control.\n{T}: Add {W}. Spend this mana only to cast an Angel spell.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Vigilance"
+			],
+			"power": "2",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/e/4ebc7622-08a1-4f43-92dd-8675d395e8f6.jpg?1789752341",
+				"normal": "https://cards.scryfall.io/normal/front/4/e/4ebc7622-08a1-4f43-92dd-8675d395e8f6.jpg?1789752341",
+				"large": "https://cards.scryfall.io/large/front/4/e/4ebc7622-08a1-4f43-92dd-8675d395e8f6.jpg?1789752341",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/e/4ebc7622-08a1-4f43-92dd-8675d395e8f6.jpg?1789752341"
+			}
+		},
+		"Plains": {
+			"id": "4ef17ed4-a9b5-4b8e-b4cb-2ecb7e5898c3",
+			"oracle_id": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+			"name": "Plains",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Basic Land — Plains",
+			"oracle_text": "({T}: Add {W}.)",
+			"colors": [],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/e/4ef17ed4-a9b5-4b8e-b4cb-2ecb7e5898c3.jpg?1783909043",
+				"normal": "https://cards.scryfall.io/normal/front/4/e/4ef17ed4-a9b5-4b8e-b4cb-2ecb7e5898c3.jpg?1783909043",
+				"large": "https://cards.scryfall.io/large/front/4/e/4ef17ed4-a9b5-4b8e-b4cb-2ecb7e5898c3.jpg?1783909043",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/e/4ef17ed4-a9b5-4b8e-b4cb-2ecb7e5898c3.jpg?1783909043"
+			}
+		},
+		"Arcane Signet": {
+			"id": "ee7710cf-e73d-479f-bc8d-0e78a0e324d9",
+			"oracle_id": "0bc7f093-bef0-4f1a-852c-4b75ebf54838",
+			"name": "Arcane Signet",
+			"mana_cost": "{2}",
+			"cmc": 2,
+			"type_line": "Artifact",
+			"oracle_text": "{T}: Add one mana of any color in your commander's color identity.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/e/ee7710cf-e73d-479f-bc8d-0e78a0e324d9.jpg?1789753310",
+				"normal": "https://cards.scryfall.io/normal/front/e/e/ee7710cf-e73d-479f-bc8d-0e78a0e324d9.jpg?1789753310",
+				"large": "https://cards.scryfall.io/large/front/e/e/ee7710cf-e73d-479f-bc8d-0e78a0e324d9.jpg?1789753310",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/e/ee7710cf-e73d-479f-bc8d-0e78a0e324d9.jpg?1789753310"
+			}
+		},
+		"Heraldic Banner": {
+			"id": "eb25d007-aeff-4282-9623-621302b99bfe",
+			"oracle_id": "3525e263-e29a-49bf-a29f-fb3ce43bbd33",
+			"name": "Heraldic Banner",
+			"mana_cost": "{3}",
+			"cmc": 3,
+			"type_line": "Artifact",
+			"oracle_text": "As this artifact enters, choose a color.\nCreatures you control of the chosen color get +1/+0.\n{T}: Add one mana of the chosen color.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/b/eb25d007-aeff-4282-9623-621302b99bfe.jpg?1789753326",
+				"normal": "https://cards.scryfall.io/normal/front/e/b/eb25d007-aeff-4282-9623-621302b99bfe.jpg?1789753326",
+				"large": "https://cards.scryfall.io/large/front/e/b/eb25d007-aeff-4282-9623-621302b99bfe.jpg?1789753326",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/b/eb25d007-aeff-4282-9623-621302b99bfe.jpg?1789753326"
+			}
+		},
+		"Tome of Legends": {
+			"id": "14adbcbf-830e-4df6-b5d3-851e266e60ba",
+			"oracle_id": "cada2a1c-5db2-4702-9a57-cbe7da1bf208",
+			"name": "Tome of Legends",
+			"mana_cost": "{2}",
+			"cmc": 2,
+			"type_line": "Artifact — Book",
+			"oracle_text": "This artifact enters with a page counter on it.\nWhenever your commander enters or attacks, put a page counter on this artifact.\n{1}, {T}, Remove a page counter from this artifact: Draw a card.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/4/14adbcbf-830e-4df6-b5d3-851e266e60ba.jpg?1789753353",
+				"normal": "https://cards.scryfall.io/normal/front/1/4/14adbcbf-830e-4df6-b5d3-851e266e60ba.jpg?1789753353",
+				"large": "https://cards.scryfall.io/large/front/1/4/14adbcbf-830e-4df6-b5d3-851e266e60ba.jpg?1789753353",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/4/14adbcbf-830e-4df6-b5d3-851e266e60ba.jpg?1789753353"
+			}
+		},
+		"Secluded Steppe": {
+			"id": "095bbeb1-edf4-485e-bd2f-2b8f48b7aaa3",
+			"oracle_id": "8dec6fcf-1254-4b1b-ba23-7a3e492a7241",
+			"name": "Secluded Steppe",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "This land enters tapped.\n{T}: Add {W}.\nCycling {W} ({W}, Discard this card: Draw a card.)",
+			"colors": [],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Cycling"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/0/9/095bbeb1-edf4-485e-bd2f-2b8f48b7aaa3.jpg?1789753447",
+				"normal": "https://cards.scryfall.io/normal/front/0/9/095bbeb1-edf4-485e-bd2f-2b8f48b7aaa3.jpg?1789753447",
+				"large": "https://cards.scryfall.io/large/front/0/9/095bbeb1-edf4-485e-bd2f-2b8f48b7aaa3.jpg?1789753447",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/0/9/095bbeb1-edf4-485e-bd2f-2b8f48b7aaa3.jpg?1789753447"
+			}
+		},
+		"Angelic Destiny": {
+			"id": "a8c5b900-650b-4655-b8f8-a7d454b20207",
+			"oracle_id": "8ba36878-0816-44c7-b543-8ebfc28c2ecd",
+			"name": "Angelic Destiny",
+			"mana_cost": "{2}{W}{W}",
+			"cmc": 4,
+			"type_line": "Enchantment — Aura",
+			"oracle_text": "Enchant creature\nEnchanted creature gets +4/+4, has flying and first strike, and is an Angel in addition to its other types.\nWhen enchanted creature dies, return this card to its owner's hand.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Enchant"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/a/8/a8c5b900-650b-4655-b8f8-a7d454b20207.jpg?1789753490",
+				"normal": "https://cards.scryfall.io/normal/front/a/8/a8c5b900-650b-4655-b8f8-a7d454b20207.jpg?1789753490",
+				"large": "https://cards.scryfall.io/large/front/a/8/a8c5b900-650b-4655-b8f8-a7d454b20207.jpg?1789753490",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/a/8/a8c5b900-650b-4655-b8f8-a7d454b20207.jpg?1789753490"
+			}
+		},
+		"Grasp of Fate": {
+			"id": "808b7b00-7072-4587-8383-2bf64a9bb38b",
+			"oracle_id": "1b26a54f-6c27-4940-b77e-2a66175c5eff",
+			"name": "Grasp of Fate",
+			"mana_cost": "{1}{W}{W}",
+			"cmc": 3,
+			"type_line": "Enchantment",
+			"oracle_text": "When this enchantment enters, for each opponent, exile up to one target nonland permanent that player controls until this enchantment leaves the battlefield. (Those permanents return under their owners' control.)",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/8/0/808b7b00-7072-4587-8383-2bf64a9bb38b.jpg?1789752838",
+				"normal": "https://cards.scryfall.io/normal/front/8/0/808b7b00-7072-4587-8383-2bf64a9bb38b.jpg?1789752838",
+				"large": "https://cards.scryfall.io/large/front/8/0/808b7b00-7072-4587-8383-2bf64a9bb38b.jpg?1789752838",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/8/0/808b7b00-7072-4587-8383-2bf64a9bb38b.jpg?1789752838"
+			}
+		},
+		"Mind Stone": {
+			"id": "62901ae9-98dd-466b-8358-f5abd765b3c0",
+			"oracle_id": "c97361b5-af16-4a7b-af85-a429dbaf4ad2",
+			"name": "Mind Stone",
+			"mana_cost": "{2}",
+			"cmc": 2,
+			"type_line": "Artifact",
+			"oracle_text": "{T}: Add {C}.\n{1}, {T}, Sacrifice this artifact: Draw a card.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/2/62901ae9-98dd-466b-8358-f5abd765b3c0.jpg?1789753333",
+				"normal": "https://cards.scryfall.io/normal/front/6/2/62901ae9-98dd-466b-8358-f5abd765b3c0.jpg?1789753333",
+				"large": "https://cards.scryfall.io/large/front/6/2/62901ae9-98dd-466b-8358-f5abd765b3c0.jpg?1789753333",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/2/62901ae9-98dd-466b-8358-f5abd765b3c0.jpg?1789753333"
+			}
+		},
+		"Sol Ring": {
+			"id": "4f152dd9-2b35-45b2-90fe-8c71d0634226",
+			"oracle_id": "6ad8011d-3471-4369-9d68-b264cc027487",
+			"name": "Sol Ring",
+			"mana_cost": "{1}",
+			"cmc": 1,
+			"type_line": "Artifact",
+			"oracle_text": "{T}: Add {C}{C}.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/f/4f152dd9-2b35-45b2-90fe-8c71d0634226.jpg?1789753351",
+				"normal": "https://cards.scryfall.io/normal/front/4/f/4f152dd9-2b35-45b2-90fe-8c71d0634226.jpg?1789753351",
+				"large": "https://cards.scryfall.io/large/front/4/f/4f152dd9-2b35-45b2-90fe-8c71d0634226.jpg?1789753351",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/f/4f152dd9-2b35-45b2-90fe-8c71d0634226.jpg?1789753351"
+			}
+		},
+		"Swords to Plowshares": {
+			"id": "36959f2b-75b5-4d68-b193-ada980822fd9",
+			"oracle_id": "b1544f21-7e98-461b-aed5-e748b0168c52",
+			"name": "Swords to Plowshares",
+			"mana_cost": "{W}",
+			"cmc": 1,
+			"type_line": "Instant",
+			"oracle_text": "Exile target creature. Its controller gains life equal to its power.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/3/6/36959f2b-75b5-4d68-b193-ada980822fd9.jpg?1789752896",
+				"normal": "https://cards.scryfall.io/normal/front/3/6/36959f2b-75b5-4d68-b193-ada980822fd9.jpg?1789752896",
+				"large": "https://cards.scryfall.io/large/front/3/6/36959f2b-75b5-4d68-b193-ada980822fd9.jpg?1789752896",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/3/6/36959f2b-75b5-4d68-b193-ada980822fd9.jpg?1789752896"
+			}
+		},
+		"Temple of the False God": {
+			"id": "6c68b939-8971-43ea-8ad6-8bca631e24dc",
+			"oracle_id": "cfdd5dc6-593e-495a-8cfe-3a56b3c4c7df",
+			"name": "Temple of the False God",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "{T}: Add {C}{C}. Activate only if you control five or more lands.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/c/6c68b939-8971-43ea-8ad6-8bca631e24dc.jpg?1789753453",
+				"normal": "https://cards.scryfall.io/normal/front/6/c/6c68b939-8971-43ea-8ad6-8bca631e24dc.jpg?1789753453",
+				"large": "https://cards.scryfall.io/large/front/6/c/6c68b939-8971-43ea-8ad6-8bca631e24dc.jpg?1789753453",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/c/6c68b939-8971-43ea-8ad6-8bca631e24dc.jpg?1789753453"
+			}
+		},
+		"Radiant Fountain": {
+			"id": "9ab17fb1-98ed-4c8e-985d-a453d236095d",
+			"oracle_id": "6db442e5-fbcc-4456-a4c5-bea1aee3fc8e",
+			"name": "Radiant Fountain",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "When this land enters, you gain 2 life.\n{T}: Add {C}.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/9/a/9ab17fb1-98ed-4c8e-985d-a453d236095d.jpg?1789753449",
+				"normal": "https://cards.scryfall.io/normal/front/9/a/9ab17fb1-98ed-4c8e-985d-a453d236095d.jpg?1789753449",
+				"large": "https://cards.scryfall.io/large/front/9/a/9ab17fb1-98ed-4c8e-985d-a453d236095d.jpg?1789753449",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/9/a/9ab17fb1-98ed-4c8e-985d-a453d236095d.jpg?1789753449"
+			}
+		},
+		"Speaker of the Heavens": {
+			"id": "2c4d0c8c-5bf7-494f-859b-334ff54b16eb",
+			"oracle_id": "e4bacf1b-0a45-4c73-857d-dffadb7e6fa5",
+			"name": "Speaker of the Heavens",
+			"mana_cost": "{W}",
+			"cmc": 1,
+			"type_line": "Creature — Human Cleric",
+			"oracle_text": "Vigilance, lifelink (Attacking doesn't cause this creature to tap. Damage dealt by this creature also causes you to gain that much life.)\n{T}: Create a 4/4 white Angel creature token with flying. Activate only if you have at least 7 life more than your starting life total and only as a sorcery.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Lifelink",
+				"Vigilance"
+			],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/c/2c4d0c8c-5bf7-494f-859b-334ff54b16eb.jpg?1789752855",
+				"normal": "https://cards.scryfall.io/normal/front/2/c/2c4d0c8c-5bf7-494f-859b-334ff54b16eb.jpg?1789752855",
+				"large": "https://cards.scryfall.io/large/front/2/c/2c4d0c8c-5bf7-494f-859b-334ff54b16eb.jpg?1789752855",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/c/2c4d0c8c-5bf7-494f-859b-334ff54b16eb.jpg?1789752855"
+			}
+		},
+		"Angel of Vitality": {
+			"id": "dbb38f33-9f51-48cb-9f69-9a62f2c4b907",
+			"oracle_id": "635fe908-6f58-4c9e-ac55-0775a7c6f278",
+			"name": "Angel of Vitality",
+			"mana_cost": "{2}{W}",
+			"cmc": 3,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying\nIf you would gain life, you gain that much life plus 1 instead.\nThis creature gets +2/+2 as long as you have 25 or more life.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "2",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/d/b/dbb38f33-9f51-48cb-9f69-9a62f2c4b907.jpg?1789752815",
+				"normal": "https://cards.scryfall.io/normal/front/d/b/dbb38f33-9f51-48cb-9f69-9a62f2c4b907.jpg?1789752815",
+				"large": "https://cards.scryfall.io/large/front/d/b/dbb38f33-9f51-48cb-9f69-9a62f2c4b907.jpg?1789752815",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/d/b/dbb38f33-9f51-48cb-9f69-9a62f2c4b907.jpg?1789752815"
+			}
+		},
+		"Bishop of Wings": {
+			"id": "e4a34101-1be3-44ae-b709-f0398998d4c4",
+			"oracle_id": "af4684cf-f109-44be-adfb-7c551a36635e",
+			"name": "Bishop of Wings",
+			"mana_cost": "{W}{W}",
+			"cmc": 2,
+			"type_line": "Creature — Human Cleric",
+			"oracle_text": "Whenever an Angel you control enters, you gain 4 life.\nWhenever an Angel you control dies, create a 1/1 white Spirit creature token with flying.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "1",
+			"toughness": "4",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/4/e4a34101-1be3-44ae-b709-f0398998d4c4.jpg?1789752819",
+				"normal": "https://cards.scryfall.io/normal/front/e/4/e4a34101-1be3-44ae-b709-f0398998d4c4.jpg?1789752819",
+				"large": "https://cards.scryfall.io/large/front/e/4/e4a34101-1be3-44ae-b709-f0398998d4c4.jpg?1789752819",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/4/e4a34101-1be3-44ae-b709-f0398998d4c4.jpg?1789752819"
+			}
+		},
+		"Sephara, Sky's Blade": {
+			"id": "dd9723a6-51e1-41c3-9fbd-3e18c3ffead3",
+			"oracle_id": "ac8952c9-bd30-48cd-b964-7e6271f9cbc8",
+			"name": "Sephara, Sky's Blade",
+			"mana_cost": "{4}{W}{W}{W}",
+			"cmc": 7,
+			"type_line": "Legendary Creature — Angel",
+			"oracle_text": "You may pay {W} and tap four untapped creatures you control with flying rather than pay this spell's mana cost.\nFlying, lifelink\nOther creatures you control with flying have indestructible. (Damage and effects that say \"destroy\" don't destroy them.)",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Lifelink"
+			],
+			"power": "7",
+			"toughness": "7",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/d/d/dd9723a6-51e1-41c3-9fbd-3e18c3ffead3.jpg?1789752855",
+				"normal": "https://cards.scryfall.io/normal/front/d/d/dd9723a6-51e1-41c3-9fbd-3e18c3ffead3.jpg?1789752855",
+				"large": "https://cards.scryfall.io/large/front/d/d/dd9723a6-51e1-41c3-9fbd-3e18c3ffead3.jpg?1789752855",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/d/d/dd9723a6-51e1-41c3-9fbd-3e18c3ffead3.jpg?1789752855"
+			}
+		},
+		"Commander's Sphere": {
+			"id": "a2f126c3-ef62-421b-8d3e-2ae2f2d4f000",
+			"oracle_id": "0b67c4e2-f88b-4e01-85a1-9d5f5b8db13b",
+			"name": "Commander's Sphere",
+			"mana_cost": "{3}",
+			"cmc": 3,
+			"type_line": "Artifact",
+			"oracle_text": "{T}: Add one mana of any color in your commander's color identity.\nSacrifice this artifact: Draw a card.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/a/2/a2f126c3-ef62-421b-8d3e-2ae2f2d4f000.jpg?1789753314",
+				"normal": "https://cards.scryfall.io/normal/front/a/2/a2f126c3-ef62-421b-8d3e-2ae2f2d4f000.jpg?1789753314",
+				"large": "https://cards.scryfall.io/large/front/a/2/a2f126c3-ef62-421b-8d3e-2ae2f2d4f000.jpg?1789753314",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/a/2/a2f126c3-ef62-421b-8d3e-2ae2f2d4f000.jpg?1789753314"
+			}
+		},
+		"Swiftfoot Boots": {
+			"id": "c193aab3-e53a-40ff-bd30-892170a88ff9",
+			"oracle_id": "c8b143ad-43ec-4e0d-a440-e348daa31391",
+			"name": "Swiftfoot Boots",
+			"mana_cost": "{2}",
+			"cmc": 2,
+			"type_line": "Artifact — Equipment",
+			"oracle_text": "Equipped creature has hexproof and haste. (It can't be the target of spells or abilities your opponents control. It can attack and {T} no matter when it came under your control.)\nEquip {1} ({1}: Attach to target creature you control. Equip only as a sorcery.)",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [
+				"Equip"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/c/1/c193aab3-e53a-40ff-bd30-892170a88ff9.jpg?1789753350",
+				"normal": "https://cards.scryfall.io/normal/front/c/1/c193aab3-e53a-40ff-bd30-892170a88ff9.jpg?1789753350",
+				"large": "https://cards.scryfall.io/large/front/c/1/c193aab3-e53a-40ff-bd30-892170a88ff9.jpg?1789753350",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/c/1/c193aab3-e53a-40ff-bd30-892170a88ff9.jpg?1789753350"
+			}
+		},
+		"Endless Atlas": {
+			"id": "1718ebac-641f-4115-bb13-d58732cf3464",
+			"oracle_id": "cb923c4d-1d2e-4039-90bb-72d1981b9738",
+			"name": "Endless Atlas",
+			"mana_cost": "{2}",
+			"cmc": 2,
+			"type_line": "Artifact",
+			"oracle_text": "{2}, {T}: Draw a card. Activate only if you control three or more lands with the same name.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/7/1718ebac-641f-4115-bb13-d58732cf3464.jpg?1789753318",
+				"normal": "https://cards.scryfall.io/normal/front/1/7/1718ebac-641f-4115-bb13-d58732cf3464.jpg?1789753318",
+				"large": "https://cards.scryfall.io/large/front/1/7/1718ebac-641f-4115-bb13-d58732cf3464.jpg?1789753318",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/7/1718ebac-641f-4115-bb13-d58732cf3464.jpg?1789753318"
+			}
+		},
+		"Reya Dawnbringer": {
+			"id": "8384c346-17f5-458f-bd56-6b0f04d6f375",
+			"oracle_id": "08d1a5d1-141d-48e3-ac22-c2529191cb13",
+			"name": "Reya Dawnbringer",
+			"mana_cost": "{6}{W}{W}{W}",
+			"cmc": 9,
+			"type_line": "Legendary Creature — Angel",
+			"oracle_text": "Flying\nAt the beginning of your upkeep, you may return target creature card from your graveyard to the battlefield.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "4",
+			"toughness": "6",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/8/3/8384c346-17f5-458f-bd56-6b0f04d6f375.jpg?1789752848",
+				"normal": "https://cards.scryfall.io/normal/front/8/3/8384c346-17f5-458f-bd56-6b0f04d6f375.jpg?1789752848",
+				"large": "https://cards.scryfall.io/large/front/8/3/8384c346-17f5-458f-bd56-6b0f04d6f375.jpg?1789752848",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/8/3/8384c346-17f5-458f-bd56-6b0f04d6f375.jpg?1789752848"
+			}
+		},
+		"Marble Diamond": {
+			"id": "103029b9-4b0e-47c7-a714-ff93fc2ba66b",
+			"oracle_id": "910488bf-66ab-415e-973b-1262b2ab7454",
+			"name": "Marble Diamond",
+			"mana_cost": "{2}",
+			"cmc": 2,
+			"type_line": "Artifact",
+			"oracle_text": "This artifact enters tapped.\n{T}: Add {W}.",
+			"colors": [],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/0/103029b9-4b0e-47c7-a714-ff93fc2ba66b.jpg?1789753329",
+				"normal": "https://cards.scryfall.io/normal/front/1/0/103029b9-4b0e-47c7-a714-ff93fc2ba66b.jpg?1789753329",
+				"large": "https://cards.scryfall.io/large/front/1/0/103029b9-4b0e-47c7-a714-ff93fc2ba66b.jpg?1789753329",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/0/103029b9-4b0e-47c7-a714-ff93fc2ba66b.jpg?1789753329"
+			}
+		},
+		"Day of Judgment": {
+			"id": "3b3307b6-e597-4f2c-8ad8-f8602e0ac461",
+			"oracle_id": "d057289d-5e28-43d5-8ff3-4a1bc723477d",
+			"name": "Day of Judgment",
+			"mana_cost": "{2}{W}{W}",
+			"cmc": 4,
+			"type_line": "Sorcery",
+			"oracle_text": "Destroy all creatures.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/3/b/3b3307b6-e597-4f2c-8ad8-f8602e0ac461.jpg?1789752828",
+				"normal": "https://cards.scryfall.io/normal/front/3/b/3b3307b6-e597-4f2c-8ad8-f8602e0ac461.jpg?1789752828",
+				"large": "https://cards.scryfall.io/large/front/3/b/3b3307b6-e597-4f2c-8ad8-f8602e0ac461.jpg?1789752828",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/3/b/3b3307b6-e597-4f2c-8ad8-f8602e0ac461.jpg?1789752828"
+			}
+		},
+		"Angel of Finality": {
+			"id": "ed1e014c-8cf9-4193-ac8e-86a7b2311f59",
+			"oracle_id": "48d14b5c-711a-4f8a-9de5-55415cb7a79a",
+			"name": "Angel of Finality",
+			"mana_cost": "{3}{W}",
+			"cmc": 4,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying\nWhen this creature enters, exile target player's graveyard.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "3",
+			"toughness": "4",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/d/ed1e014c-8cf9-4193-ac8e-86a7b2311f59.jpg?1789752817",
+				"normal": "https://cards.scryfall.io/normal/front/e/d/ed1e014c-8cf9-4193-ac8e-86a7b2311f59.jpg?1789752817",
+				"large": "https://cards.scryfall.io/large/front/e/d/ed1e014c-8cf9-4193-ac8e-86a7b2311f59.jpg?1789752817",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/d/ed1e014c-8cf9-4193-ac8e-86a7b2311f59.jpg?1789752817"
+			}
+		},
+		"Emeria Shepherd": {
+			"id": "08ef3822-592f-456f-823d-a4d5cc85ddf9",
+			"oracle_id": "473da1b6-232b-4428-a66d-30262246b47a",
+			"name": "Emeria Shepherd",
+			"mana_cost": "{5}{W}{W}",
+			"cmc": 7,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying\nLandfall — Whenever a land you control enters, you may return target nonland permanent card from your graveyard to your hand. If that land is a Plains, you may return that nonland permanent card to the battlefield instead.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Landfall",
+				"Flying"
+			],
+			"power": "4",
+			"toughness": "4",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/0/8/08ef3822-592f-456f-823d-a4d5cc85ddf9.jpg?1789752831",
+				"normal": "https://cards.scryfall.io/normal/front/0/8/08ef3822-592f-456f-823d-a4d5cc85ddf9.jpg?1789752831",
+				"large": "https://cards.scryfall.io/large/front/0/8/08ef3822-592f-456f-823d-a4d5cc85ddf9.jpg?1789752831",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/0/8/08ef3822-592f-456f-823d-a4d5cc85ddf9.jpg?1789752831"
+			}
+		},
+		"Always Watching": {
+			"id": "1c9a58d6-e1d8-4f9a-816f-d5ba7c84ca3e",
+			"oracle_id": "c2153115-bc12-458d-baeb-538ec61e1242",
+			"name": "Always Watching",
+			"mana_cost": "{1}{W}{W}",
+			"cmc": 3,
+			"type_line": "Enchantment",
+			"oracle_text": "Nontoken creatures you control get +1/+1 and have vigilance.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/c/1c9a58d6-e1d8-4f9a-816f-d5ba7c84ca3e.jpg?1789752815",
+				"normal": "https://cards.scryfall.io/normal/front/1/c/1c9a58d6-e1d8-4f9a-816f-d5ba7c84ca3e.jpg?1789752815",
+				"large": "https://cards.scryfall.io/large/front/1/c/1c9a58d6-e1d8-4f9a-816f-d5ba7c84ca3e.jpg?1789752815",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/c/1c9a58d6-e1d8-4f9a-816f-d5ba7c84ca3e.jpg?1789752815"
+			}
+		},
+		"Metallic Mimic": {
+			"id": "97021da6-7008-4271-a83b-459e5c9691fa",
+			"oracle_id": "1f91297a-ec2b-4ea8-9198-aa1daac20ff8",
+			"name": "Metallic Mimic",
+			"mana_cost": "{2}",
+			"cmc": 2,
+			"type_line": "Artifact Creature — Shapeshifter",
+			"oracle_text": "As this creature enters, choose a creature type.\nThis creature is the chosen type in addition to its other types.\nEach other creature you control of the chosen type enters with an additional +1/+1 counter on it.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "2",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/9/7/97021da6-7008-4271-a83b-459e5c9691fa.jpg?1789753331",
+				"normal": "https://cards.scryfall.io/normal/front/9/7/97021da6-7008-4271-a83b-459e5c9691fa.jpg?1789753331",
+				"large": "https://cards.scryfall.io/large/front/9/7/97021da6-7008-4271-a83b-459e5c9691fa.jpg?1789753331",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/9/7/97021da6-7008-4271-a83b-459e5c9691fa.jpg?1789753331"
+			}
+		},
+		"Sunblast Angel": {
+			"id": "2b5e1bb7-14a3-4737-bdac-8da4c3746e7d",
+			"oracle_id": "8b34d1df-4024-497d-bd28-a7caa8c3fa24",
+			"name": "Sunblast Angel",
+			"mana_cost": "{4}{W}{W}",
+			"cmc": 6,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying\nWhen this creature enters, destroy all tapped creatures.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "4",
+			"toughness": "5",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/b/2b5e1bb7-14a3-4737-bdac-8da4c3746e7d.jpg?1789752894",
+				"normal": "https://cards.scryfall.io/normal/front/2/b/2b5e1bb7-14a3-4737-bdac-8da4c3746e7d.jpg?1789752894",
+				"large": "https://cards.scryfall.io/large/front/2/b/2b5e1bb7-14a3-4737-bdac-8da4c3746e7d.jpg?1789752894",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/b/2b5e1bb7-14a3-4737-bdac-8da4c3746e7d.jpg?1789752894"
+			}
+		},
+		"Segovian Angel": {
+			"id": "675c227e-3da0-452c-aea2-5c9a7c55f5ca",
+			"oracle_id": "50372c54-359c-4ee6-9e21-1e40ba53652d",
+			"name": "Segovian Angel",
+			"mana_cost": "{W}",
+			"cmc": 1,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying, vigilance",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Vigilance"
+			],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/7/675c227e-3da0-452c-aea2-5c9a7c55f5ca.jpg?1789752851",
+				"normal": "https://cards.scryfall.io/normal/front/6/7/675c227e-3da0-452c-aea2-5c9a7c55f5ca.jpg?1789752851",
+				"large": "https://cards.scryfall.io/large/front/6/7/675c227e-3da0-452c-aea2-5c9a7c55f5ca.jpg?1789752851",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/7/675c227e-3da0-452c-aea2-5c9a7c55f5ca.jpg?1789752851"
+			}
+		},
+		"Cleansing Nova": {
+			"id": "7b46929d-f63c-4026-8223-e2a4a159e017",
+			"oracle_id": "aff34f28-f707-4458-8af3-1bd5b13a6b10",
+			"name": "Cleansing Nova",
+			"mana_cost": "{3}{W}{W}",
+			"cmc": 5,
+			"type_line": "Sorcery",
+			"oracle_text": "Choose one —\n• Destroy all creatures.\n• Destroy all artifacts and enchantments.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/7/b/7b46929d-f63c-4026-8223-e2a4a159e017.jpg?1789752825",
+				"normal": "https://cards.scryfall.io/normal/front/7/b/7b46929d-f63c-4026-8223-e2a4a159e017.jpg?1789752825",
+				"large": "https://cards.scryfall.io/large/front/7/b/7b46929d-f63c-4026-8223-e2a4a159e017.jpg?1789752825",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/7/b/7b46929d-f63c-4026-8223-e2a4a159e017.jpg?1789752825"
+			}
+		},
+		"Austere Command": {
+			"id": "a47d6756-400c-4d45-8708-8a8e95c926c8",
+			"oracle_id": "09cc8709-fe10-472a-b05c-e89f3523018d",
+			"name": "Austere Command",
+			"mana_cost": "{4}{W}{W}",
+			"cmc": 6,
+			"type_line": "Sorcery",
+			"oracle_text": "Choose two —\n• Destroy all artifacts.\n• Destroy all enchantments.\n• Destroy all creatures with mana value 3 or less.\n• Destroy all creatures with mana value 4 or greater.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/a/4/a47d6756-400c-4d45-8708-8a8e95c926c8.jpg?1789752818",
+				"normal": "https://cards.scryfall.io/normal/front/a/4/a47d6756-400c-4d45-8708-8a8e95c926c8.jpg?1789752818",
+				"large": "https://cards.scryfall.io/large/front/a/4/a47d6756-400c-4d45-8708-8a8e95c926c8.jpg?1789752818",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/a/4/a47d6756-400c-4d45-8708-8a8e95c926c8.jpg?1789752818"
+			}
+		},
+		"Valorous Stance": {
+			"id": "16a9ebf9-694e-484b-a1b0-adf5192ca7a7",
+			"oracle_id": "1f938353-9081-4dc1-b8e7-d18ece038bd4",
+			"name": "Valorous Stance",
+			"mana_cost": "{1}{W}",
+			"cmc": 2,
+			"type_line": "Instant",
+			"oracle_text": "Choose one —\n• Target creature gains indestructible until end of turn. (Damage and effects that say \"destroy\" don't destroy it.)\n• Destroy target creature with toughness 4 or greater.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/6/16a9ebf9-694e-484b-a1b0-adf5192ca7a7.jpg?1789752901",
+				"normal": "https://cards.scryfall.io/normal/front/1/6/16a9ebf9-694e-484b-a1b0-adf5192ca7a7.jpg?1789752901",
+				"large": "https://cards.scryfall.io/large/front/1/6/16a9ebf9-694e-484b-a1b0-adf5192ca7a7.jpg?1789752901",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/6/16a9ebf9-694e-484b-a1b0-adf5192ca7a7.jpg?1789752901"
+			}
+		},
+		"Serra Avenger": {
+			"id": "fd18cc57-9c28-4cd5-9ac0-389c4992eaff",
+			"oracle_id": "b91b65b3-b35c-460e-a49b-333000a9a519",
+			"name": "Serra Avenger",
+			"mana_cost": "{W}{W}",
+			"cmc": 2,
+			"type_line": "Creature — Angel",
+			"oracle_text": "You can't cast Serra Avenger during your first, second, or third turns of the game.\nFlying, vigilance",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Vigilance"
+			],
+			"power": "3",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/f/d/fd18cc57-9c28-4cd5-9ac0-389c4992eaff.jpg?1789752854",
+				"normal": "https://cards.scryfall.io/normal/front/f/d/fd18cc57-9c28-4cd5-9ac0-389c4992eaff.jpg?1789752854",
+				"large": "https://cards.scryfall.io/large/front/f/d/fd18cc57-9c28-4cd5-9ac0-389c4992eaff.jpg?1789752854",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/f/d/fd18cc57-9c28-4cd5-9ac0-389c4992eaff.jpg?1789752854"
+			}
+		},
+		"Bonders' Enclave": {
+			"id": "7cfeb33d-65c7-4aa2-a1d8-964e6cd73b82",
+			"oracle_id": "f33ce38a-34ec-4b65-a0fc-160484a02007",
+			"name": "Bonders' Enclave",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "{T}: Add {C}.\n{3}, {T}: Draw a card. Activate only if you control a creature with power 4 or greater.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/7/c/7cfeb33d-65c7-4aa2-a1d8-964e6cd73b82.jpg?1789753359",
+				"normal": "https://cards.scryfall.io/normal/front/7/c/7cfeb33d-65c7-4aa2-a1d8-964e6cd73b82.jpg?1789753359",
+				"large": "https://cards.scryfall.io/large/front/7/c/7cfeb33d-65c7-4aa2-a1d8-964e6cd73b82.jpg?1789753359",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/7/c/7cfeb33d-65c7-4aa2-a1d8-964e6cd73b82.jpg?1789753359"
+			}
+		},
+		"Defy Death": {
+			"id": "46643da0-44a9-4df5-a7d0-076af2c7c132",
+			"oracle_id": "dbf9c3e8-35dd-4b80-bd23-f43e21cfd991",
+			"name": "Defy Death",
+			"mana_cost": "{3}{W}{W}",
+			"cmc": 5,
+			"type_line": "Sorcery",
+			"oracle_text": "Return target creature card from your graveyard to the battlefield. If it's an Angel, put two +1/+1 counters on it.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/6/46643da0-44a9-4df5-a7d0-076af2c7c132.jpg?1789752830",
+				"normal": "https://cards.scryfall.io/normal/front/4/6/46643da0-44a9-4df5-a7d0-076af2c7c132.jpg?1789752830",
+				"large": "https://cards.scryfall.io/large/front/4/6/46643da0-44a9-4df5-a7d0-076af2c7c132.jpg?1789752830",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/6/46643da0-44a9-4df5-a7d0-076af2c7c132.jpg?1789752830"
+			}
+		},
+		"Herald of War": {
+			"id": "5bba2910-975b-46d4-9d50-4d9a83caaa77",
+			"oracle_id": "1228bd6f-565d-4ad5-bd24-e5aa1ead5dee",
+			"name": "Herald of War",
+			"mana_cost": "{3}{W}{W}",
+			"cmc": 5,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying\nWhenever this creature attacks, put a +1/+1 counter on it.\nAngel spells and Human spells you cast cost {1} less to cast for each +1/+1 counter on this creature.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "3",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/b/5bba2910-975b-46d4-9d50-4d9a83caaa77.jpg?1789752840",
+				"normal": "https://cards.scryfall.io/normal/front/5/b/5bba2910-975b-46d4-9d50-4d9a83caaa77.jpg?1789752840",
+				"large": "https://cards.scryfall.io/large/front/5/b/5bba2910-975b-46d4-9d50-4d9a83caaa77.jpg?1789752840",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/b/5bba2910-975b-46d4-9d50-4d9a83caaa77.jpg?1789752840"
+			}
+		},
+		"Seraph Sanctuary": {
+			"id": "cef8e044-6cc0-4988-9d5f-bf9a0ab1c66f",
+			"oracle_id": "0b504dc6-61cc-4a72-907c-145fa4c72466",
+			"name": "Seraph Sanctuary",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "When this land enters, you gain 1 life.\nWhenever an Angel you control enters, you gain 1 life.\n{T}: Add {C}.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/c/e/cef8e044-6cc0-4988-9d5f-bf9a0ab1c66f.jpg?1789753450",
+				"normal": "https://cards.scryfall.io/normal/front/c/e/cef8e044-6cc0-4988-9d5f-bf9a0ab1c66f.jpg?1789753450",
+				"large": "https://cards.scryfall.io/large/front/c/e/cef8e044-6cc0-4988-9d5f-bf9a0ab1c66f.jpg?1789753450",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/c/e/cef8e044-6cc0-4988-9d5f-bf9a0ab1c66f.jpg?1789753450"
+			}
+		},
+		"Seraph of the Sword": {
+			"id": "3dbfbdba-52d0-4b49-8c86-8f1686e2285b",
+			"oracle_id": "84ee74e9-b3e3-4f47-8b3c-5c1a70f5cad6",
+			"name": "Seraph of the Sword",
+			"mana_cost": "{3}{W}",
+			"cmc": 4,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying\nPrevent all combat damage that would be dealt to this creature.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "3",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/3/d/3dbfbdba-52d0-4b49-8c86-8f1686e2285b.jpg?1789752854",
+				"normal": "https://cards.scryfall.io/normal/front/3/d/3dbfbdba-52d0-4b49-8c86-8f1686e2285b.jpg?1789752854",
+				"large": "https://cards.scryfall.io/large/front/3/d/3dbfbdba-52d0-4b49-8c86-8f1686e2285b.jpg?1789752854",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/3/d/3dbfbdba-52d0-4b49-8c86-8f1686e2285b.jpg?1789752854"
+			}
+		},
+		"Angelic Field Marshal": {
+			"id": "b4f751ad-336d-479a-b63c-d2d193a42ccf",
+			"oracle_id": "502575f4-7c56-44bc-a77f-ae28d66c8e1f",
+			"name": "Angelic Field Marshal",
+			"mana_cost": "{2}{W}{W}",
+			"cmc": 4,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying\nLieutenant — As long as you control your commander, this creature gets +2/+2 and creatures you control have vigilance.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Lieutenant"
+			],
+			"power": "3",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/b/4/b4f751ad-336d-479a-b63c-d2d193a42ccf.jpg?1789752817",
+				"normal": "https://cards.scryfall.io/normal/front/b/4/b4f751ad-336d-479a-b63c-d2d193a42ccf.jpg?1789752817",
+				"large": "https://cards.scryfall.io/large/front/b/4/b4f751ad-336d-479a-b63c-d2d193a42ccf.jpg?1789752817",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/b/4/b4f751ad-336d-479a-b63c-d2d193a42ccf.jpg?1789752817"
+			}
+		},
+		"Archangel of Tithes": {
+			"id": "5699c00b-99a0-4db6-a592-e93efbe391bf",
+			"oracle_id": "ff5caed4-0276-476d-8fae-edae2536df7f",
+			"name": "Archangel of Tithes",
+			"mana_cost": "{1}{W}{W}{W}",
+			"cmc": 4,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying\nAs long as this creature is untapped, creatures can't attack you or planeswalkers you control unless their controller pays {1} for each of those creatures.\nAs long as this creature is attacking, creatures can't block unless their controller pays {1} for each of those creatures.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "3",
+			"toughness": "5",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/6/5699c00b-99a0-4db6-a592-e93efbe391bf.jpg?1789752826",
+				"normal": "https://cards.scryfall.io/normal/front/5/6/5699c00b-99a0-4db6-a592-e93efbe391bf.jpg?1789752826",
+				"large": "https://cards.scryfall.io/large/front/5/6/5699c00b-99a0-4db6-a592-e93efbe391bf.jpg?1789752826",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/6/5699c00b-99a0-4db6-a592-e93efbe391bf.jpg?1789752826"
+			}
+		},
+		"Linvala, the Preserver": {
+			"id": "3c31c48d-7833-4235-bc49-7e12a4ed607a",
+			"oracle_id": "64f5689d-504d-40e9-bdb5-36dcefd257e2",
+			"name": "Linvala, the Preserver",
+			"mana_cost": "{4}{W}{W}",
+			"cmc": 6,
+			"type_line": "Legendary Creature — Angel",
+			"oracle_text": "Flying\nWhen Linvala enters, if an opponent has more life than you, you gain 5 life.\nWhen Linvala enters, if an opponent controls more creatures than you, create a 3/3 white Angel creature token with flying.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "5",
+			"toughness": "5",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/3/c/3c31c48d-7833-4235-bc49-7e12a4ed607a.jpg?1789752841",
+				"normal": "https://cards.scryfall.io/normal/front/3/c/3c31c48d-7833-4235-bc49-7e12a4ed607a.jpg?1789752841",
+				"large": "https://cards.scryfall.io/large/front/3/c/3c31c48d-7833-4235-bc49-7e12a4ed607a.jpg?1789752841",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/3/c/3c31c48d-7833-4235-bc49-7e12a4ed607a.jpg?1789752841"
+			}
+		},
+		"Lyra Dawnbringer": {
+			"id": "15e10422-44e9-421c-b9ec-4006245f71a2",
+			"oracle_id": "592c91fc-6430-4c76-9460-65f047350f67",
+			"name": "Lyra Dawnbringer",
+			"mana_cost": "{3}{W}{W}",
+			"cmc": 5,
+			"type_line": "Legendary Creature — Angel",
+			"oracle_text": "Flying\nFirst strike (This creature deals combat damage before creatures without first strike.)\nLifelink (Damage dealt by this creature also causes you to gain that much life.)\nOther Angels you control get +1/+1 and have lifelink.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Lifelink",
+				"First strike"
+			],
+			"power": "5",
+			"toughness": "5",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/5/15e10422-44e9-421c-b9ec-4006245f71a2.jpg?1789752844",
+				"normal": "https://cards.scryfall.io/normal/front/1/5/15e10422-44e9-421c-b9ec-4006245f71a2.jpg?1789752844",
+				"large": "https://cards.scryfall.io/large/front/1/5/15e10422-44e9-421c-b9ec-4006245f71a2.jpg?1789752844",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/5/15e10422-44e9-421c-b9ec-4006245f71a2.jpg?1789752844"
+			}
+		},
+		"Invoke the Divine": {
+			"id": "2d9d2b52-8f33-4936-927a-4c71ddd8acb8",
+			"oracle_id": "87bd0fdb-c5b9-46ea-9858-1a870960351f",
+			"name": "Invoke the Divine",
+			"mana_cost": "{2}{W}",
+			"cmc": 3,
+			"type_line": "Instant",
+			"oracle_text": "Destroy target artifact or enchantment. You gain 4 life.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/d/2d9d2b52-8f33-4936-927a-4c71ddd8acb8.jpg?1789752843",
+				"normal": "https://cards.scryfall.io/normal/front/2/d/2d9d2b52-8f33-4936-927a-4c71ddd8acb8.jpg?1789752843",
+				"large": "https://cards.scryfall.io/large/front/2/d/2d9d2b52-8f33-4936-927a-4c71ddd8acb8.jpg?1789752843",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/d/2d9d2b52-8f33-4936-927a-4c71ddd8acb8.jpg?1789752843"
+			}
+		},
+		"Vanquisher's Banner": {
+			"id": "8eae5f95-909e-4de7-b767-8a16bdba5ede",
+			"oracle_id": "8cf38025-5821-45a0-9483-266353b7e82d",
+			"name": "Vanquisher's Banner",
+			"mana_cost": "{5}",
+			"cmc": 5,
+			"type_line": "Artifact",
+			"oracle_text": "As this artifact enters, choose a creature type.\nCreatures you control of the chosen type get +1/+1.\nWhenever you cast a creature spell of the chosen type, draw a card.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/8/e/8eae5f95-909e-4de7-b767-8a16bdba5ede.jpg?1789753356",
+				"normal": "https://cards.scryfall.io/normal/front/8/e/8eae5f95-909e-4de7-b767-8a16bdba5ede.jpg?1789753356",
+				"large": "https://cards.scryfall.io/large/front/8/e/8eae5f95-909e-4de7-b767-8a16bdba5ede.jpg?1789753356",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/8/e/8eae5f95-909e-4de7-b767-8a16bdba5ede.jpg?1789753356"
+			}
+		},
+		"Court of Grace": {
+			"id": "f0deb485-4895-4a3e-b1a7-e3c969593f97",
+			"oracle_id": "f63c2438-27d4-449a-828f-f0a2ea86ff16",
+			"name": "Court of Grace",
+			"mana_cost": "{2}{W}{W}",
+			"cmc": 4,
+			"type_line": "Enchantment",
+			"oracle_text": "When this enchantment enters, you become the monarch.\nAt the beginning of your upkeep, create a 1/1 white Spirit creature token with flying. If you're the monarch, create a 4/4 white Angel creature token with flying instead.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/f/0/f0deb485-4895-4a3e-b1a7-e3c969593f97.jpg?1789752829",
+				"normal": "https://cards.scryfall.io/normal/front/f/0/f0deb485-4895-4a3e-b1a7-e3c969593f97.jpg?1789752829",
+				"large": "https://cards.scryfall.io/large/front/f/0/f0deb485-4895-4a3e-b1a7-e3c969593f97.jpg?1789752829",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/f/0/f0deb485-4895-4a3e-b1a7-e3c969593f97.jpg?1789752829"
+			}
+		},
+		"War Room": {
+			"id": "b2593c45-585f-4eaf-bb08-e91a4fc2d425",
+			"oracle_id": "71c52bf5-2a5d-488e-8b15-7ef290e4b77d",
+			"name": "War Room",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "{T}: Add {C}.\n{3}, {T}, Pay life equal to the number of colors in your commanders' color identity: Draw a card.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/b/2/b2593c45-585f-4eaf-bb08-e91a4fc2d425.jpg?1789753455",
+				"normal": "https://cards.scryfall.io/normal/front/b/2/b2593c45-585f-4eaf-bb08-e91a4fc2d425.jpg?1789753455",
+				"large": "https://cards.scryfall.io/large/front/b/2/b2593c45-585f-4eaf-bb08-e91a4fc2d425.jpg?1789753455",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/b/2/b2593c45-585f-4eaf-bb08-e91a4fc2d425.jpg?1789753455"
+			}
+		},
+		"Starnheim Aspirant": {
+			"id": "5a99580f-bdf5-41fd-8281-c615c6568826",
+			"oracle_id": "e7b92789-47a9-430a-ad57-be7b6c3d63cb",
+			"name": "Starnheim Aspirant",
+			"mana_cost": "{2}{W}",
+			"cmc": 3,
+			"type_line": "Creature — Human Cleric",
+			"oracle_text": "Angel spells you cast cost {2} less to cast.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "2",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/a/5a99580f-bdf5-41fd-8281-c615c6568826.jpg?1789752858",
+				"normal": "https://cards.scryfall.io/normal/front/5/a/5a99580f-bdf5-41fd-8281-c615c6568826.jpg?1789752858",
+				"large": "https://cards.scryfall.io/large/front/5/a/5a99580f-bdf5-41fd-8281-c615c6568826.jpg?1789752858",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/a/5a99580f-bdf5-41fd-8281-c615c6568826.jpg?1789752858"
+			}
+		},
+		"Youthful Valkyrie": {
+			"id": "9577d16a-e6ed-4d98-b90f-2abfc9b9586a",
+			"oracle_id": "6d37ba4b-ff56-4eec-9dc2-2d7f357dc9c9",
+			"name": "Youthful Valkyrie",
+			"mana_cost": "{1}{W}",
+			"cmc": 2,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying\nWhenever another Angel you control enters, put a +1/+1 counter on this creature.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "1",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/9/5/9577d16a-e6ed-4d98-b90f-2abfc9b9586a.jpg?1789752899",
+				"normal": "https://cards.scryfall.io/normal/front/9/5/9577d16a-e6ed-4d98-b90f-2abfc9b9586a.jpg?1789752899",
+				"large": "https://cards.scryfall.io/large/front/9/5/9577d16a-e6ed-4d98-b90f-2abfc9b9586a.jpg?1789752899",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/9/5/9577d16a-e6ed-4d98-b90f-2abfc9b9586a.jpg?1789752899"
+			}
+		},
+		"Righteous Valkyrie": {
+			"id": "c43a1592-2d28-4244-a579-4deab02e92b5",
+			"oracle_id": "891d2690-7144-4f87-b6ef-96f2469780a9",
+			"name": "Righteous Valkyrie",
+			"mana_cost": "{2}{W}",
+			"cmc": 3,
+			"type_line": "Creature — Angel Cleric",
+			"oracle_text": "Flying\nWhenever another Angel or Cleric you control enters, you gain life equal to that creature's toughness.\nAs long as you have at least 7 life more than your starting life total, creatures you control get +2/+2.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "2",
+			"toughness": "4",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/c/4/c43a1592-2d28-4244-a579-4deab02e92b5.jpg?1789752850",
+				"normal": "https://cards.scryfall.io/normal/front/c/4/c43a1592-2d28-4244-a579-4deab02e92b5.jpg?1789752850",
+				"large": "https://cards.scryfall.io/large/front/c/4/c43a1592-2d28-4244-a579-4deab02e92b5.jpg?1789752850",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/c/4/c43a1592-2d28-4244-a579-4deab02e92b5.jpg?1789752850"
+			}
+		},
+		"Secret Rendezvous": {
+			"id": "c62d5dc4-f89c-43a9-924c-5d7361ddfacb",
+			"oracle_id": "34b90d3e-f48c-41ff-b3e4-5cab7a9cd597",
+			"name": "Secret Rendezvous",
+			"mana_cost": "{1}{W}{W}",
+			"cmc": 3,
+			"type_line": "Sorcery",
+			"oracle_text": "You and target opponent each draw three cards.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/c/6/c62d5dc4-f89c-43a9-924c-5d7361ddfacb.jpg?1789752850",
+				"normal": "https://cards.scryfall.io/normal/front/c/6/c62d5dc4-f89c-43a9-924c-5d7361ddfacb.jpg?1789752850",
+				"large": "https://cards.scryfall.io/large/front/c/6/c62d5dc4-f89c-43a9-924c-5d7361ddfacb.jpg?1789752850",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/c/6/c62d5dc4-f89c-43a9-924c-5d7361ddfacb.jpg?1789752850"
+			}
+		},
+		"Angel of the Ruins": {
+			"id": "3a3f00d5-5847-4fc8-8c76-81ea11ce4376",
+			"oracle_id": "14878a5f-7983-4133-a1a7-9d539531e092",
+			"name": "Angel of the Ruins",
+			"mana_cost": "{5}{W}{W}",
+			"cmc": 7,
+			"type_line": "Artifact Creature — Angel",
+			"oracle_text": "Flying\nWhen this creature enters, exile up to two target artifacts and/or enchantments.\nPlainscycling {2} ({2}, Discard this card: Search your library for a Plains card, reveal it, put it into your hand, then shuffle.)",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Plainscycling",
+				"Landcycling",
+				"Typecycling",
+				"Cycling"
+			],
+			"power": "5",
+			"toughness": "7",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/3/a/3a3f00d5-5847-4fc8-8c76-81ea11ce4376.jpg?1789752820",
+				"normal": "https://cards.scryfall.io/normal/front/3/a/3a3f00d5-5847-4fc8-8c76-81ea11ce4376.jpg?1789752820",
+				"large": "https://cards.scryfall.io/large/front/3/a/3a3f00d5-5847-4fc8-8c76-81ea11ce4376.jpg?1789752820",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/3/a/3a3f00d5-5847-4fc8-8c76-81ea11ce4376.jpg?1789752820"
+			}
+		},
+		"Thraben Watcher": {
+			"id": "0b85b4a9-ce44-443f-9a5d-4b75fcbad076",
+			"oracle_id": "53cd9d9f-c1a7-404e-9934-4542415e3431",
+			"name": "Thraben Watcher",
+			"mana_cost": "{2}{W}{W}",
+			"cmc": 4,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying, vigilance\nOther nontoken creatures you control get +1/+1 and have vigilance.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Vigilance"
+			],
+			"power": "2",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/0/b/0b85b4a9-ce44-443f-9a5d-4b75fcbad076.jpg?1789752896",
+				"normal": "https://cards.scryfall.io/normal/front/0/b/0b85b4a9-ce44-443f-9a5d-4b75fcbad076.jpg?1789752896",
+				"large": "https://cards.scryfall.io/large/front/0/b/0b85b4a9-ce44-443f-9a5d-4b75fcbad076.jpg?1789752896",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/0/b/0b85b4a9-ce44-443f-9a5d-4b75fcbad076.jpg?1789752896"
+			}
+		},
+		"Search the Premises": {
+			"id": "ec91933d-8da0-4044-87d3-52d509756e7d",
+			"oracle_id": "0232418d-1c52-4573-b488-c62345ca1c8d",
+			"name": "Search the Premises",
+			"mana_cost": "{3}{W}",
+			"cmc": 4,
+			"type_line": "Enchantment",
+			"oracle_text": "Whenever a creature attacks you or a planeswalker you control, investigate. (Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Investigate"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/c/ec91933d-8da0-4044-87d3-52d509756e7d.jpg?1789752849",
+				"normal": "https://cards.scryfall.io/normal/front/e/c/ec91933d-8da0-4044-87d3-52d509756e7d.jpg?1789752849",
+				"large": "https://cards.scryfall.io/large/front/e/c/ec91933d-8da0-4044-87d3-52d509756e7d.jpg?1789752849",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/c/ec91933d-8da0-4044-87d3-52d509756e7d.jpg?1789752849"
+			}
+		},
+		"Fateful Absence": {
+			"id": "168a41be-fa21-4d09-baf8-af3afd516d9b",
+			"oracle_id": "35bba442-1aec-4d33-b502-4c580d61644b",
+			"name": "Fateful Absence",
+			"mana_cost": "{1}{W}",
+			"cmc": 2,
+			"type_line": "Instant",
+			"oracle_text": "Destroy target creature or planeswalker. Its controller investigates. (They create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Investigate"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/6/168a41be-fa21-4d09-baf8-af3afd516d9b.jpg?1789752836",
+				"normal": "https://cards.scryfall.io/normal/front/1/6/168a41be-fa21-4d09-baf8-af3afd516d9b.jpg?1789752836",
+				"large": "https://cards.scryfall.io/large/front/1/6/168a41be-fa21-4d09-baf8-af3afd516d9b.jpg?1789752836",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/6/168a41be-fa21-4d09-baf8-af3afd516d9b.jpg?1789752836"
+			}
+		},
+		"Inspiring Overseer": {
+			"id": "d04d0a9b-a5a7-423a-bc27-8ea9b2cbff75",
+			"oracle_id": "d646e42b-5635-4798-b633-29c093b66a55",
+			"name": "Inspiring Overseer",
+			"mana_cost": "{2}{W}",
+			"cmc": 3,
+			"type_line": "Creature — Angel Cleric",
+			"oracle_text": "Flying\nWhen this creature enters, you gain 1 life and draw a card.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "2",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/d/0/d04d0a9b-a5a7-423a-bc27-8ea9b2cbff75.jpg?1789752840",
+				"normal": "https://cards.scryfall.io/normal/front/d/0/d04d0a9b-a5a7-423a-bc27-8ea9b2cbff75.jpg?1789752840",
+				"large": "https://cards.scryfall.io/large/front/d/0/d04d0a9b-a5a7-423a-bc27-8ea9b2cbff75.jpg?1789752840",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/d/0/d04d0a9b-a5a7-423a-bc27-8ea9b2cbff75.jpg?1789752840"
+			}
+		},
+		"Angelic Sleuth": {
+			"id": "68905611-fb68-421a-84b6-b41e379a6361",
+			"oracle_id": "2579e9e0-b00f-4a1b-8fce-15d06bb7fe5a",
+			"name": "Angelic Sleuth",
+			"mana_cost": "{2}{W}",
+			"cmc": 3,
+			"type_line": "Creature — Angel Advisor",
+			"oracle_text": "Flying\nWhenever another permanent you control leaves the battlefield, if it had counters on it, investigate. (Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Investigate"
+			],
+			"power": "2",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/8/68905611-fb68-421a-84b6-b41e379a6361.jpg?1789752817",
+				"normal": "https://cards.scryfall.io/normal/front/6/8/68905611-fb68-421a-84b6-b41e379a6361.jpg?1789752817",
+				"large": "https://cards.scryfall.io/large/front/6/8/68905611-fb68-421a-84b6-b41e379a6361.jpg?1789752817",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/8/68905611-fb68-421a-84b6-b41e379a6361.jpg?1789752817"
+			}
+		},
+		"Cut a Deal": {
+			"id": "6db24e22-d0b6-4f27-9fff-fce027fadf15",
+			"oracle_id": "8b5cffd5-5db3-4151-9275-d91387554412",
+			"name": "Cut a Deal",
+			"mana_cost": "{2}{W}",
+			"cmc": 3,
+			"type_line": "Sorcery",
+			"oracle_text": "Each opponent draws a card, then you draw a card for each opponent who drew a card this way.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/d/6db24e22-d0b6-4f27-9fff-fce027fadf15.jpg?1789752825",
+				"normal": "https://cards.scryfall.io/normal/front/6/d/6db24e22-d0b6-4f27-9fff-fce027fadf15.jpg?1789752825",
+				"large": "https://cards.scryfall.io/large/front/6/d/6db24e22-d0b6-4f27-9fff-fce027fadf15.jpg?1789752825",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/d/6db24e22-d0b6-4f27-9fff-fce027fadf15.jpg?1789752825"
+			}
+		},
+		"Destroy Evil": {
+			"id": "c927db80-2711-4546-970e-7c2e89a0fb2f",
+			"oracle_id": "b75e667a-1ceb-445a-acf4-ae1fd2dae9e7",
+			"name": "Destroy Evil",
+			"mana_cost": "{1}{W}",
+			"cmc": 2,
+			"type_line": "Instant",
+			"oracle_text": "Choose one —\n• Destroy target creature with toughness 4 or greater.\n• Destroy target enchantment.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/c/9/c927db80-2711-4546-970e-7c2e89a0fb2f.jpg?1789752830",
+				"normal": "https://cards.scryfall.io/normal/front/c/9/c927db80-2711-4546-970e-7c2e89a0fb2f.jpg?1789752830",
+				"large": "https://cards.scryfall.io/large/front/c/9/c927db80-2711-4546-970e-7c2e89a0fb2f.jpg?1789752830",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/c/9/c927db80-2711-4546-970e-7c2e89a0fb2f.jpg?1789752830"
+			}
+		},
+		"Norn's Choirmaster": {
+			"id": "c7459da4-1081-4550-88c4-936f3662c5c8",
+			"oracle_id": "bad6a5a9-7010-418d-b042-182926aa999d",
+			"name": "Norn's Choirmaster",
+			"mana_cost": "{3}{W}{W}",
+			"cmc": 5,
+			"type_line": "Creature — Phyrexian Angel",
+			"oracle_text": "Flying, first strike\nWhenever a commander you control enters or attacks, proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"First strike",
+				"Proliferate"
+			],
+			"power": "5",
+			"toughness": "4",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/c/7/c7459da4-1081-4550-88c4-936f3662c5c8.jpg?1789752845",
+				"normal": "https://cards.scryfall.io/normal/front/c/7/c7459da4-1081-4550-88c4-936f3662c5c8.jpg?1789752845",
+				"large": "https://cards.scryfall.io/large/front/c/7/c7459da4-1081-4550-88c4-936f3662c5c8.jpg?1789752845",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/c/7/c7459da4-1081-4550-88c4-936f3662c5c8.jpg?1789752845"
+			}
+		},
+		"Firemane Commando": {
+			"id": "62cef25e-0a24-43f8-9d88-53f9d38c854f",
+			"oracle_id": "ac675899-25bb-4f06-9c8c-bf188024495f",
+			"name": "Firemane Commando",
+			"mana_cost": "{3}{W}",
+			"cmc": 4,
+			"type_line": "Creature — Angel Soldier",
+			"oracle_text": "Flying\nWhenever you attack with two or more creatures, draw a card.\nWhenever another player attacks with two or more creatures, they draw a card if none of those creatures attacked you.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "4",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/2/62cef25e-0a24-43f8-9d88-53f9d38c854f.jpg?1789752837",
+				"normal": "https://cards.scryfall.io/normal/front/6/2/62cef25e-0a24-43f8-9d88-53f9d38c854f.jpg?1789752837",
+				"large": "https://cards.scryfall.io/large/front/6/2/62cef25e-0a24-43f8-9d88-53f9d38c854f.jpg?1789752837",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/2/62cef25e-0a24-43f8-9d88-53f9d38c854f.jpg?1789752837"
+			}
+		},
+		"Metropolis Reformer": {
+			"id": "2ea3aa21-0999-4178-928a-5216b66b1a24",
+			"oracle_id": "baec04a1-3bc9-4618-afab-e42013e36648",
+			"name": "Metropolis Reformer",
+			"mana_cost": "{2}{W}",
+			"cmc": 3,
+			"type_line": "Creature — Angel Cleric",
+			"oracle_text": "Flying, vigilance\nYou have hexproof.\nWhenever this creature is dealt damage, you gain that much life.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Vigilance"
+			],
+			"power": "2",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/e/2ea3aa21-0999-4178-928a-5216b66b1a24.jpg?1789752852",
+				"normal": "https://cards.scryfall.io/normal/front/2/e/2ea3aa21-0999-4178-928a-5216b66b1a24.jpg?1789752852",
+				"large": "https://cards.scryfall.io/large/front/2/e/2ea3aa21-0999-4178-928a-5216b66b1a24.jpg?1789752852",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/e/2ea3aa21-0999-4178-928a-5216b66b1a24.jpg?1789752852"
+			}
+		},
+		"Wojek Investigator": {
+			"id": "59f11982-7822-4847-ab0f-de2022e750a7",
+			"oracle_id": "ab41243d-b178-4ebe-a7ac-bea37427be99",
+			"name": "Wojek Investigator",
+			"mana_cost": "{2}{W}",
+			"cmc": 3,
+			"type_line": "Creature — Angel Detective",
+			"oracle_text": "Flying, vigilance\nAt the beginning of your upkeep, investigate once for each opponent who has more cards in hand than you. (To investigate, create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Investigate",
+				"Vigilance"
+			],
+			"power": "2",
+			"toughness": "4",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/9/59f11982-7822-4847-ab0f-de2022e750a7.jpg?1789752898",
+				"normal": "https://cards.scryfall.io/normal/front/5/9/59f11982-7822-4847-ab0f-de2022e750a7.jpg?1789752898",
+				"large": "https://cards.scryfall.io/large/front/5/9/59f11982-7822-4847-ab0f-de2022e750a7.jpg?1789752898",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/9/59f11982-7822-4847-ab0f-de2022e750a7.jpg?1789752898"
+			}
+		},
+		"Merchant of Truth": {
+			"id": "45cb7d19-0cdb-4e6a-b1ba-59c74306105b",
+			"oracle_id": "84275aab-f718-4896-b61c-63bf49fb483b",
+			"name": "Merchant of Truth",
+			"mana_cost": "{2}{W}{W}",
+			"cmc": 4,
+			"type_line": "Creature — Angel Detective",
+			"oracle_text": "Flying\nWhenever a nontoken creature you control dies, investigate.\nClues you control have exalted. (Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn for each instance of exalted among permanents you control.)",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Investigate"
+			],
+			"power": "2",
+			"toughness": "5",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/5/45cb7d19-0cdb-4e6a-b1ba-59c74306105b.jpg?1789752845",
+				"normal": "https://cards.scryfall.io/normal/front/4/5/45cb7d19-0cdb-4e6a-b1ba-59c74306105b.jpg?1789752845",
+				"large": "https://cards.scryfall.io/large/front/4/5/45cb7d19-0cdb-4e6a-b1ba-59c74306105b.jpg?1789752845",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/5/45cb7d19-0cdb-4e6a-b1ba-59c74306105b.jpg?1789752845"
+			}
+		},
+		"Patchwork Banner": {
+			"id": "205c527c-0055-4d2a-86b1-18d1c58a898d",
+			"oracle_id": "4fb00dbe-1f82-4ba6-b18c-97e816d10d3a",
+			"name": "Patchwork Banner",
+			"mana_cost": "{3}",
+			"cmc": 3,
+			"type_line": "Artifact",
+			"oracle_text": "As this artifact enters, choose a creature type.\nCreatures you control of the chosen type get +1/+1.\n{T}: Add one mana of any color.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/0/205c527c-0055-4d2a-86b1-18d1c58a898d.jpg?1789753341",
+				"normal": "https://cards.scryfall.io/normal/front/2/0/205c527c-0055-4d2a-86b1-18d1c58a898d.jpg?1789753341",
+				"large": "https://cards.scryfall.io/large/front/2/0/205c527c-0055-4d2a-86b1-18d1c58a898d.jpg?1789753341",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/0/205c527c-0055-4d2a-86b1-18d1c58a898d.jpg?1789753341"
+			}
+		},
+		"Exorcise": {
+			"id": "be5b4b1d-fd4e-4783-9393-85e08d9ae0df",
+			"oracle_id": "58916455-844c-4d97-908f-8205bdc117c0",
+			"name": "Exorcise",
+			"mana_cost": "{1}{W}",
+			"cmc": 2,
+			"type_line": "Sorcery",
+			"oracle_text": "Exile target artifact, enchantment, or creature with power 4 or greater.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/b/e/be5b4b1d-fd4e-4783-9393-85e08d9ae0df.jpg?1789752834",
+				"normal": "https://cards.scryfall.io/normal/front/b/e/be5b4b1d-fd4e-4783-9393-85e08d9ae0df.jpg?1789752834",
+				"large": "https://cards.scryfall.io/large/front/b/e/be5b4b1d-fd4e-4783-9393-85e08d9ae0df.jpg?1789752834",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/b/e/be5b4b1d-fd4e-4783-9393-85e08d9ae0df.jpg?1789752834"
+			}
+		},
+		"Herald of Eternal Dawn": {
+			"id": "bdcddceb-6b5e-4c19-9069-457c3736932d",
+			"oracle_id": "4080f7e3-06d3-4d3d-9929-4e826cb66713",
+			"name": "Herald of Eternal Dawn",
+			"mana_cost": "{4}{W}{W}{W}",
+			"cmc": 7,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flash (You may cast this spell any time you could cast an instant.)\nFlying\nYou can't lose the game and your opponents can't win the game.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Flash"
+			],
+			"power": "6",
+			"toughness": "6",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/b/d/bdcddceb-6b5e-4c19-9069-457c3736932d.jpg?1789752839",
+				"normal": "https://cards.scryfall.io/normal/front/b/d/bdcddceb-6b5e-4c19-9069-457c3736932d.jpg?1789752839",
+				"large": "https://cards.scryfall.io/large/front/b/d/bdcddceb-6b5e-4c19-9069-457c3736932d.jpg?1789752839",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/b/d/bdcddceb-6b5e-4c19-9069-457c3736932d.jpg?1789752839"
+			}
+		},
+		"Exemplar of Light": {
+			"id": "4331836b-fa3c-4505-9361-a0b82aef63f5",
+			"oracle_id": "9ad730b5-8950-4215-9319-387e2970dd22",
+			"name": "Exemplar of Light",
+			"mana_cost": "{2}{W}{W}",
+			"cmc": 4,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying\nWhenever you gain life, put a +1/+1 counter on this creature.\nWhenever you put one or more +1/+1 counters on this creature, draw a card. This ability triggers only once each turn.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "3",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/3/4331836b-fa3c-4505-9361-a0b82aef63f5.jpg?1789752836",
+				"normal": "https://cards.scryfall.io/normal/front/4/3/4331836b-fa3c-4505-9361-a0b82aef63f5.jpg?1789752836",
+				"large": "https://cards.scryfall.io/large/front/4/3/4331836b-fa3c-4505-9361-a0b82aef63f5.jpg?1789752836",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/3/4331836b-fa3c-4505-9361-a0b82aef63f5.jpg?1789752836"
+			}
+		},
+		"Vanguard Seraph": {
+			"id": "e545bc61-02f9-4f3f-b5ba-f9d32ea515d2",
+			"oracle_id": "3250466f-82a4-45e1-9722-ff247ddf8c15",
+			"name": "Vanguard Seraph",
+			"mana_cost": "{3}{W}",
+			"cmc": 4,
+			"type_line": "Creature — Angel Warrior",
+			"oracle_text": "Flying\nWhenever you gain life for the first time each turn, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying",
+				"Surveil"
+			],
+			"power": "3",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/5/e545bc61-02f9-4f3f-b5ba-f9d32ea515d2.jpg?1789753033",
+				"normal": "https://cards.scryfall.io/normal/front/e/5/e545bc61-02f9-4f3f-b5ba-f9d32ea515d2.jpg?1789753033",
+				"large": "https://cards.scryfall.io/large/front/e/5/e545bc61-02f9-4f3f-b5ba-f9d32ea515d2.jpg?1789753033",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/5/e545bc61-02f9-4f3f-b5ba-f9d32ea515d2.jpg?1789753033"
+			}
+		},
+		"Dazzling Angel": {
+			"id": "a1a8cc0d-c2ac-4dfe-a0a1-996bfadb7d54",
+			"oracle_id": "7de464e3-fae3-44cc-8233-776fc727c00a",
+			"name": "Dazzling Angel",
+			"mana_cost": "{2}{W}",
+			"cmc": 3,
+			"type_line": "Creature — Angel",
+			"oracle_text": "Flying\nWhenever another creature you control enters, you gain 1 life.",
+			"colors": [
+				"W"
+			],
+			"color_identity": [
+				"W"
+			],
+			"keywords": [
+				"Flying"
+			],
+			"power": "2",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/a/1/a1a8cc0d-c2ac-4dfe-a0a1-996bfadb7d54.jpg?1789752829",
+				"normal": "https://cards.scryfall.io/normal/front/a/1/a1a8cc0d-c2ac-4dfe-a0a1-996bfadb7d54.jpg?1789752829",
+				"large": "https://cards.scryfall.io/large/front/a/1/a1a8cc0d-c2ac-4dfe-a0a1-996bfadb7d54.jpg?1789752829",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/a/1/a1a8cc0d-c2ac-4dfe-a0a1-996bfadb7d54.jpg?1789752829"
+			}
+		}
+	},
+	"validation": {
+		"ok": true,
+		"errors": [],
+		"warnings": [],
+		"total": 100
+	}
+}

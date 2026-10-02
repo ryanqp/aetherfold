@@ -19,6 +19,11 @@ var mp_status: Label
 var mp_roster: Label
 var gallery_grid: GridContainer
 var import_overlay: ImportOverlay
+var page_dim: ColorRect
+var starter_msg: String = ""
+var starter_label: Label
+var vs_preview: TextureRect
+var vs_preview_card: Dictionary = {}
 var builder_cmd: LineEdit
 var builder_cmd_list: ItemList
 var builder_card: LineEdit
@@ -28,7 +33,6 @@ var builder_count: Label
 var builder_cmd_name: String = ""
 var builder_cards: Dictionary = {}
 var settings_music: Button
-var settings_sfx: Button
 
 
 func _ready() -> void:
@@ -37,6 +41,15 @@ func _ready() -> void:
 	bg.color = Color(0.05, 0.055, 0.06)
 	bg.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	add_child(bg)
+	## Every page sits on the animated mana-wheel sky (dimmed), so the whole menu looks like the title screen.
+	_backdrop = Backdrop.new()
+	add_child(_backdrop)
+	page_dim = ColorRect.new()
+	page_dim.color = Color(0.02, 0.02, 0.04, 0.68)
+	page_dim.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	page_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(page_dim)
+	_install_precons()
 	_build_hub()
 	_build_vs()
 	_build_mp()
@@ -58,6 +71,16 @@ func _ready() -> void:
 	_show("hub")
 
 
+## The eight Commander precon starter decks ship with the game (res://data/precons); any that aren't saved on
+## this computer yet are saved now, and the starter decks they replaced are deleted.
+func _install_precons() -> void:
+	var res: Dictionary = PreconDecks.new().install()
+	starter_msg = "Starter decks: %d Commander precons ready." % PreconDecks.new().saved_count()
+	if int(res.get("removed", 0)) > 0:
+		starter_msg += " (Removed %d old starter decks.)" % int(res.get("removed", 0))
+	print("[precons] ", JSON.stringify(res))
+
+
 func _app() -> Node:
 	return get_node_or_null("/root/AppState")
 
@@ -68,6 +91,10 @@ func _net() -> Node:
 
 func _show(name: String) -> void:
 	current = name
+	if page_dim != null:
+		page_dim.visible = name != "hub"
+	if _backdrop != null:
+		_backdrop.wheel_strength = 1.0 if name == "hub" else 0.45
 	for k in pages.keys():
 		pages[k].visible = (str(k) == name)
 	if name == "gallery":
@@ -84,7 +111,7 @@ func _page() -> PanelContainer:
 	p.offset_top = 40
 	p.offset_bottom = -40
 	var st := StyleBoxFlat.new()
-	st.bg_color = PANEL
+	st.bg_color = Color(0.07, 0.065, 0.06, 0.88)
 	st.set_corner_radius_all(16)
 	st.set_border_width_all(2)
 	st.border_color = GOLD.darkened(0.25)
@@ -129,9 +156,25 @@ func _btn(text: String, cb: Callable, min_w: float = 360, gold := false) -> Butt
 	b.text = text
 	b.custom_minimum_size = Vector2(min_w, 48)
 	var st := StyleBoxFlat.new()
-	st.bg_color = GOLD.darkened(0.15) if gold else Color(0.16, 0.17, 0.18)
+	st.bg_color = GOLD.darkened(0.15) if gold else Color(0.23, 0.20, 0.15, 0.95)
+	st.border_color = Color(0.55, 0.45, 0.22, 0.9)
+	st.set_border_width_all(1)
 	st.set_corner_radius_all(8)
 	b.add_theme_stylebox_override("normal", st)
+	## Hover / focus / press: the button lights up gold (a soft glow), the same as the painted front menu.
+	var hv := st.duplicate() as StyleBoxFlat
+	hv.bg_color = GOLD.lightened(0.1) if gold else Color(0.30, 0.26, 0.12)
+	hv.border_color = Color(0.97, 0.82, 0.38, 0.95)
+	hv.set_border_width_all(2)
+	hv.shadow_color = Color(0.97, 0.78, 0.25, 0.35)
+	hv.shadow_size = 8
+	b.add_theme_stylebox_override("hover", hv)
+	b.add_theme_stylebox_override("focus", hv)
+	var pr := hv.duplicate() as StyleBoxFlat
+	pr.bg_color = hv.bg_color.lightened(0.15)
+	b.add_theme_stylebox_override("pressed", pr)
+	b.add_theme_color_override("font_hover_color", Color(1, 0.97, 0.85) if not gold else Color(0.1, 0.08, 0.02))
+	b.add_theme_color_override("font_focus_color", Color(1, 0.97, 0.85) if not gold else Color(0.1, 0.08, 0.02))
 	b.add_theme_color_override("font_color", Color(0.12, 0.10, 0.04) if gold else INK)
 	b.add_theme_font_size_override("font_size", 20)
 	b.pressed.connect(cb)
@@ -148,25 +191,135 @@ func _back_row(parent: Node, extra: Node = null) -> void:
 	parent.add_child(row)
 
 
+## The title screen: an animated Magic-themed backdrop (MagicBackdrop: stars, a turning mana wheel, drifting mana
+## motes), the game's name over the wheel, and one button per page.
+const HUB_ENTRIES := [
+	{"id": "vs", "text": "Play vs. AI", "tip": "Play a Commander duel against the AI", "gold": true},
+	{"id": "mp", "text": "Multiplayer", "tip": "Host or join a table on your network", "gold": false},
+	{"id": "library", "text": "Library", "tip": "Import, build and browse your decks", "gold": false},
+	{"id": "settings", "text": "Settings", "tip": "Music, volume and fullscreen", "gold": false},
+	{"id": "exit", "text": "Leave the Multiverse", "tip": "Quit", "gold": false},
+]
+
+const Backdrop := preload("res://scripts/ui/magic_backdrop.gd")
+var _backdrop: Control
+
+
 func _build_hub() -> void:
-	var p := _page()
+	var p := Control.new()
+	p.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(p)
 	pages["hub"] = p
-	var c := _col(p)
-	_title(c, "AETHERFOLD")
-	_sub(c, "Commander  ·  1v1 table")
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 12)
-	c.add_child(spacer)
-	var wrap := VBoxContainer.new()
-	wrap.alignment = BoxContainer.ALIGNMENT_CENTER
-	wrap.add_theme_constant_override("separation", 10)
-	wrap.add_child(_btn("Vs. AI", _show.bind("vs"), 400, true))
-	wrap.add_child(_btn("Multiplayer", _show.bind("mp"), 400))
-	wrap.add_child(_btn("Library Builder", _show.bind("library"), 400))
-	wrap.add_child(_btn("Menu", _show.bind("settings"), 400))
-	wrap.add_child(_btn("Exit Game", _on_exit, 400))
-	c.add_child(wrap)
-	status_label = _sub(c, "Play Krenko against a Talrand bot, or bring your own decks.")
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(center)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 10)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	center.add_child(col)
+	var name_lab := Label.new()
+	name_lab.text = "AETHERFOLD"
+	name_lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_lab.add_theme_font_size_override("font_size", 88)
+	name_lab.add_theme_color_override("font_color", Color(0.98, 0.86, 0.45))
+	name_lab.add_theme_color_override("font_outline_color", Color(0.18, 0.08, 0.30))
+	name_lab.add_theme_constant_override("outline_size", 14)
+	name_lab.add_theme_color_override("font_shadow_color", Color(0.45, 0.30, 0.85, 0.55))
+	name_lab.add_theme_constant_override("shadow_offset_x", 0)
+	name_lab.add_theme_constant_override("shadow_offset_y", 6)
+	col.add_child(name_lab)
+	var tag := Label.new()
+	tag.text = "·  A  C O M M A N D E R   T A B L E  ·"
+	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tag.add_theme_font_size_override("font_size", 18)
+	tag.add_theme_color_override("font_color", Color(0.80, 0.76, 0.95))
+	col.add_child(tag)
+	col.add_child(_mana_pips())
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(0, 14)
+	col.add_child(gap)
+	for spec in HUB_ENTRIES:
+		var row := CenterContainer.new()
+		var b := _hub_btn(str(spec.text), _on_hub_button.bind(str(spec.id)), bool(spec.gold))
+		b.tooltip_text = str(spec.tip)
+		row.add_child(b)
+		col.add_child(row)
+	status_label = Label.new()
+	status_label.add_theme_color_override("font_color", Color(0.86, 0.84, 0.95))
+	status_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+	status_label.add_theme_constant_override("shadow_offset_x", 1)
+	status_label.add_theme_constant_override("shadow_offset_y", 1)
+	status_label.text = "Play Krenko against a Talrand bot, or bring your own decks."
+	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_label.set_anchors_and_offsets_preset(PRESET_BOTTOM_WIDE)
+	status_label.offset_top = -34
+	status_label.offset_bottom = -8
+	p.add_child(status_label)
+
+
+## The five colors of mana as little glowing orbs under the title.
+func _mana_pips() -> Control:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 14)
+	for c in Backdrop.MANA:
+		var pip := Panel.new()
+		pip.custom_minimum_size = Vector2(22, 22)
+		var st := StyleBoxFlat.new()
+		st.bg_color = c
+		st.set_corner_radius_all(11)
+		st.set_border_width_all(2)
+		st.border_color = GOLD
+		st.shadow_color = Color(c.r, c.g, c.b, 0.6)
+		st.shadow_size = 8
+		pip.add_theme_stylebox_override("panel", st)
+		row.add_child(pip)
+	return row
+
+
+## A title-screen button: dark violet with a gold rim that blazes on hover.
+func _hub_btn(text: String, cb: Callable, gold: bool) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.custom_minimum_size = Vector2(380, 54)
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_size_override("font_size", 22)
+	var fill := Color(0.13, 0.08, 0.22, 0.90)
+	var rim := Color(0.62, 0.50, 0.28, 0.9)
+	if gold:
+		fill = Color(0.52, 0.38, 0.10, 0.95)
+		rim = Color(0.97, 0.82, 0.38, 1.0)
+	var normal := _hub_style(fill, rim, false)
+	b.add_theme_stylebox_override("normal", normal)
+	b.add_theme_stylebox_override("hover", _hub_style(fill.lightened(0.18), Color(1.0, 0.90, 0.55), true))
+	b.add_theme_stylebox_override("focus", normal)
+	b.add_theme_stylebox_override("pressed", _hub_style(fill.lightened(0.30), Color(1.0, 0.95, 0.70), true))
+	b.add_theme_color_override("font_color", Color(1.0, 0.96, 0.82) if gold else Color(0.90, 0.88, 0.98))
+	b.add_theme_color_override("font_hover_color", Color(1, 1, 0.92))
+	b.add_theme_color_override("font_pressed_color", Color(1, 1, 0.92))
+	b.pressed.connect(cb)
+	return b
+
+
+func _hub_style(fill: Color, border: Color, lit: bool) -> StyleBoxFlat:
+	var st := StyleBoxFlat.new()
+	st.bg_color = fill
+	st.border_color = border
+	st.set_border_width_all(3 if lit else 2)
+	st.set_corner_radius_all(10)
+	st.shadow_color = Color(0.75, 0.55, 1.0, 0.45) if lit else Color(0, 0, 0, 0.35)
+	st.shadow_size = 14 if lit else 4
+	return st
+
+
+func _on_hub_button(id: String) -> void:
+	match id:
+		"vs", "mp", "library", "settings":
+			_show(id)
+		"exit":
+			_on_exit()
 
 
 func _build_vs() -> void:
@@ -181,6 +334,21 @@ func _build_vs() -> void:
 	c.add_child(row)
 	row.add_child(_vs_column("Your deck", true))
 	row.add_child(_vs_column("Bot deck", false))
+	## Hover a deck to see its commander here, as the full card.
+	var prev_box := Control.new()
+	prev_box.custom_minimum_size = Vector2(300, 0)
+	vs_preview = TextureRect.new()
+	vs_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	vs_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+	vs_preview.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	vs_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vs_preview.visible = false
+	prev_box.add_child(vs_preview)
+	prev_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(prev_box)
+	var cat0 := get_node_or_null("/root/ScryfallCatalog")
+	if cat0 != null and cat0.has_signal("art_updated"):
+		cat0.art_updated.connect(func(_cid: String) -> void: _update_vs_preview())
 	var diff_row := HBoxContainer.new()
 	diff_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	var dl := Label.new()
@@ -231,21 +399,80 @@ func _fill_deck_list(list: Node, is_player: bool) -> void:
 		list.remove_child(ch)
 		ch.queue_free()
 	var selected := vs_player_id if is_player else vs_bot_id
+	## Three groups: the two built-in starters, the Commander precons (in Moxfield's order), then your own decks.
+	var groups := {"builtin": [], "precon": [], "mine": []}
 	for rec in DeckCatalog.all_choices():
-		var id := str(rec.get("id", ""))
-		var b := Button.new()
-		b.custom_minimum_size = Vector2(0, 64)
-		b.toggle_mode = true
-		b.button_pressed = id == selected
-		b.text = "  %s" % str(rec.get("name", DeckCatalog.commander_name(rec)))
-		if bool(rec.get("builtin", false)):
-			b.text += "  (starter)"
-		var tex := _cmd_tex(rec)
-		if tex:
-			b.icon = tex
-			b.expand_icon = true
-		b.pressed.connect(_on_pick_vs.bind(id, is_player))
-		list.add_child(b)
+		var r: Dictionary = rec
+		if bool(r.get("builtin", false)):
+			(groups.builtin as Array).append(r)
+		elif str(r.get("source", "")) == PreconDecks.SOURCE:
+			(groups.precon as Array).append(r)
+		else:
+			(groups.mine as Array).append(r)
+	(groups.precon as Array).sort_custom(func(a, b) -> bool: return int(a.get("precon_order", 99)) < int(b.get("precon_order", 99)))
+	for g in [["builtin", "Starters"], ["precon", "Commander precons"], ["mine", "Your decks"]]:
+		var recs: Array = groups[g[0]]
+		if recs.is_empty():
+			continue
+		var head := Label.new()
+		head.text = str(g[1])
+		head.add_theme_color_override("font_color", GOLD)
+		head.add_theme_font_size_override("font_size", 15)
+		list.add_child(head)
+		for rec2 in recs:
+			list.add_child(_deck_button(rec2, selected, is_player))
+
+
+func _deck_button(rec: Dictionary, selected: String, is_player: bool) -> Button:
+	var id := str(rec.get("id", ""))
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(0, 64)
+	b.toggle_mode = true
+	b.button_pressed = id == selected
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var nm := str(rec.get("name", DeckCatalog.commander_name(rec)))
+	var cmd := DeckCatalog.commander_name(rec)
+	if str(rec.get("source", "")) == PreconDecks.SOURCE:
+		b.text = "  %s\n  %s  ·  %s" % [nm, cmd, str(rec.get("precon_set", "Precon"))]
+	elif bool(rec.get("builtin", false)):
+		b.text = "  %s  (starter)" % nm
+	else:
+		b.text = "  %s" % nm
+	b.tooltip_text = "%s — commander: %s" % [nm, cmd]
+	var tex := _cmd_tex(rec)
+	if tex:
+		b.icon = tex
+		b.expand_icon = true
+	b.pressed.connect(_on_pick_vs.bind(id, is_player))
+	var cmd_card := DeckCatalog.commander_row(rec)
+	b.mouse_entered.connect(_show_vs_preview.bind(cmd_card))
+	b.mouse_exited.connect(_hide_vs_preview)
+	return b
+
+
+## Hovering a deck in the pick lists shows its commander as a full card beside the lists.
+func _show_vs_preview(card: Dictionary) -> void:
+	if vs_preview == null:
+		return
+	vs_preview_card = card
+	_update_vs_preview()
+	vs_preview.visible = vs_preview.texture != null
+
+
+func _update_vs_preview() -> void:
+	var cat := get_node_or_null("/root/ScryfallCatalog")
+	if cat == null or vs_preview_card.is_empty():
+		return
+	var t: Texture2D = cat.texture_for(vs_preview_card, "normal")
+	if t != null:
+		vs_preview.texture = t
+		vs_preview.visible = true
+
+
+func _hide_vs_preview() -> void:
+	vs_preview_card = {}
+	if vs_preview != null:
+		vs_preview.visible = false
 
 
 func _on_pick_vs(id: String, is_player: bool) -> void:
@@ -257,6 +484,11 @@ func _on_pick_vs(id: String, is_player: bool) -> void:
 
 
 func _cmd_tex(rec: Dictionary) -> Texture2D:
+	var local := str(rec.get("commander_image", ""))
+	if local != "" and FileAccess.file_exists(local):
+		var img := Image.new()
+		if img.load(local) == OK:
+			return ImageTexture.create_from_image(img)
 	var cat := get_node_or_null("/root/ScryfallCatalog")
 	if cat == null or not cat.has_method("texture_for"):
 		return null
@@ -396,7 +628,16 @@ func _on_mp_ready() -> void:
 func _build_library() -> void:
 	var p := _page()
 	pages["library"] = p
-	var c := _col(p)
+	var outer := _col(p)
+	## The page scrolls (the import report can be long); Back stays pinned at the bottom.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	outer.add_child(scroll)
+	var c := VBoxContainer.new()
+	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	c.add_theme_constant_override("separation", 12)
+	scroll.add_child(c)
 	_title(c, "Library", 32)
 	_sub(c, "Import a list, build a deck, or browse what you’ve saved.")
 	var wrap := VBoxContainer.new()
@@ -405,8 +646,15 @@ func _build_library() -> void:
 	wrap.add_child(_btn("Import from URL / list", _on_open_import, 420, true))
 	wrap.add_child(_btn("Library Builder", _show.bind("builder"), 420))
 	wrap.add_child(_btn("Library Gallery", _show.bind("gallery"), 420))
+	starter_label = Label.new()
+	starter_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	starter_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	starter_label.custom_minimum_size = Vector2(420, 0)
+	starter_label.add_theme_color_override("font_color", MUTED)
+	starter_label.text = starter_msg
+	wrap.add_child(starter_label)
 	c.add_child(wrap)
-	_back_row(c)
+	_back_row(outer)
 
 
 func _on_open_import() -> void:
@@ -441,6 +689,7 @@ func _refresh_gallery() -> void:
 		var ch := gallery_grid.get_child(0)
 		gallery_grid.remove_child(ch)
 		ch.queue_free()
+	DeckStore.new().purge_test_decks()
 	var recs: Array = DeckStore.new().list_decks()
 	if recs.is_empty():
 		var empty := Label.new()
@@ -646,33 +895,47 @@ func _build_settings() -> void:
 	_title(c, "Menu", 32)
 	_sub(c, "Audio and display.")
 	settings_music = _btn("Music: On", _toggle_music, 280)
-	var sfx_off := false
-	var app_now := _app()
-	if app_now != null:
-		sfx_off = bool(app_now.sfx_muted)
-	settings_sfx = _btn("SFX: Off" if sfx_off else "SFX: On", _toggle_sfx, 280)
 	c.add_child(settings_music)
-	c.add_child(settings_sfx)
+	_volume_row(c)
 	c.add_child(_btn("Toggle fullscreen", _toggle_fullscreen, 280))
 	_sub(c, "Aetherfold  ·  Godot 4.7  ·  fan Commander table")
 	_back_row(c)
 
 
 func _toggle_music() -> void:
-	var bus := AudioServer.get_bus_index("Master")
-	var mute := not AudioServer.is_bus_mute(bus)
-	# music is on table; toggle Master here as a coarse control
-	if settings_music:
-		settings_music.text = "Music: Off" if settings_music.text.ends_with("On") else "Music: On"
-
-
-func _toggle_sfx() -> void:
-	var app := _app()
-	if app == null:
+	var music := get_node_or_null("/root/Music")
+	if music == null:
 		return
-	app.sfx_muted = not bool(app.sfx_muted)
-	if settings_sfx:
-		settings_sfx.text = "SFX: Off" if app.sfx_muted else "SFX: On"
+	var off: bool = music.toggle_mute()
+	if settings_music:
+		settings_music.text = "Music: Off" if off else "Music: On"
+
+
+func _volume_row(parent: Control) -> void:
+	var music := get_node_or_null("/root/Music")
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 10)
+	var lab := Label.new()
+	lab.text = "Volume"
+	row.add_child(lab)
+	var sl := HSlider.new()
+	sl.min_value = 0
+	sl.max_value = 100
+	sl.step = 1
+	sl.value = (music.volume if music != null else 0.7) * 100.0
+	sl.custom_minimum_size = Vector2(200, 24)
+	row.add_child(sl)
+	var pct := Label.new()
+	pct.text = "%d%%" % int(sl.value)
+	pct.custom_minimum_size = Vector2(44, 0)
+	row.add_child(pct)
+	sl.value_changed.connect(func(v: float) -> void:
+		pct.text = "%d%%" % int(v)
+		if music != null:
+			music.set_volume(v / 100.0)
+	)
+	parent.add_child(row)
 
 
 func _on_mp_copy() -> void:

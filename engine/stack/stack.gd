@@ -47,17 +47,31 @@ func resolve_top(engine: RulesEngine) -> bool:
 		done = engine.executor.resolve(engine, entry)
 	if not done:
 		return false
-	pop()
+	## An effect may have put something new on top (a free cast), so remove this entry by id.
+	remove_by_stack_id(entry.stack_id)
 	if entry.kind != StackEntry.Kind.SPELL:
 		return true
 	var obj: GameObject = engine.state.objects.get(entry.object_id)
 	if obj == null or obj.zone != EngineEnums.ZoneId.STACK:
 		return true
 	var def: CardDefinition = obj.definition as CardDefinition if obj.definition is CardDefinition else null
-	if def != null and def.is_permanent_type():
-		engine.state.zones.move(obj.object_id, EngineEnums.ZoneId.BATTLEFIELD)
-	else:
+	## An Aura spell whose target is gone doesn't resolve (CR 608.3b); otherwise it enters attached (CR 303.4f).
+	if bool(entry.ctx.get("aura_fizzle", false)):
 		engine.state.zones.move(obj.object_id, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
+		return true
+	if def != null and def.is_permanent_type():
+		## Mutate (CR 702.140b): merges with its target instead of entering.
+		if engine.kw.mutate_onto(obj):
+			return true
+		var landed_perm: GameObject = engine.state.zones.move(obj.object_id, EngineEnums.ZoneId.BATTLEFIELD)
+		if landed_perm != null and entry.ctx.has("aura_target"):
+			landed_perm.attached_to = int(entry.ctx["aura_target"])
+		if landed_perm != null:
+			engine.kw.after_permanent_landed(landed_perm)
+	else:
+		var dest: int = EngineEnums.ZoneId.EXILE if bool(entry.ctx.get("exile_self", false)) else engine.kw.resolved_destination(obj)
+		var landed: GameObject = engine.state.zones.move(obj.object_id, dest, obj.owner_id)
+		engine.kw.after_spell_resolved(obj, landed)
 	return true
 
 

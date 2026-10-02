@@ -1,0 +1,2319 @@
+{
+	"name": "Wretched Ranks",
+	"source": "moxfield_commander_precons",
+	"sourceUrl": "https://moxfield.com/decks/EFXjDyGIrkitAxoiL2NS0g",
+	"source_url": "https://moxfield.com/decks/EFXjDyGIrkitAxoiL2NS0g",
+	"source_key": "precon:EFXjDyGIrkitAxoiL2NS0g",
+	"source_deck_id": "EFXjDyGIrkitAxoiL2NS0g",
+	"precon_id": "wretched-ranks",
+	"precon_order": 4,
+	"precon_set": "Foundations Commander",
+	"precon_version": 1,
+	"source_commander": "Ghoulcaller Gisa",
+	"scryfall_commander_id": "909e62fa-4585-495e-812b-5df56af24610",
+	"is_imported": true,
+	"commander": [
+		{
+			"cardId": "909e62fa-4585-495e-812b-5df56af24610",
+			"name": "Ghoulcaller Gisa",
+			"oracle_id": "0dd894cb-1968-471c-af08-ea7ec5ce8428",
+			"quantity": 1,
+			"scryfall_id": "909e62fa-4585-495e-812b-5df56af24610"
+		}
+	],
+	"mainboard": [
+		{
+			"cardId": "319bc1f0-ee42-44e5-b08b-735613ded2ba",
+			"name": "Swamp",
+			"oracle_id": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+			"quantity": 33,
+			"scryfall_id": "319bc1f0-ee42-44e5-b08b-735613ded2ba"
+		},
+		{
+			"cardId": "ee7710cf-e73d-479f-bc8d-0e78a0e324d9",
+			"name": "Arcane Signet",
+			"oracle_id": "0bc7f093-bef0-4f1a-852c-4b75ebf54838",
+			"quantity": 1,
+			"scryfall_id": "ee7710cf-e73d-479f-bc8d-0e78a0e324d9"
+		},
+		{
+			"cardId": "58c50444-3660-4039-ae18-278b92d32132",
+			"name": "Ayara, First of Locthwain",
+			"oracle_id": "388168b3-ec68-4af2-b88c-6a5ec88c15f6",
+			"quantity": 1,
+			"scryfall_id": "58c50444-3660-4039-ae18-278b92d32132"
+		},
+		{
+			"cardId": "61fdb579-86f3-4f8d-a0b1-fd545917105d",
+			"name": "Castle Locthwain",
+			"oracle_id": "be811e70-aaaa-41f3-bf9e-5d3f9f719b49",
+			"quantity": 1,
+			"scryfall_id": "61fdb579-86f3-4f8d-a0b1-fd545917105d"
+		},
+		{
+			"cardId": "316398d0-cf0a-43ed-a419-aaf0ea44b9c1",
+			"name": "Witch's Cottage",
+			"oracle_id": "6c8f276e-4e7b-4974-ab02-9356cc0ffb2b",
+			"quantity": 1,
+			"scryfall_id": "316398d0-cf0a-43ed-a419-aaf0ea44b9c1"
+		},
+		{
+			"cardId": "b4f6c5d3-9dce-48dc-aa0c-9324d6e2e77f",
+			"name": "Barren Moor",
+			"oracle_id": "326ba371-124c-4949-a048-3a0c8962e567",
+			"quantity": 1,
+			"scryfall_id": "b4f6c5d3-9dce-48dc-aa0c-9324d6e2e77f"
+		},
+		{
+			"cardId": "3999a519-bfd5-43cf-b7b1-40ed5eb0a05a",
+			"name": "Bojuka Bog",
+			"oracle_id": "04b7362d-0490-4cb0-b5d7-2a7732f659ce",
+			"quantity": 1,
+			"scryfall_id": "3999a519-bfd5-43cf-b7b1-40ed5eb0a05a"
+		},
+		{
+			"cardId": "b6b2df2b-7436-4359-9246-2d5a471621fb",
+			"name": "Carrion Feeder",
+			"oracle_id": "a1cc5e37-b09a-4b7f-afd5-77c1c35aa425",
+			"quantity": 1,
+			"scryfall_id": "b6b2df2b-7436-4359-9246-2d5a471621fb"
+		},
+		{
+			"cardId": "239015f1-02ba-49d0-b11e-1d9729e9d57e",
+			"name": "Go for the Throat",
+			"oracle_id": "2f092562-9e17-43cd-aeb8-d0567f99363e",
+			"quantity": 1,
+			"scryfall_id": "239015f1-02ba-49d0-b11e-1d9729e9d57e"
+		},
+		{
+			"cardId": "7625fff5-9080-4590-be75-14df86d5ba3c",
+			"name": "Gravecrawler",
+			"oracle_id": "09ff28b1-b6c9-48e6-b12e-2f0e644f709f",
+			"quantity": 1,
+			"scryfall_id": "7625fff5-9080-4590-be75-14df86d5ba3c"
+		},
+		{
+			"cardId": "5bde28a1-635f-48f8-bed8-444921d5912c",
+			"name": "Grave Titan",
+			"oracle_id": "f3abd4d1-a975-4e85-8684-aa0fce029670",
+			"quantity": 1,
+			"scryfall_id": "5bde28a1-635f-48f8-bed8-444921d5912c"
+		},
+		{
+			"cardId": "58251ceb-aadb-4e1f-b1f1-428e5f94e7bc",
+			"name": "Gray Merchant of Asphodel",
+			"oracle_id": "38f3b157-0df4-409b-89cc-086e1531cd5b",
+			"quantity": 1,
+			"scryfall_id": "58251ceb-aadb-4e1f-b1f1-428e5f94e7bc"
+		},
+		{
+			"cardId": "1992d081-a3f9-4349-bc71-770372af2adf",
+			"name": "Lord of the Accursed",
+			"oracle_id": "3f372107-6c52-4f1f-8bf0-7b3fa21b2cae",
+			"quantity": 1,
+			"scryfall_id": "1992d081-a3f9-4349-bc71-770372af2adf"
+		},
+		{
+			"cardId": "62901ae9-98dd-466b-8358-f5abd765b3c0",
+			"name": "Mind Stone",
+			"oracle_id": "c97361b5-af16-4a7b-af85-a429dbaf4ad2",
+			"quantity": 1,
+			"scryfall_id": "62901ae9-98dd-466b-8358-f5abd765b3c0"
+		},
+		{
+			"cardId": "b7d4377e-d96f-475b-9512-0a1c4fbcd4e3",
+			"name": "Night's Whisper",
+			"oracle_id": "7ffae8f8-3006-4969-a339-6d30678f87ea",
+			"quantity": 1,
+			"scryfall_id": "b7d4377e-d96f-475b-9512-0a1c4fbcd4e3"
+		},
+		{
+			"cardId": "e6db1ad2-ed85-4084-976e-da1933f4d008",
+			"name": "Phyrexian Arena",
+			"oracle_id": "ee579a32-a048-4335-b966-231ba731cdea",
+			"quantity": 1,
+			"scryfall_id": "e6db1ad2-ed85-4084-976e-da1933f4d008"
+		},
+		{
+			"cardId": "4f152dd9-2b35-45b2-90fe-8c71d0634226",
+			"name": "Sol Ring",
+			"oracle_id": "6ad8011d-3471-4369-9d68-b264cc027487",
+			"quantity": 1,
+			"scryfall_id": "4f152dd9-2b35-45b2-90fe-8c71d0634226"
+		},
+		{
+			"cardId": "cf71a124-6112-4094-9541-dc0d384cc4de",
+			"name": "Tendrils of Corruption",
+			"oracle_id": "84ee0da2-d886-4603-9aaa-bc5326a424d7",
+			"quantity": 1,
+			"scryfall_id": "cf71a124-6112-4094-9541-dc0d384cc4de"
+		},
+		{
+			"cardId": "e9d9f150-dc54-4dcd-9bd8-809a0b87b266",
+			"name": "Wight of Precinct Six",
+			"oracle_id": "6397c046-4c59-4f0b-9b44-2a804eb95edf",
+			"quantity": 1,
+			"scryfall_id": "e9d9f150-dc54-4dcd-9bd8-809a0b87b266"
+		},
+		{
+			"cardId": "2f7c9824-b7b0-47f9-ad3f-59037871b7ca",
+			"name": "Ambition's Cost",
+			"oracle_id": "84de4fec-2f38-4293-93d3-b3882c5aac14",
+			"quantity": 1,
+			"scryfall_id": "2f7c9824-b7b0-47f9-ad3f-59037871b7ca"
+		},
+		{
+			"cardId": "8d107d3f-1f6f-41dc-999f-b18bb55bf892",
+			"name": "Liliana's Mastery",
+			"oracle_id": "bd104c7e-311e-4b03-98d3-5f20f3a99d26",
+			"quantity": 1,
+			"scryfall_id": "8d107d3f-1f6f-41dc-999f-b18bb55bf892"
+		},
+		{
+			"cardId": "c9d70cc4-379d-41db-8eb0-10643d2aafd1",
+			"name": "Cryptbreaker",
+			"oracle_id": "16f75a65-d067-4f79-81b9-833c373cf4d2",
+			"quantity": 1,
+			"scryfall_id": "c9d70cc4-379d-41db-8eb0-10643d2aafd1"
+		},
+		{
+			"cardId": "65d2620a-92e8-4a05-be90-5bdcad70ae30",
+			"name": "Bad Moon",
+			"oracle_id": "fc5d3341-cbce-49e5-93cc-8add92479dca",
+			"quantity": 1,
+			"scryfall_id": "65d2620a-92e8-4a05-be90-5bdcad70ae30"
+		},
+		{
+			"cardId": "a2f126c3-ef62-421b-8d3e-2ae2f2d4f000",
+			"name": "Commander's Sphere",
+			"oracle_id": "0b67c4e2-f88b-4e01-85a1-9d5f5b8db13b",
+			"quantity": 1,
+			"scryfall_id": "a2f126c3-ef62-421b-8d3e-2ae2f2d4f000"
+		},
+		{
+			"cardId": "04848d8c-2294-4ca6-850c-1eadaa3ca93f",
+			"name": "Fleshbag Marauder",
+			"oracle_id": "4b1bf05e-753e-4350-a913-894cf3cecc0c",
+			"quantity": 1,
+			"scryfall_id": "04848d8c-2294-4ca6-850c-1eadaa3ca93f"
+		},
+		{
+			"cardId": "0111bf5d-7132-4cf2-b27d-efba3ad9477a",
+			"name": "Sign in Blood",
+			"oracle_id": "c6207f6a-a624-4754-88f5-dbe700c841ff",
+			"quantity": 1,
+			"scryfall_id": "0111bf5d-7132-4cf2-b27d-efba3ad9477a"
+		},
+		{
+			"cardId": "e92628a2-9a26-4a44-bb2c-98418cb950b0",
+			"name": "Syphon Flesh",
+			"oracle_id": "bc7c3151-ad07-429a-8af8-e4f24b7d9f6b",
+			"quantity": 1,
+			"scryfall_id": "e92628a2-9a26-4a44-bb2c-98418cb950b0"
+		},
+		{
+			"cardId": "e94a5f83-24fe-4182-b70c-63303b4e3890",
+			"name": "Marchesa's Decree",
+			"oracle_id": "e4ab5ee4-4683-4219-9e15-31975e69efbb",
+			"quantity": 1,
+			"scryfall_id": "e94a5f83-24fe-4182-b70c-63303b4e3890"
+		},
+		{
+			"cardId": "6f5b3931-580a-4471-9b5d-25bcf5803a73",
+			"name": "Geier Reach Sanitarium",
+			"oracle_id": "7b9fafe7-d26a-4ed5-b4c4-ce13763770b5",
+			"quantity": 1,
+			"scryfall_id": "6f5b3931-580a-4471-9b5d-25bcf5803a73"
+		},
+		{
+			"cardId": "3ce8bd32-5c35-4696-bdda-addc576925f6",
+			"name": "Memorial to Folly",
+			"oracle_id": "2bc38f14-0314-4351-8138-e2b8bf041404",
+			"quantity": 1,
+			"scryfall_id": "3ce8bd32-5c35-4696-bdda-addc576925f6"
+		},
+		{
+			"cardId": "c2038b12-30b8-42ff-a15d-87cbbf72c939",
+			"name": "Mutilate",
+			"oracle_id": "698e79ec-c2bc-4973-a095-f3c57b50e39c",
+			"quantity": 1,
+			"scryfall_id": "c2038b12-30b8-42ff-a15d-87cbbf72c939"
+		},
+		{
+			"cardId": "33c01126-1918-4c67-8ee8-14ffc1325b97",
+			"name": "Army of the Damned",
+			"oracle_id": "75d667ec-86f4-4850-a3b6-e7a9fc7053b0",
+			"quantity": 1,
+			"scryfall_id": "33c01126-1918-4c67-8ee8-14ffc1325b97"
+		},
+		{
+			"cardId": "89a24a9c-ad0d-49df-b7d8-e898da567e51",
+			"name": "Diregraf Colossus",
+			"oracle_id": "fd62ad01-601f-4250-bc2a-8ef3982e45c4",
+			"quantity": 1,
+			"scryfall_id": "89a24a9c-ad0d-49df-b7d8-e898da567e51"
+		},
+		{
+			"cardId": "69c60f2e-b313-4139-9708-1a0e0f1ca63e",
+			"name": "Cemetery Recruitment",
+			"oracle_id": "07792d72-d5db-41b9-871c-e720e12ce659",
+			"quantity": 1,
+			"scryfall_id": "69c60f2e-b313-4139-9708-1a0e0f1ca63e"
+		},
+		{
+			"cardId": "983efb06-c4e3-4fe4-8a67-9ea9b54344a6",
+			"name": "Moan of the Unhallowed",
+			"oracle_id": "ce87e5ed-2562-4563-9a5b-bd53c04ec4a5",
+			"quantity": 1,
+			"scryfall_id": "983efb06-c4e3-4fe4-8a67-9ea9b54344a6"
+		},
+		{
+			"cardId": "95bea61d-986c-4e01-a82d-25e47986375e",
+			"name": "Midnight Reaper",
+			"oracle_id": "e8c7566d-7cc0-48af-a986-83223ec7e06c",
+			"quantity": 1,
+			"scryfall_id": "95bea61d-986c-4e01-a82d-25e47986375e"
+		},
+		{
+			"cardId": "49b8e4af-5a44-4aec-a386-729443af4140",
+			"name": "Graveborn Muse",
+			"oracle_id": "d2a65ff4-ab82-42f7-9d90-feb29132121e",
+			"quantity": 1,
+			"scryfall_id": "49b8e4af-5a44-4aec-a386-729443af4140"
+		},
+		{
+			"cardId": "09a16104-26d5-422e-b86d-6c008ac2c903",
+			"name": "Lord of the Undead",
+			"oracle_id": "7714af0e-41d9-4609-967f-27233b46055f",
+			"quantity": 1,
+			"scryfall_id": "09a16104-26d5-422e-b86d-6c008ac2c903"
+		},
+		{
+			"cardId": "f9139c01-ab89-445f-b564-dce1abf2c79f",
+			"name": "Undead Warchief",
+			"oracle_id": "e6af56bf-bd78-4801-8f6e-033cdd68de3d",
+			"quantity": 1,
+			"scryfall_id": "f9139c01-ab89-445f-b564-dce1abf2c79f"
+		},
+		{
+			"cardId": "81197564-19bb-423d-87d4-3d83deac85a2",
+			"name": "Vengeful Dead",
+			"oracle_id": "277c8ee9-0157-4e45-96ad-1b67716955ee",
+			"quantity": 1,
+			"scryfall_id": "81197564-19bb-423d-87d4-3d83deac85a2"
+		},
+		{
+			"cardId": "0070d335-d42d-4ccc-b828-405b7dd00868",
+			"name": "God-Eternal Bontu",
+			"oracle_id": "183891b0-b5ec-47f4-8d09-b9d3cfc4e7f1",
+			"quantity": 1,
+			"scryfall_id": "0070d335-d42d-4ccc-b828-405b7dd00868"
+		},
+		{
+			"cardId": "ccb7deab-cec1-453a-8257-8204c883c9f6",
+			"name": "Eternal Taskmaster",
+			"oracle_id": "a7c000a8-1864-4bb2-80fa-a61d74dbd966",
+			"quantity": 1,
+			"scryfall_id": "ccb7deab-cec1-453a-8257-8204c883c9f6"
+		},
+		{
+			"cardId": "63df1c6a-98b8-41c1-ac06-c816b50cb07c",
+			"name": "Undead Augur",
+			"oracle_id": "c26887e1-27f4-4550-921b-53460e43c079",
+			"quantity": 1,
+			"scryfall_id": "63df1c6a-98b8-41c1-ac06-c816b50cb07c"
+		},
+		{
+			"cardId": "b4d4daca-34ef-4a5a-97e6-21f7f6a2f481",
+			"name": "Bontu's Monument",
+			"oracle_id": "940ba435-7abc-40f8-a5af-c1c653b3284e",
+			"quantity": 1,
+			"scryfall_id": "b4d4daca-34ef-4a5a-97e6-21f7f6a2f481"
+		},
+		{
+			"cardId": "c179dd0e-4904-457f-b11e-7d267d0bb9eb",
+			"name": "Cemetery Reaper",
+			"oracle_id": "70fa209f-5e79-44de-81ce-1d8d0d8c1006",
+			"quantity": 1,
+			"scryfall_id": "c179dd0e-4904-457f-b11e-7d267d0bb9eb"
+		},
+		{
+			"cardId": "ddfc57da-6cfd-4b81-8fc0-51270edc0200",
+			"name": "Death Baron",
+			"oracle_id": "99024aa8-5687-4d38-8a4b-feef42d6c1ff",
+			"quantity": 1,
+			"scryfall_id": "ddfc57da-6cfd-4b81-8fc0-51270edc0200"
+		},
+		{
+			"cardId": "551de81f-35e9-4467-b575-ae5bf79d4e7c",
+			"name": "Noxious Ghoul",
+			"oracle_id": "602e421e-afab-4488-8a52-af66b4fdce4b",
+			"quantity": 1,
+			"scryfall_id": "551de81f-35e9-4467-b575-ae5bf79d4e7c"
+		},
+		{
+			"cardId": "970593fe-747f-48d3-a964-e18a1fa2cf0f",
+			"name": "Charcoal Diamond",
+			"oracle_id": "1386d111-a2a7-4df1-91d7-947664126989",
+			"quantity": 1,
+			"scryfall_id": "970593fe-747f-48d3-a964-e18a1fa2cf0f"
+		},
+		{
+			"cardId": "22dc3c27-78ca-42fd-b434-15a813c07eed",
+			"name": "Mire Triton",
+			"oracle_id": "4fe6f784-0290-4d4a-85ae-0b66522d31e9",
+			"quantity": 1,
+			"scryfall_id": "22dc3c27-78ca-42fd-b434-15a813c07eed"
+		},
+		{
+			"cardId": "2ee81094-87e3-45a2-8ad8-2610ca52d357",
+			"name": "Liliana's Reaver",
+			"oracle_id": "97332d4e-a55c-4e4f-9040-bf426a7c8e39",
+			"quantity": 1,
+			"scryfall_id": "2ee81094-87e3-45a2-8ad8-2610ca52d357"
+		},
+		{
+			"cardId": "21733d61-25c1-4844-9385-a2c01f82ea9f",
+			"name": "Oversold Cemetery",
+			"oracle_id": "ed4cd3a1-688b-4c05-948d-39d3336e00c0",
+			"quantity": 1,
+			"scryfall_id": "21733d61-25c1-4844-9385-a2c01f82ea9f"
+		},
+		{
+			"cardId": "cb759501-d634-430b-b5c9-24338e2d7367",
+			"name": "Soulless One",
+			"oracle_id": "27d98b94-a8a1-442b-8940-4ffab51b5164",
+			"quantity": 1,
+			"scryfall_id": "cb759501-d634-430b-b5c9-24338e2d7367"
+		},
+		{
+			"cardId": "d188a93a-cd9b-4a0b-80fb-738907b228cf",
+			"name": "Kalitas, Traitor of Ghet",
+			"oracle_id": "e1cfd1cb-44a5-429f-a5c1-e6d29bad1c71",
+			"quantity": 1,
+			"scryfall_id": "d188a93a-cd9b-4a0b-80fb-738907b228cf"
+		},
+		{
+			"cardId": "1f7bcaf9-4e36-4f23-b63f-f70fe5c9dd6f",
+			"name": "Josu Vess, Lich Knight",
+			"oracle_id": "974a46f9-aa84-4b34-bee5-c635166e5841",
+			"quantity": 1,
+			"scryfall_id": "1f7bcaf9-4e36-4f23-b63f-f70fe5c9dd6f"
+		},
+		{
+			"cardId": "9a6bc939-3d31-4a78-9925-27435bec2a67",
+			"name": "Open the Graves",
+			"oracle_id": "28778958-a1f9-4fea-b551-c193d1257f18",
+			"quantity": 1,
+			"scryfall_id": "9a6bc939-3d31-4a78-9925-27435bec2a67"
+		},
+		{
+			"cardId": "859a3a66-dae9-4a67-936d-2681397a6bc2",
+			"name": "Endless Ranks of the Dead",
+			"oracle_id": "69d4ecac-4735-4667-bfc1-c8800b436d08",
+			"quantity": 1,
+			"scryfall_id": "859a3a66-dae9-4a67-936d-2681397a6bc2"
+		},
+		{
+			"cardId": "815334d8-8f4b-47dd-b24a-07ac297e14c8",
+			"name": "Necrotic Hex",
+			"oracle_id": "a6e720a2-9819-40ec-a811-7812898b531a",
+			"quantity": 1,
+			"scryfall_id": "815334d8-8f4b-47dd-b24a-07ac297e14c8"
+		},
+		{
+			"cardId": "d3bfa5bc-bcb9-4649-96b8-3cded84a25a2",
+			"name": "Champion of the Perished",
+			"oracle_id": "f3654fbd-16a5-4953-84ac-534e8421032f",
+			"quantity": 1,
+			"scryfall_id": "d3bfa5bc-bcb9-4649-96b8-3cded84a25a2"
+		},
+		{
+			"cardId": "da046d5a-9a44-4efb-af0f-229898edc051",
+			"name": "Undead Butler",
+			"oracle_id": "426fa8e8-b0f9-4b6c-b22b-04ec2073187a",
+			"quantity": 1,
+			"scryfall_id": "da046d5a-9a44-4efb-af0f-229898edc051"
+		},
+		{
+			"cardId": "54280b46-470f-46bd-9407-5bb5e34302b1",
+			"name": "Headless Rider",
+			"oracle_id": "d4fdacd7-3101-44e2-a880-dde7326137a4",
+			"quantity": 1,
+			"scryfall_id": "54280b46-470f-46bd-9407-5bb5e34302b1"
+		},
+		{
+			"cardId": "a789aea2-bf82-430e-ab6d-8beac52964a8",
+			"name": "Razorlash Transmogrant",
+			"oracle_id": "580996d4-db9a-4b57-a0e1-a2dbb524121a",
+			"quantity": 1,
+			"scryfall_id": "a789aea2-bf82-430e-ab6d-8beac52964a8"
+		},
+		{
+			"cardId": "21a72531-329c-43fd-adc1-a671b3b1edc4",
+			"name": "Infernal Idol",
+			"oracle_id": "a0802918-e18a-4716-befb-96ae6667f2f3",
+			"quantity": 1,
+			"scryfall_id": "21a72531-329c-43fd-adc1-a671b3b1edc4"
+		},
+		{
+			"cardId": "1d175191-6946-434d-90c8-73412472a543",
+			"name": "Consuming Corruption",
+			"oracle_id": "3bc0bd36-70be-4180-9fb3-b10ce054107b",
+			"quantity": 1,
+			"scryfall_id": "1d175191-6946-434d-90c8-73412472a543"
+		},
+		{
+			"cardId": "dc334dac-bd40-44f2-8550-c80f73056ade",
+			"name": "Consumed by Greed",
+			"oracle_id": "b548578c-4910-402c-8e78-498924e0a9be",
+			"quantity": 1,
+			"scryfall_id": "dc334dac-bd40-44f2-8550-c80f73056ade"
+		},
+		{
+			"cardId": "205c527c-0055-4d2a-86b1-18d1c58a898d",
+			"name": "Patchwork Banner",
+			"oracle_id": "4fb00dbe-1f82-4ba6-b18c-97e816d10d3a",
+			"quantity": 1,
+			"scryfall_id": "205c527c-0055-4d2a-86b1-18d1c58a898d"
+		},
+		{
+			"cardId": "0868f94e-235d-4f65-a7af-8aacd58dd61e",
+			"name": "Withering Torment",
+			"oracle_id": "ffce81c5-1b58-4882-a4e7-6f8d7cb170de",
+			"quantity": 1,
+			"scryfall_id": "0868f94e-235d-4f65-a7af-8aacd58dd61e"
+		},
+		{
+			"cardId": "e92dcd69-8978-4afe-b83d-c9224dfb6a9e",
+			"name": "Zul Ashur, Lich Lord",
+			"oracle_id": "a7c6c9b3-91f2-4ecf-b2b0-b0edd96974d9",
+			"quantity": 1,
+			"scryfall_id": "e92dcd69-8978-4afe-b83d-c9224dfb6a9e"
+		}
+	],
+	"cards": {
+		"Ghoulcaller Gisa": {
+			"id": "909e62fa-4585-495e-812b-5df56af24610",
+			"oracle_id": "0dd894cb-1968-471c-af08-ea7ec5ce8428",
+			"name": "Ghoulcaller Gisa",
+			"mana_cost": "{3}{B}{B}",
+			"cmc": 5,
+			"type_line": "Legendary Creature — Human Wizard",
+			"oracle_text": "{B}, {T}, Sacrifice another creature: Create X 2/2 black Zombie creature tokens, where X is the sacrificed creature's power.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "3",
+			"toughness": "4",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/9/0/909e62fa-4585-495e-812b-5df56af24610.jpg?1789752353",
+				"normal": "https://cards.scryfall.io/normal/front/9/0/909e62fa-4585-495e-812b-5df56af24610.jpg?1789752353",
+				"large": "https://cards.scryfall.io/large/front/9/0/909e62fa-4585-495e-812b-5df56af24610.jpg?1789752353",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/9/0/909e62fa-4585-495e-812b-5df56af24610.jpg?1789752353"
+			}
+		},
+		"Swamp": {
+			"id": "319bc1f0-ee42-44e5-b08b-735613ded2ba",
+			"oracle_id": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+			"name": "Swamp",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Basic Land — Swamp",
+			"oracle_text": "({T}: Add {B}.)",
+			"colors": [],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/3/1/319bc1f0-ee42-44e5-b08b-735613ded2ba.jpg?1783909041",
+				"normal": "https://cards.scryfall.io/normal/front/3/1/319bc1f0-ee42-44e5-b08b-735613ded2ba.jpg?1783909041",
+				"large": "https://cards.scryfall.io/large/front/3/1/319bc1f0-ee42-44e5-b08b-735613ded2ba.jpg?1783909041",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/3/1/319bc1f0-ee42-44e5-b08b-735613ded2ba.jpg?1783909041"
+			}
+		},
+		"Arcane Signet": {
+			"id": "ee7710cf-e73d-479f-bc8d-0e78a0e324d9",
+			"oracle_id": "0bc7f093-bef0-4f1a-852c-4b75ebf54838",
+			"name": "Arcane Signet",
+			"mana_cost": "{2}",
+			"cmc": 2,
+			"type_line": "Artifact",
+			"oracle_text": "{T}: Add one mana of any color in your commander's color identity.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/e/ee7710cf-e73d-479f-bc8d-0e78a0e324d9.jpg?1789753310",
+				"normal": "https://cards.scryfall.io/normal/front/e/e/ee7710cf-e73d-479f-bc8d-0e78a0e324d9.jpg?1789753310",
+				"large": "https://cards.scryfall.io/large/front/e/e/ee7710cf-e73d-479f-bc8d-0e78a0e324d9.jpg?1789753310",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/e/ee7710cf-e73d-479f-bc8d-0e78a0e324d9.jpg?1789753310"
+			}
+		},
+		"Ayara, First of Locthwain": {
+			"id": "58c50444-3660-4039-ae18-278b92d32132",
+			"oracle_id": "388168b3-ec68-4af2-b88c-6a5ec88c15f6",
+			"name": "Ayara, First of Locthwain",
+			"mana_cost": "{B}{B}{B}",
+			"cmc": 3,
+			"type_line": "Legendary Creature — Elf Noble",
+			"oracle_text": "Whenever Ayara or another black creature you control enters, each opponent loses 1 life and you gain 1 life.\n{T}, Sacrifice another black creature: Draw a card.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "2",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/8/58c50444-3660-4039-ae18-278b92d32132.jpg?1789752928",
+				"normal": "https://cards.scryfall.io/normal/front/5/8/58c50444-3660-4039-ae18-278b92d32132.jpg?1789752928",
+				"large": "https://cards.scryfall.io/large/front/5/8/58c50444-3660-4039-ae18-278b92d32132.jpg?1789752928",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/8/58c50444-3660-4039-ae18-278b92d32132.jpg?1789752928"
+			}
+		},
+		"Castle Locthwain": {
+			"id": "61fdb579-86f3-4f8d-a0b1-fd545917105d",
+			"oracle_id": "be811e70-aaaa-41f3-bf9e-5d3f9f719b49",
+			"name": "Castle Locthwain",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "This land enters tapped unless you control a Swamp.\n{T}: Add {B}.\n{1}{B}{B}, {T}: Draw a card, then you lose life equal to the number of cards in your hand.",
+			"colors": [],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/1/61fdb579-86f3-4f8d-a0b1-fd545917105d.jpg?1789753359",
+				"normal": "https://cards.scryfall.io/normal/front/6/1/61fdb579-86f3-4f8d-a0b1-fd545917105d.jpg?1789753359",
+				"large": "https://cards.scryfall.io/large/front/6/1/61fdb579-86f3-4f8d-a0b1-fd545917105d.jpg?1789753359",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/1/61fdb579-86f3-4f8d-a0b1-fd545917105d.jpg?1789753359"
+			}
+		},
+		"Witch's Cottage": {
+			"id": "316398d0-cf0a-43ed-a419-aaf0ea44b9c1",
+			"oracle_id": "6c8f276e-4e7b-4974-ab02-9356cc0ffb2b",
+			"name": "Witch's Cottage",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land — Swamp",
+			"oracle_text": "({T}: Add {B}.)\nThis land enters tapped unless you control three or more other Swamps.\nWhen this land enters untapped, you may put target creature card from your graveyard on top of your library.",
+			"colors": [],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/3/1/316398d0-cf0a-43ed-a419-aaf0ea44b9c1.jpg?1789753458",
+				"normal": "https://cards.scryfall.io/normal/front/3/1/316398d0-cf0a-43ed-a419-aaf0ea44b9c1.jpg?1789753458",
+				"large": "https://cards.scryfall.io/large/front/3/1/316398d0-cf0a-43ed-a419-aaf0ea44b9c1.jpg?1789753458",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/3/1/316398d0-cf0a-43ed-a419-aaf0ea44b9c1.jpg?1789753458"
+			}
+		},
+		"Barren Moor": {
+			"id": "b4f6c5d3-9dce-48dc-aa0c-9324d6e2e77f",
+			"oracle_id": "326ba371-124c-4949-a048-3a0c8962e567",
+			"name": "Barren Moor",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "This land enters tapped.\n{T}: Add {B}.\nCycling {B} ({B}, Discard this card: Draw a card.)",
+			"colors": [],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [
+				"Cycling"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/b/4/b4f6c5d3-9dce-48dc-aa0c-9324d6e2e77f.jpg?1789753356",
+				"normal": "https://cards.scryfall.io/normal/front/b/4/b4f6c5d3-9dce-48dc-aa0c-9324d6e2e77f.jpg?1789753356",
+				"large": "https://cards.scryfall.io/large/front/b/4/b4f6c5d3-9dce-48dc-aa0c-9324d6e2e77f.jpg?1789753356",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/b/4/b4f6c5d3-9dce-48dc-aa0c-9324d6e2e77f.jpg?1789753356"
+			}
+		},
+		"Bojuka Bog": {
+			"id": "3999a519-bfd5-43cf-b7b1-40ed5eb0a05a",
+			"oracle_id": "04b7362d-0490-4cb0-b5d7-2a7732f659ce",
+			"name": "Bojuka Bog",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "This land enters tapped.\nWhen this land enters, exile target player's graveyard.\n{T}: Add {B}.",
+			"colors": [],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/3/9/3999a519-bfd5-43cf-b7b1-40ed5eb0a05a.jpg?1789753362",
+				"normal": "https://cards.scryfall.io/normal/front/3/9/3999a519-bfd5-43cf-b7b1-40ed5eb0a05a.jpg?1789753362",
+				"large": "https://cards.scryfall.io/large/front/3/9/3999a519-bfd5-43cf-b7b1-40ed5eb0a05a.jpg?1789753362",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/3/9/3999a519-bfd5-43cf-b7b1-40ed5eb0a05a.jpg?1789753362"
+			}
+		},
+		"Carrion Feeder": {
+			"id": "b6b2df2b-7436-4359-9246-2d5a471621fb",
+			"oracle_id": "a1cc5e37-b09a-4b7f-afd5-77c1c35aa425",
+			"name": "Carrion Feeder",
+			"mana_cost": "{B}",
+			"cmc": 1,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "This creature can't block.\nSacrifice a creature: Put a +1/+1 counter on this creature.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/b/6/b6b2df2b-7436-4359-9246-2d5a471621fb.jpg?1789752930",
+				"normal": "https://cards.scryfall.io/normal/front/b/6/b6b2df2b-7436-4359-9246-2d5a471621fb.jpg?1789752930",
+				"large": "https://cards.scryfall.io/large/front/b/6/b6b2df2b-7436-4359-9246-2d5a471621fb.jpg?1789752930",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/b/6/b6b2df2b-7436-4359-9246-2d5a471621fb.jpg?1789752930"
+			}
+		},
+		"Go for the Throat": {
+			"id": "239015f1-02ba-49d0-b11e-1d9729e9d57e",
+			"oracle_id": "2f092562-9e17-43cd-aeb8-d0567f99363e",
+			"name": "Go for the Throat",
+			"mana_cost": "{1}{B}",
+			"cmc": 2,
+			"type_line": "Instant",
+			"oracle_text": "Destroy target nonartifact creature.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/3/239015f1-02ba-49d0-b11e-1d9729e9d57e.jpg?1789752946",
+				"normal": "https://cards.scryfall.io/normal/front/2/3/239015f1-02ba-49d0-b11e-1d9729e9d57e.jpg?1789752946",
+				"large": "https://cards.scryfall.io/large/front/2/3/239015f1-02ba-49d0-b11e-1d9729e9d57e.jpg?1789752946",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/3/239015f1-02ba-49d0-b11e-1d9729e9d57e.jpg?1789752946"
+			}
+		},
+		"Gravecrawler": {
+			"id": "7625fff5-9080-4590-be75-14df86d5ba3c",
+			"oracle_id": "09ff28b1-b6c9-48e6-b12e-2f0e644f709f",
+			"name": "Gravecrawler",
+			"mana_cost": "{B}",
+			"cmc": 1,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "This creature can't block.\nYou may cast this card from your graveyard as long as you control a Zombie.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "2",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/7/6/7625fff5-9080-4590-be75-14df86d5ba3c.jpg?1789753037",
+				"normal": "https://cards.scryfall.io/normal/front/7/6/7625fff5-9080-4590-be75-14df86d5ba3c.jpg?1789753037",
+				"large": "https://cards.scryfall.io/large/front/7/6/7625fff5-9080-4590-be75-14df86d5ba3c.jpg?1789753037",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/7/6/7625fff5-9080-4590-be75-14df86d5ba3c.jpg?1789753037"
+			}
+		},
+		"Grave Titan": {
+			"id": "5bde28a1-635f-48f8-bed8-444921d5912c",
+			"oracle_id": "f3abd4d1-a975-4e85-8684-aa0fce029670",
+			"name": "Grave Titan",
+			"mana_cost": "{4}{B}{B}",
+			"cmc": 6,
+			"type_line": "Creature — Giant",
+			"oracle_text": "Deathtouch\nWhenever this creature enters or attacks, create two 2/2 black Zombie creature tokens.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [
+				"Deathtouch"
+			],
+			"power": "6",
+			"toughness": "6",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/b/5bde28a1-635f-48f8-bed8-444921d5912c.jpg?1789752942",
+				"normal": "https://cards.scryfall.io/normal/front/5/b/5bde28a1-635f-48f8-bed8-444921d5912c.jpg?1789752942",
+				"large": "https://cards.scryfall.io/large/front/5/b/5bde28a1-635f-48f8-bed8-444921d5912c.jpg?1789752942",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/b/5bde28a1-635f-48f8-bed8-444921d5912c.jpg?1789752942"
+			}
+		},
+		"Gray Merchant of Asphodel": {
+			"id": "58251ceb-aadb-4e1f-b1f1-428e5f94e7bc",
+			"oracle_id": "38f3b157-0df4-409b-89cc-086e1531cd5b",
+			"name": "Gray Merchant of Asphodel",
+			"mana_cost": "{3}{B}{B}",
+			"cmc": 5,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "When this creature enters, each opponent loses X life, where X is your devotion to black. You gain life equal to the life lost this way. (Each {B} in the mana costs of permanents you control counts toward your devotion to black.)",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "2",
+			"toughness": "4",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/8/58251ceb-aadb-4e1f-b1f1-428e5f94e7bc.jpg?1789753037",
+				"normal": "https://cards.scryfall.io/normal/front/5/8/58251ceb-aadb-4e1f-b1f1-428e5f94e7bc.jpg?1789753037",
+				"large": "https://cards.scryfall.io/large/front/5/8/58251ceb-aadb-4e1f-b1f1-428e5f94e7bc.jpg?1789753037",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/8/58251ceb-aadb-4e1f-b1f1-428e5f94e7bc.jpg?1789753037"
+			}
+		},
+		"Lord of the Accursed": {
+			"id": "1992d081-a3f9-4349-bc71-770372af2adf",
+			"oracle_id": "3f372107-6c52-4f1f-8bf0-7b3fa21b2cae",
+			"name": "Lord of the Accursed",
+			"mana_cost": "{2}{B}",
+			"cmc": 3,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "Other Zombies you control get +1/+1.\n{1}{B}, {T}: All Zombies gain menace until end of turn.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "2",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/9/1992d081-a3f9-4349-bc71-770372af2adf.jpg?1789753045",
+				"normal": "https://cards.scryfall.io/normal/front/1/9/1992d081-a3f9-4349-bc71-770372af2adf.jpg?1789753045",
+				"large": "https://cards.scryfall.io/large/front/1/9/1992d081-a3f9-4349-bc71-770372af2adf.jpg?1789753045",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/9/1992d081-a3f9-4349-bc71-770372af2adf.jpg?1789753045"
+			}
+		},
+		"Mind Stone": {
+			"id": "62901ae9-98dd-466b-8358-f5abd765b3c0",
+			"oracle_id": "c97361b5-af16-4a7b-af85-a429dbaf4ad2",
+			"name": "Mind Stone",
+			"mana_cost": "{2}",
+			"cmc": 2,
+			"type_line": "Artifact",
+			"oracle_text": "{T}: Add {C}.\n{1}, {T}, Sacrifice this artifact: Draw a card.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/2/62901ae9-98dd-466b-8358-f5abd765b3c0.jpg?1789753333",
+				"normal": "https://cards.scryfall.io/normal/front/6/2/62901ae9-98dd-466b-8358-f5abd765b3c0.jpg?1789753333",
+				"large": "https://cards.scryfall.io/large/front/6/2/62901ae9-98dd-466b-8358-f5abd765b3c0.jpg?1789753333",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/2/62901ae9-98dd-466b-8358-f5abd765b3c0.jpg?1789753333"
+			}
+		},
+		"Night's Whisper": {
+			"id": "b7d4377e-d96f-475b-9512-0a1c4fbcd4e3",
+			"oracle_id": "7ffae8f8-3006-4969-a339-6d30678f87ea",
+			"name": "Night's Whisper",
+			"mana_cost": "{1}{B}",
+			"cmc": 2,
+			"type_line": "Sorcery",
+			"oracle_text": "You draw two cards and lose 2 life.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/b/7/b7d4377e-d96f-475b-9512-0a1c4fbcd4e3.jpg?1789753240",
+				"normal": "https://cards.scryfall.io/normal/front/b/7/b7d4377e-d96f-475b-9512-0a1c4fbcd4e3.jpg?1789753240",
+				"large": "https://cards.scryfall.io/large/front/b/7/b7d4377e-d96f-475b-9512-0a1c4fbcd4e3.jpg?1789753240",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/b/7/b7d4377e-d96f-475b-9512-0a1c4fbcd4e3.jpg?1789753240"
+			}
+		},
+		"Phyrexian Arena": {
+			"id": "e6db1ad2-ed85-4084-976e-da1933f4d008",
+			"oracle_id": "ee579a32-a048-4335-b966-231ba731cdea",
+			"name": "Phyrexian Arena",
+			"mana_cost": "{1}{B}{B}",
+			"cmc": 3,
+			"type_line": "Enchantment",
+			"oracle_text": "At the beginning of your upkeep, you draw a card and lose 1 life.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/6/e6db1ad2-ed85-4084-976e-da1933f4d008.jpg?1789753055",
+				"normal": "https://cards.scryfall.io/normal/front/e/6/e6db1ad2-ed85-4084-976e-da1933f4d008.jpg?1789753055",
+				"large": "https://cards.scryfall.io/large/front/e/6/e6db1ad2-ed85-4084-976e-da1933f4d008.jpg?1789753055",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/6/e6db1ad2-ed85-4084-976e-da1933f4d008.jpg?1789753055"
+			}
+		},
+		"Sol Ring": {
+			"id": "4f152dd9-2b35-45b2-90fe-8c71d0634226",
+			"oracle_id": "6ad8011d-3471-4369-9d68-b264cc027487",
+			"name": "Sol Ring",
+			"mana_cost": "{1}",
+			"cmc": 1,
+			"type_line": "Artifact",
+			"oracle_text": "{T}: Add {C}{C}.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/f/4f152dd9-2b35-45b2-90fe-8c71d0634226.jpg?1789753351",
+				"normal": "https://cards.scryfall.io/normal/front/4/f/4f152dd9-2b35-45b2-90fe-8c71d0634226.jpg?1789753351",
+				"large": "https://cards.scryfall.io/large/front/4/f/4f152dd9-2b35-45b2-90fe-8c71d0634226.jpg?1789753351",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/f/4f152dd9-2b35-45b2-90fe-8c71d0634226.jpg?1789753351"
+			}
+		},
+		"Tendrils of Corruption": {
+			"id": "cf71a124-6112-4094-9541-dc0d384cc4de",
+			"oracle_id": "84ee0da2-d886-4603-9aaa-bc5326a424d7",
+			"name": "Tendrils of Corruption",
+			"mana_cost": "{3}{B}",
+			"cmc": 4,
+			"type_line": "Instant",
+			"oracle_text": "Tendrils of Corruption deals X damage to target creature and you gain X life, where X is the number of Swamps you control.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/c/f/cf71a124-6112-4094-9541-dc0d384cc4de.jpg?1789753058",
+				"normal": "https://cards.scryfall.io/normal/front/c/f/cf71a124-6112-4094-9541-dc0d384cc4de.jpg?1789753058",
+				"large": "https://cards.scryfall.io/large/front/c/f/cf71a124-6112-4094-9541-dc0d384cc4de.jpg?1789753058",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/c/f/cf71a124-6112-4094-9541-dc0d384cc4de.jpg?1789753058"
+			}
+		},
+		"Wight of Precinct Six": {
+			"id": "e9d9f150-dc54-4dcd-9bd8-809a0b87b266",
+			"oracle_id": "6397c046-4c59-4f0b-9b44-2a804eb95edf",
+			"name": "Wight of Precinct Six",
+			"mana_cost": "{1}{B}",
+			"cmc": 2,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "This creature gets +1/+1 for each creature card in your opponents' graveyards.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/9/e9d9f150-dc54-4dcd-9bd8-809a0b87b266.jpg?1789753063",
+				"normal": "https://cards.scryfall.io/normal/front/e/9/e9d9f150-dc54-4dcd-9bd8-809a0b87b266.jpg?1789753063",
+				"large": "https://cards.scryfall.io/large/front/e/9/e9d9f150-dc54-4dcd-9bd8-809a0b87b266.jpg?1789753063",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/9/e9d9f150-dc54-4dcd-9bd8-809a0b87b266.jpg?1789753063"
+			}
+		},
+		"Ambition's Cost": {
+			"id": "2f7c9824-b7b0-47f9-ad3f-59037871b7ca",
+			"oracle_id": "84de4fec-2f38-4293-93d3-b3882c5aac14",
+			"name": "Ambition's Cost",
+			"mana_cost": "{3}{B}",
+			"cmc": 4,
+			"type_line": "Sorcery",
+			"oracle_text": "You draw three cards and lose 3 life.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/f/2f7c9824-b7b0-47f9-ad3f-59037871b7ca.jpg?1789752933",
+				"normal": "https://cards.scryfall.io/normal/front/2/f/2f7c9824-b7b0-47f9-ad3f-59037871b7ca.jpg?1789752933",
+				"large": "https://cards.scryfall.io/large/front/2/f/2f7c9824-b7b0-47f9-ad3f-59037871b7ca.jpg?1789752933",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/f/2f7c9824-b7b0-47f9-ad3f-59037871b7ca.jpg?1789752933"
+			}
+		},
+		"Liliana's Mastery": {
+			"id": "8d107d3f-1f6f-41dc-999f-b18bb55bf892",
+			"oracle_id": "bd104c7e-311e-4b03-98d3-5f20f3a99d26",
+			"name": "Liliana's Mastery",
+			"mana_cost": "{3}{B}{B}",
+			"cmc": 5,
+			"type_line": "Enchantment",
+			"oracle_text": "Zombies you control get +1/+1.\nWhen this enchantment enters, create two 2/2 black Zombie creature tokens.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/8/d/8d107d3f-1f6f-41dc-999f-b18bb55bf892.jpg?1789753039",
+				"normal": "https://cards.scryfall.io/normal/front/8/d/8d107d3f-1f6f-41dc-999f-b18bb55bf892.jpg?1789753039",
+				"large": "https://cards.scryfall.io/large/front/8/d/8d107d3f-1f6f-41dc-999f-b18bb55bf892.jpg?1789753039",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/8/d/8d107d3f-1f6f-41dc-999f-b18bb55bf892.jpg?1789753039"
+			}
+		},
+		"Cryptbreaker": {
+			"id": "c9d70cc4-379d-41db-8eb0-10643d2aafd1",
+			"oracle_id": "16f75a65-d067-4f79-81b9-833c373cf4d2",
+			"name": "Cryptbreaker",
+			"mana_cost": "{B}",
+			"cmc": 1,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "{1}{B}, {T}, Discard a card: Create a 2/2 black Zombie creature token.\nTap three untapped Zombies you control: You draw a card and lose 1 life.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/c/9/c9d70cc4-379d-41db-8eb0-10643d2aafd1.jpg?1789752936",
+				"normal": "https://cards.scryfall.io/normal/front/c/9/c9d70cc4-379d-41db-8eb0-10643d2aafd1.jpg?1789752936",
+				"large": "https://cards.scryfall.io/large/front/c/9/c9d70cc4-379d-41db-8eb0-10643d2aafd1.jpg?1789752936",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/c/9/c9d70cc4-379d-41db-8eb0-10643d2aafd1.jpg?1789752936"
+			}
+		},
+		"Bad Moon": {
+			"id": "65d2620a-92e8-4a05-be90-5bdcad70ae30",
+			"oracle_id": "fc5d3341-cbce-49e5-93cc-8add92479dca",
+			"name": "Bad Moon",
+			"mana_cost": "{1}{B}",
+			"cmc": 2,
+			"type_line": "Enchantment",
+			"oracle_text": "Black creatures get +1/+1.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/5/65d2620a-92e8-4a05-be90-5bdcad70ae30.jpg?1789752933",
+				"normal": "https://cards.scryfall.io/normal/front/6/5/65d2620a-92e8-4a05-be90-5bdcad70ae30.jpg?1789752933",
+				"large": "https://cards.scryfall.io/large/front/6/5/65d2620a-92e8-4a05-be90-5bdcad70ae30.jpg?1789752933",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/5/65d2620a-92e8-4a05-be90-5bdcad70ae30.jpg?1789752933"
+			}
+		},
+		"Commander's Sphere": {
+			"id": "a2f126c3-ef62-421b-8d3e-2ae2f2d4f000",
+			"oracle_id": "0b67c4e2-f88b-4e01-85a1-9d5f5b8db13b",
+			"name": "Commander's Sphere",
+			"mana_cost": "{3}",
+			"cmc": 3,
+			"type_line": "Artifact",
+			"oracle_text": "{T}: Add one mana of any color in your commander's color identity.\nSacrifice this artifact: Draw a card.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/a/2/a2f126c3-ef62-421b-8d3e-2ae2f2d4f000.jpg?1789753314",
+				"normal": "https://cards.scryfall.io/normal/front/a/2/a2f126c3-ef62-421b-8d3e-2ae2f2d4f000.jpg?1789753314",
+				"large": "https://cards.scryfall.io/large/front/a/2/a2f126c3-ef62-421b-8d3e-2ae2f2d4f000.jpg?1789753314",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/a/2/a2f126c3-ef62-421b-8d3e-2ae2f2d4f000.jpg?1789753314"
+			}
+		},
+		"Fleshbag Marauder": {
+			"id": "04848d8c-2294-4ca6-850c-1eadaa3ca93f",
+			"oracle_id": "4b1bf05e-753e-4350-a913-894cf3cecc0c",
+			"name": "Fleshbag Marauder",
+			"mana_cost": "{2}{B}",
+			"cmc": 3,
+			"type_line": "Creature — Zombie Warrior",
+			"oracle_text": "When this creature enters, each player sacrifices a creature of their choice.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "3",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/0/4/04848d8c-2294-4ca6-850c-1eadaa3ca93f.jpg?1789752941",
+				"normal": "https://cards.scryfall.io/normal/front/0/4/04848d8c-2294-4ca6-850c-1eadaa3ca93f.jpg?1789752941",
+				"large": "https://cards.scryfall.io/large/front/0/4/04848d8c-2294-4ca6-850c-1eadaa3ca93f.jpg?1789752941",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/0/4/04848d8c-2294-4ca6-850c-1eadaa3ca93f.jpg?1789752941"
+			}
+		},
+		"Sign in Blood": {
+			"id": "0111bf5d-7132-4cf2-b27d-efba3ad9477a",
+			"oracle_id": "c6207f6a-a624-4754-88f5-dbe700c841ff",
+			"name": "Sign in Blood",
+			"mana_cost": "{B}{B}",
+			"cmc": 2,
+			"type_line": "Sorcery",
+			"oracle_text": "Target player draws two cards and loses 2 life.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/0/1/0111bf5d-7132-4cf2-b27d-efba3ad9477a.jpg?1789753055",
+				"normal": "https://cards.scryfall.io/normal/front/0/1/0111bf5d-7132-4cf2-b27d-efba3ad9477a.jpg?1789753055",
+				"large": "https://cards.scryfall.io/large/front/0/1/0111bf5d-7132-4cf2-b27d-efba3ad9477a.jpg?1789753055",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/0/1/0111bf5d-7132-4cf2-b27d-efba3ad9477a.jpg?1789753055"
+			}
+		},
+		"Syphon Flesh": {
+			"id": "e92628a2-9a26-4a44-bb2c-98418cb950b0",
+			"oracle_id": "bc7c3151-ad07-429a-8af8-e4f24b7d9f6b",
+			"name": "Syphon Flesh",
+			"mana_cost": "{4}{B}",
+			"cmc": 5,
+			"type_line": "Sorcery",
+			"oracle_text": "Each other player sacrifices a creature of their choice. You create a 2/2 black Zombie creature token for each creature sacrificed this way.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/9/e92628a2-9a26-4a44-bb2c-98418cb950b0.jpg?1789753057",
+				"normal": "https://cards.scryfall.io/normal/front/e/9/e92628a2-9a26-4a44-bb2c-98418cb950b0.jpg?1789753057",
+				"large": "https://cards.scryfall.io/large/front/e/9/e92628a2-9a26-4a44-bb2c-98418cb950b0.jpg?1789753057",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/9/e92628a2-9a26-4a44-bb2c-98418cb950b0.jpg?1789753057"
+			}
+		},
+		"Marchesa's Decree": {
+			"id": "e94a5f83-24fe-4182-b70c-63303b4e3890",
+			"oracle_id": "e4ab5ee4-4683-4219-9e15-31975e69efbb",
+			"name": "Marchesa's Decree",
+			"mana_cost": "{3}{B}",
+			"cmc": 4,
+			"type_line": "Enchantment",
+			"oracle_text": "When this enchantment enters, you become the monarch.\nWhenever a creature attacks you or a planeswalker you control, that creature's controller loses 1 life.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/9/e94a5f83-24fe-4182-b70c-63303b4e3890.jpg?1789753046",
+				"normal": "https://cards.scryfall.io/normal/front/e/9/e94a5f83-24fe-4182-b70c-63303b4e3890.jpg?1789753046",
+				"large": "https://cards.scryfall.io/large/front/e/9/e94a5f83-24fe-4182-b70c-63303b4e3890.jpg?1789753046",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/9/e94a5f83-24fe-4182-b70c-63303b4e3890.jpg?1789753046"
+			}
+		},
+		"Geier Reach Sanitarium": {
+			"id": "6f5b3931-580a-4471-9b5d-25bcf5803a73",
+			"oracle_id": "7b9fafe7-d26a-4ed5-b4c4-ce13763770b5",
+			"name": "Geier Reach Sanitarium",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Legendary Land",
+			"oracle_text": "{T}: Add {C}.\n{2}, {T}: Each player draws a card, then discards a card.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/f/6f5b3931-580a-4471-9b5d-25bcf5803a73.jpg?1789753434",
+				"normal": "https://cards.scryfall.io/normal/front/6/f/6f5b3931-580a-4471-9b5d-25bcf5803a73.jpg?1789753434",
+				"large": "https://cards.scryfall.io/large/front/6/f/6f5b3931-580a-4471-9b5d-25bcf5803a73.jpg?1789753434",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/f/6f5b3931-580a-4471-9b5d-25bcf5803a73.jpg?1789753434"
+			}
+		},
+		"Memorial to Folly": {
+			"id": "3ce8bd32-5c35-4696-bdda-addc576925f6",
+			"oracle_id": "2bc38f14-0314-4351-8138-e2b8bf041404",
+			"name": "Memorial to Folly",
+			"mana_cost": "",
+			"cmc": 0,
+			"type_line": "Land",
+			"oracle_text": "This land enters tapped.\n{T}: Add {B}.\n{2}{B}, {T}, Sacrifice this land: Return target creature card from your graveyard to your hand.",
+			"colors": [],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/3/c/3ce8bd32-5c35-4696-bdda-addc576925f6.jpg?1789753450",
+				"normal": "https://cards.scryfall.io/normal/front/3/c/3ce8bd32-5c35-4696-bdda-addc576925f6.jpg?1789753450",
+				"large": "https://cards.scryfall.io/large/front/3/c/3ce8bd32-5c35-4696-bdda-addc576925f6.jpg?1789753450",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/3/c/3ce8bd32-5c35-4696-bdda-addc576925f6.jpg?1789753450"
+			}
+		},
+		"Mutilate": {
+			"id": "c2038b12-30b8-42ff-a15d-87cbbf72c939",
+			"oracle_id": "698e79ec-c2bc-4973-a095-f3c57b50e39c",
+			"name": "Mutilate",
+			"mana_cost": "{2}{B}{B}",
+			"cmc": 4,
+			"type_line": "Sorcery",
+			"oracle_text": "All creatures get -1/-1 until end of turn for each Swamp you control.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/c/2/c2038b12-30b8-42ff-a15d-87cbbf72c939.jpg?1789753722",
+				"normal": "https://cards.scryfall.io/normal/front/c/2/c2038b12-30b8-42ff-a15d-87cbbf72c939.jpg?1789753722",
+				"large": "https://cards.scryfall.io/large/front/c/2/c2038b12-30b8-42ff-a15d-87cbbf72c939.jpg?1789753722",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/c/2/c2038b12-30b8-42ff-a15d-87cbbf72c939.jpg?1789753722"
+			}
+		},
+		"Army of the Damned": {
+			"id": "33c01126-1918-4c67-8ee8-14ffc1325b97",
+			"oracle_id": "75d667ec-86f4-4850-a3b6-e7a9fc7053b0",
+			"name": "Army of the Damned",
+			"mana_cost": "{5}{B}{B}{B}",
+			"cmc": 8,
+			"type_line": "Sorcery",
+			"oracle_text": "Create thirteen tapped 2/2 black Zombie creature tokens.\nFlashback {7}{B}{B}{B} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [
+				"Flashback"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/3/3/33c01126-1918-4c67-8ee8-14ffc1325b97.jpg?1789752926",
+				"normal": "https://cards.scryfall.io/normal/front/3/3/33c01126-1918-4c67-8ee8-14ffc1325b97.jpg?1789752926",
+				"large": "https://cards.scryfall.io/large/front/3/3/33c01126-1918-4c67-8ee8-14ffc1325b97.jpg?1789752926",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/3/3/33c01126-1918-4c67-8ee8-14ffc1325b97.jpg?1789752926"
+			}
+		},
+		"Diregraf Colossus": {
+			"id": "89a24a9c-ad0d-49df-b7d8-e898da567e51",
+			"oracle_id": "fd62ad01-601f-4250-bc2a-8ef3982e45c4",
+			"name": "Diregraf Colossus",
+			"mana_cost": "{2}{B}",
+			"cmc": 3,
+			"type_line": "Creature — Zombie Giant",
+			"oracle_text": "This creature enters with a +1/+1 counter on it for each Zombie card in your graveyard.\nWhenever you cast a Zombie spell, create a tapped 2/2 black Zombie creature token.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "2",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/8/9/89a24a9c-ad0d-49df-b7d8-e898da567e51.jpg?1789752939",
+				"normal": "https://cards.scryfall.io/normal/front/8/9/89a24a9c-ad0d-49df-b7d8-e898da567e51.jpg?1789752939",
+				"large": "https://cards.scryfall.io/large/front/8/9/89a24a9c-ad0d-49df-b7d8-e898da567e51.jpg?1789752939",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/8/9/89a24a9c-ad0d-49df-b7d8-e898da567e51.jpg?1789752939"
+			}
+		},
+		"Cemetery Recruitment": {
+			"id": "69c60f2e-b313-4139-9708-1a0e0f1ca63e",
+			"oracle_id": "07792d72-d5db-41b9-871c-e720e12ce659",
+			"name": "Cemetery Recruitment",
+			"mana_cost": "{1}{B}",
+			"cmc": 2,
+			"type_line": "Sorcery",
+			"oracle_text": "Return target creature card from your graveyard to your hand. If it's a Zombie card, draw a card.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/9/69c60f2e-b313-4139-9708-1a0e0f1ca63e.jpg?1789752933",
+				"normal": "https://cards.scryfall.io/normal/front/6/9/69c60f2e-b313-4139-9708-1a0e0f1ca63e.jpg?1789752933",
+				"large": "https://cards.scryfall.io/large/front/6/9/69c60f2e-b313-4139-9708-1a0e0f1ca63e.jpg?1789752933",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/9/69c60f2e-b313-4139-9708-1a0e0f1ca63e.jpg?1789752933"
+			}
+		},
+		"Moan of the Unhallowed": {
+			"id": "983efb06-c4e3-4fe4-8a67-9ea9b54344a6",
+			"oracle_id": "ce87e5ed-2562-4563-9a5b-bd53c04ec4a5",
+			"name": "Moan of the Unhallowed",
+			"mana_cost": "{2}{B}{B}",
+			"cmc": 4,
+			"type_line": "Sorcery",
+			"oracle_text": "Create two 2/2 black Zombie creature tokens.\nFlashback {5}{B}{B} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [
+				"Flashback"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/9/8/983efb06-c4e3-4fe4-8a67-9ea9b54344a6.jpg?1789753046",
+				"normal": "https://cards.scryfall.io/normal/front/9/8/983efb06-c4e3-4fe4-8a67-9ea9b54344a6.jpg?1789753046",
+				"large": "https://cards.scryfall.io/large/front/9/8/983efb06-c4e3-4fe4-8a67-9ea9b54344a6.jpg?1789753046",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/9/8/983efb06-c4e3-4fe4-8a67-9ea9b54344a6.jpg?1789753046"
+			}
+		},
+		"Midnight Reaper": {
+			"id": "95bea61d-986c-4e01-a82d-25e47986375e",
+			"oracle_id": "e8c7566d-7cc0-48af-a986-83223ec7e06c",
+			"name": "Midnight Reaper",
+			"mana_cost": "{2}{B}",
+			"cmc": 3,
+			"type_line": "Creature — Zombie Knight",
+			"oracle_text": "Whenever a nontoken creature you control dies, this creature deals 1 damage to you and you draw a card.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "3",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/9/5/95bea61d-986c-4e01-a82d-25e47986375e.jpg?1789753046",
+				"normal": "https://cards.scryfall.io/normal/front/9/5/95bea61d-986c-4e01-a82d-25e47986375e.jpg?1789753046",
+				"large": "https://cards.scryfall.io/large/front/9/5/95bea61d-986c-4e01-a82d-25e47986375e.jpg?1789753046",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/9/5/95bea61d-986c-4e01-a82d-25e47986375e.jpg?1789753046"
+			}
+		},
+		"Graveborn Muse": {
+			"id": "49b8e4af-5a44-4aec-a386-729443af4140",
+			"oracle_id": "d2a65ff4-ab82-42f7-9d90-feb29132121e",
+			"name": "Graveborn Muse",
+			"mana_cost": "{2}{B}{B}",
+			"cmc": 4,
+			"type_line": "Creature — Zombie Spirit",
+			"oracle_text": "At the beginning of your upkeep, you draw X cards and lose X life, where X is the number of Zombies you control.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "3",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/4/9/49b8e4af-5a44-4aec-a386-729443af4140.jpg?1789753036",
+				"normal": "https://cards.scryfall.io/normal/front/4/9/49b8e4af-5a44-4aec-a386-729443af4140.jpg?1789753036",
+				"large": "https://cards.scryfall.io/large/front/4/9/49b8e4af-5a44-4aec-a386-729443af4140.jpg?1789753036",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/4/9/49b8e4af-5a44-4aec-a386-729443af4140.jpg?1789753036"
+			}
+		},
+		"Lord of the Undead": {
+			"id": "09a16104-26d5-422e-b86d-6c008ac2c903",
+			"oracle_id": "7714af0e-41d9-4609-967f-27233b46055f",
+			"name": "Lord of the Undead",
+			"mana_cost": "{1}{B}{B}",
+			"cmc": 3,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "Other Zombie creatures get +1/+1.\n{1}{B}, {T}: Return target Zombie card from your graveyard to your hand.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "2",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/0/9/09a16104-26d5-422e-b86d-6c008ac2c903.jpg?1789753043",
+				"normal": "https://cards.scryfall.io/normal/front/0/9/09a16104-26d5-422e-b86d-6c008ac2c903.jpg?1789753043",
+				"large": "https://cards.scryfall.io/large/front/0/9/09a16104-26d5-422e-b86d-6c008ac2c903.jpg?1789753043",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/0/9/09a16104-26d5-422e-b86d-6c008ac2c903.jpg?1789753043"
+			}
+		},
+		"Undead Warchief": {
+			"id": "f9139c01-ab89-445f-b564-dce1abf2c79f",
+			"oracle_id": "e6af56bf-bd78-4801-8f6e-033cdd68de3d",
+			"name": "Undead Warchief",
+			"mana_cost": "{2}{B}{B}",
+			"cmc": 4,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "Zombie spells you cast cost {1} less to cast.\nZombie creatures you control get +2/+1.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/f/9/f9139c01-ab89-445f-b564-dce1abf2c79f.jpg?1789753058",
+				"normal": "https://cards.scryfall.io/normal/front/f/9/f9139c01-ab89-445f-b564-dce1abf2c79f.jpg?1789753058",
+				"large": "https://cards.scryfall.io/large/front/f/9/f9139c01-ab89-445f-b564-dce1abf2c79f.jpg?1789753058",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/f/9/f9139c01-ab89-445f-b564-dce1abf2c79f.jpg?1789753058"
+			}
+		},
+		"Vengeful Dead": {
+			"id": "81197564-19bb-423d-87d4-3d83deac85a2",
+			"oracle_id": "277c8ee9-0157-4e45-96ad-1b67716955ee",
+			"name": "Vengeful Dead",
+			"mana_cost": "{3}{B}",
+			"cmc": 4,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "Whenever this creature or another Zombie dies, each opponent loses 1 life.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "3",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/8/1/81197564-19bb-423d-87d4-3d83deac85a2.jpg?1789753059",
+				"normal": "https://cards.scryfall.io/normal/front/8/1/81197564-19bb-423d-87d4-3d83deac85a2.jpg?1789753059",
+				"large": "https://cards.scryfall.io/large/front/8/1/81197564-19bb-423d-87d4-3d83deac85a2.jpg?1789753059",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/8/1/81197564-19bb-423d-87d4-3d83deac85a2.jpg?1789753059"
+			}
+		},
+		"God-Eternal Bontu": {
+			"id": "0070d335-d42d-4ccc-b828-405b7dd00868",
+			"oracle_id": "183891b0-b5ec-47f4-8d09-b9d3cfc4e7f1",
+			"name": "God-Eternal Bontu",
+			"mana_cost": "{3}{B}{B}",
+			"cmc": 5,
+			"type_line": "Legendary Creature — Zombie God",
+			"oracle_text": "Menace\nWhen God-Eternal Bontu enters, sacrifice any number of other permanents, then draw that many cards.\nWhen God-Eternal Bontu dies or is put into exile from the battlefield, you may put her into her owner's library third from the top.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [
+				"Menace"
+			],
+			"power": "5",
+			"toughness": "6",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/0/0/0070d335-d42d-4ccc-b828-405b7dd00868.jpg?1789752943",
+				"normal": "https://cards.scryfall.io/normal/front/0/0/0070d335-d42d-4ccc-b828-405b7dd00868.jpg?1789752943",
+				"large": "https://cards.scryfall.io/large/front/0/0/0070d335-d42d-4ccc-b828-405b7dd00868.jpg?1789752943",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/0/0/0070d335-d42d-4ccc-b828-405b7dd00868.jpg?1789752943"
+			}
+		},
+		"Eternal Taskmaster": {
+			"id": "ccb7deab-cec1-453a-8257-8204c883c9f6",
+			"oracle_id": "a7c000a8-1864-4bb2-80fa-a61d74dbd966",
+			"name": "Eternal Taskmaster",
+			"mana_cost": "{1}{B}",
+			"cmc": 2,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "This creature enters tapped.\nWhenever this creature attacks, you may pay {2}{B}. If you do, return target creature card from your graveyard to your hand.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "2",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/c/c/ccb7deab-cec1-453a-8257-8204c883c9f6.jpg?1789752941",
+				"normal": "https://cards.scryfall.io/normal/front/c/c/ccb7deab-cec1-453a-8257-8204c883c9f6.jpg?1789752941",
+				"large": "https://cards.scryfall.io/large/front/c/c/ccb7deab-cec1-453a-8257-8204c883c9f6.jpg?1789752941",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/c/c/ccb7deab-cec1-453a-8257-8204c883c9f6.jpg?1789752941"
+			}
+		},
+		"Undead Augur": {
+			"id": "63df1c6a-98b8-41c1-ac06-c816b50cb07c",
+			"oracle_id": "c26887e1-27f4-4550-921b-53460e43c079",
+			"name": "Undead Augur",
+			"mana_cost": "{B}{B}",
+			"cmc": 2,
+			"type_line": "Creature — Zombie Wizard",
+			"oracle_text": "Whenever this creature or another Zombie you control dies, you draw a card and lose 1 life.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "2",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/6/3/63df1c6a-98b8-41c1-ac06-c816b50cb07c.jpg?1789753056",
+				"normal": "https://cards.scryfall.io/normal/front/6/3/63df1c6a-98b8-41c1-ac06-c816b50cb07c.jpg?1789753056",
+				"large": "https://cards.scryfall.io/large/front/6/3/63df1c6a-98b8-41c1-ac06-c816b50cb07c.jpg?1789753056",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/6/3/63df1c6a-98b8-41c1-ac06-c816b50cb07c.jpg?1789753056"
+			}
+		},
+		"Bontu's Monument": {
+			"id": "b4d4daca-34ef-4a5a-97e6-21f7f6a2f481",
+			"oracle_id": "940ba435-7abc-40f8-a5af-c1c653b3284e",
+			"name": "Bontu's Monument",
+			"mana_cost": "{3}",
+			"cmc": 3,
+			"type_line": "Legendary Artifact",
+			"oracle_text": "Black creature spells you cast cost {1} less to cast.\nWhenever you cast a creature spell, each opponent loses 1 life and you gain 1 life.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/b/4/b4d4daca-34ef-4a5a-97e6-21f7f6a2f481.jpg?1789753308",
+				"normal": "https://cards.scryfall.io/normal/front/b/4/b4d4daca-34ef-4a5a-97e6-21f7f6a2f481.jpg?1789753308",
+				"large": "https://cards.scryfall.io/large/front/b/4/b4d4daca-34ef-4a5a-97e6-21f7f6a2f481.jpg?1789753308",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/b/4/b4d4daca-34ef-4a5a-97e6-21f7f6a2f481.jpg?1789753308"
+			}
+		},
+		"Cemetery Reaper": {
+			"id": "c179dd0e-4904-457f-b11e-7d267d0bb9eb",
+			"oracle_id": "70fa209f-5e79-44de-81ce-1d8d0d8c1006",
+			"name": "Cemetery Reaper",
+			"mana_cost": "{1}{B}{B}",
+			"cmc": 3,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "Other Zombie creatures you control get +1/+1.\n{2}{B}, {T}: Exile target creature card from a graveyard. Create a 2/2 black Zombie creature token.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "2",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/c/1/c179dd0e-4904-457f-b11e-7d267d0bb9eb.jpg?1789752932",
+				"normal": "https://cards.scryfall.io/normal/front/c/1/c179dd0e-4904-457f-b11e-7d267d0bb9eb.jpg?1789752932",
+				"large": "https://cards.scryfall.io/large/front/c/1/c179dd0e-4904-457f-b11e-7d267d0bb9eb.jpg?1789752932",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/c/1/c179dd0e-4904-457f-b11e-7d267d0bb9eb.jpg?1789752932"
+			}
+		},
+		"Death Baron": {
+			"id": "ddfc57da-6cfd-4b81-8fc0-51270edc0200",
+			"oracle_id": "99024aa8-5687-4d38-8a4b-feef42d6c1ff",
+			"name": "Death Baron",
+			"mana_cost": "{1}{B}{B}",
+			"cmc": 3,
+			"type_line": "Creature — Zombie Wizard",
+			"oracle_text": "Skeletons you control and other Zombies you control get +1/+1 and have deathtouch. (Any amount of damage they deal to a creature is enough to destroy it.)",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "2",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/d/d/ddfc57da-6cfd-4b81-8fc0-51270edc0200.jpg?1789752937",
+				"normal": "https://cards.scryfall.io/normal/front/d/d/ddfc57da-6cfd-4b81-8fc0-51270edc0200.jpg?1789752937",
+				"large": "https://cards.scryfall.io/large/front/d/d/ddfc57da-6cfd-4b81-8fc0-51270edc0200.jpg?1789752937",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/d/d/ddfc57da-6cfd-4b81-8fc0-51270edc0200.jpg?1789752937"
+			}
+		},
+		"Noxious Ghoul": {
+			"id": "551de81f-35e9-4467-b575-ae5bf79d4e7c",
+			"oracle_id": "602e421e-afab-4488-8a52-af66b4fdce4b",
+			"name": "Noxious Ghoul",
+			"mana_cost": "{3}{B}{B}",
+			"cmc": 5,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "Whenever this creature or another Zombie enters, all non-Zombie creatures get -1/-1 until end of turn.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "3",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/5/551de81f-35e9-4467-b575-ae5bf79d4e7c.jpg?1789753048",
+				"normal": "https://cards.scryfall.io/normal/front/5/5/551de81f-35e9-4467-b575-ae5bf79d4e7c.jpg?1789753048",
+				"large": "https://cards.scryfall.io/large/front/5/5/551de81f-35e9-4467-b575-ae5bf79d4e7c.jpg?1789753048",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/5/551de81f-35e9-4467-b575-ae5bf79d4e7c.jpg?1789753048"
+			}
+		},
+		"Charcoal Diamond": {
+			"id": "970593fe-747f-48d3-a964-e18a1fa2cf0f",
+			"oracle_id": "1386d111-a2a7-4df1-91d7-947664126989",
+			"name": "Charcoal Diamond",
+			"mana_cost": "{2}",
+			"cmc": 2,
+			"type_line": "Artifact",
+			"oracle_text": "This artifact enters tapped.\n{T}: Add {B}.",
+			"colors": [],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/9/7/970593fe-747f-48d3-a964-e18a1fa2cf0f.jpg?1789753311",
+				"normal": "https://cards.scryfall.io/normal/front/9/7/970593fe-747f-48d3-a964-e18a1fa2cf0f.jpg?1789753311",
+				"large": "https://cards.scryfall.io/large/front/9/7/970593fe-747f-48d3-a964-e18a1fa2cf0f.jpg?1789753311",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/9/7/970593fe-747f-48d3-a964-e18a1fa2cf0f.jpg?1789753311"
+			}
+		},
+		"Mire Triton": {
+			"id": "22dc3c27-78ca-42fd-b434-15a813c07eed",
+			"oracle_id": "4fe6f784-0290-4d4a-85ae-0b66522d31e9",
+			"name": "Mire Triton",
+			"mana_cost": "{1}{B}",
+			"cmc": 2,
+			"type_line": "Creature — Zombie Merfolk",
+			"oracle_text": "Deathtouch\nWhen this creature enters, mill two cards and you gain 2 life. (To mill two cards, put the top two cards of your library into your graveyard.)",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [
+				"Mill",
+				"Deathtouch"
+			],
+			"power": "2",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/2/22dc3c27-78ca-42fd-b434-15a813c07eed.jpg?1789753048",
+				"normal": "https://cards.scryfall.io/normal/front/2/2/22dc3c27-78ca-42fd-b434-15a813c07eed.jpg?1789753048",
+				"large": "https://cards.scryfall.io/large/front/2/2/22dc3c27-78ca-42fd-b434-15a813c07eed.jpg?1789753048",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/2/22dc3c27-78ca-42fd-b434-15a813c07eed.jpg?1789753048"
+			}
+		},
+		"Liliana's Reaver": {
+			"id": "2ee81094-87e3-45a2-8ad8-2610ca52d357",
+			"oracle_id": "97332d4e-a55c-4e4f-9040-bf426a7c8e39",
+			"name": "Liliana's Reaver",
+			"mana_cost": "{2}{B}{B}",
+			"cmc": 4,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "Deathtouch\nWhenever this creature deals combat damage to a player, that player discards a card and you create a tapped 2/2 black Zombie creature token.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [
+				"Deathtouch"
+			],
+			"power": "4",
+			"toughness": "3",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/e/2ee81094-87e3-45a2-8ad8-2610ca52d357.jpg?1789753037",
+				"normal": "https://cards.scryfall.io/normal/front/2/e/2ee81094-87e3-45a2-8ad8-2610ca52d357.jpg?1789753037",
+				"large": "https://cards.scryfall.io/large/front/2/e/2ee81094-87e3-45a2-8ad8-2610ca52d357.jpg?1789753037",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/e/2ee81094-87e3-45a2-8ad8-2610ca52d357.jpg?1789753037"
+			}
+		},
+		"Oversold Cemetery": {
+			"id": "21733d61-25c1-4844-9385-a2c01f82ea9f",
+			"oracle_id": "ed4cd3a1-688b-4c05-948d-39d3336e00c0",
+			"name": "Oversold Cemetery",
+			"mana_cost": "{1}{B}",
+			"cmc": 2,
+			"type_line": "Enchantment",
+			"oracle_text": "At the beginning of your upkeep, if you have four or more creature cards in your graveyard, you may return target creature card from your graveyard to your hand.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/1/21733d61-25c1-4844-9385-a2c01f82ea9f.jpg?1789753051",
+				"normal": "https://cards.scryfall.io/normal/front/2/1/21733d61-25c1-4844-9385-a2c01f82ea9f.jpg?1789753051",
+				"large": "https://cards.scryfall.io/large/front/2/1/21733d61-25c1-4844-9385-a2c01f82ea9f.jpg?1789753051",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/1/21733d61-25c1-4844-9385-a2c01f82ea9f.jpg?1789753051"
+			}
+		},
+		"Soulless One": {
+			"id": "cb759501-d634-430b-b5c9-24338e2d7367",
+			"oracle_id": "27d98b94-a8a1-442b-8940-4ffab51b5164",
+			"name": "Soulless One",
+			"mana_cost": "{3}{B}",
+			"cmc": 4,
+			"type_line": "Creature — Zombie Avatar",
+			"oracle_text": "Soulless One's power and toughness are each equal to the number of Zombies on the battlefield plus the number of Zombie cards in all graveyards.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "*",
+			"toughness": "*",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/c/b/cb759501-d634-430b-b5c9-24338e2d7367.jpg?1789753059",
+				"normal": "https://cards.scryfall.io/normal/front/c/b/cb759501-d634-430b-b5c9-24338e2d7367.jpg?1789753059",
+				"large": "https://cards.scryfall.io/large/front/c/b/cb759501-d634-430b-b5c9-24338e2d7367.jpg?1789753059",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/c/b/cb759501-d634-430b-b5c9-24338e2d7367.jpg?1789753059"
+			}
+		},
+		"Kalitas, Traitor of Ghet": {
+			"id": "d188a93a-cd9b-4a0b-80fb-738907b228cf",
+			"oracle_id": "e1cfd1cb-44a5-429f-a5c1-e6d29bad1c71",
+			"name": "Kalitas, Traitor of Ghet",
+			"mana_cost": "{2}{B}{B}",
+			"cmc": 4,
+			"type_line": "Legendary Creature — Vampire Warrior",
+			"oracle_text": "Lifelink\nIf a nontoken creature an opponent controls would die, instead exile that card and create a 2/2 black Zombie creature token.\n{2}{B}, Sacrifice another Vampire or Zombie: Put two +1/+1 counters on Kalitas.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [
+				"Lifelink"
+			],
+			"power": "3",
+			"toughness": "4",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/d/1/d188a93a-cd9b-4a0b-80fb-738907b228cf.jpg?1789753038",
+				"normal": "https://cards.scryfall.io/normal/front/d/1/d188a93a-cd9b-4a0b-80fb-738907b228cf.jpg?1789753038",
+				"large": "https://cards.scryfall.io/large/front/d/1/d188a93a-cd9b-4a0b-80fb-738907b228cf.jpg?1789753038",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/d/1/d188a93a-cd9b-4a0b-80fb-738907b228cf.jpg?1789753038"
+			}
+		},
+		"Josu Vess, Lich Knight": {
+			"id": "1f7bcaf9-4e36-4f23-b63f-f70fe5c9dd6f",
+			"oracle_id": "974a46f9-aa84-4b34-bee5-c635166e5841",
+			"name": "Josu Vess, Lich Knight",
+			"mana_cost": "{2}{B}{B}",
+			"cmc": 4,
+			"type_line": "Legendary Creature — Zombie Knight",
+			"oracle_text": "Kicker {5}{B} (You may pay an additional {5}{B} as you cast this spell.)\nMenace\nWhen Josu Vess enters, if he was kicked, create eight 2/2 black Zombie Knight creature tokens with menace.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [
+				"Menace",
+				"Kicker"
+			],
+			"power": "4",
+			"toughness": "5",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/f/1f7bcaf9-4e36-4f23-b63f-f70fe5c9dd6f.jpg?1789753037",
+				"normal": "https://cards.scryfall.io/normal/front/1/f/1f7bcaf9-4e36-4f23-b63f-f70fe5c9dd6f.jpg?1789753037",
+				"large": "https://cards.scryfall.io/large/front/1/f/1f7bcaf9-4e36-4f23-b63f-f70fe5c9dd6f.jpg?1789753037",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/f/1f7bcaf9-4e36-4f23-b63f-f70fe5c9dd6f.jpg?1789753037"
+			}
+		},
+		"Open the Graves": {
+			"id": "9a6bc939-3d31-4a78-9925-27435bec2a67",
+			"oracle_id": "28778958-a1f9-4fea-b551-c193d1257f18",
+			"name": "Open the Graves",
+			"mana_cost": "{3}{B}{B}",
+			"cmc": 5,
+			"type_line": "Enchantment",
+			"oracle_text": "Whenever a nontoken creature you control dies, create a 2/2 black Zombie creature token.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/9/a/9a6bc939-3d31-4a78-9925-27435bec2a67.jpg?1789753049",
+				"normal": "https://cards.scryfall.io/normal/front/9/a/9a6bc939-3d31-4a78-9925-27435bec2a67.jpg?1789753049",
+				"large": "https://cards.scryfall.io/large/front/9/a/9a6bc939-3d31-4a78-9925-27435bec2a67.jpg?1789753049",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/9/a/9a6bc939-3d31-4a78-9925-27435bec2a67.jpg?1789753049"
+			}
+		},
+		"Endless Ranks of the Dead": {
+			"id": "859a3a66-dae9-4a67-936d-2681397a6bc2",
+			"oracle_id": "69d4ecac-4735-4667-bfc1-c8800b436d08",
+			"name": "Endless Ranks of the Dead",
+			"mana_cost": "{2}{B}{B}",
+			"cmc": 4,
+			"type_line": "Enchantment",
+			"oracle_text": "At the beginning of your upkeep, create X 2/2 black Zombie creature tokens, where X is half the number of Zombies you control, rounded down.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/8/5/859a3a66-dae9-4a67-936d-2681397a6bc2.jpg?1789752945",
+				"normal": "https://cards.scryfall.io/normal/front/8/5/859a3a66-dae9-4a67-936d-2681397a6bc2.jpg?1789752945",
+				"large": "https://cards.scryfall.io/large/front/8/5/859a3a66-dae9-4a67-936d-2681397a6bc2.jpg?1789752945",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/8/5/859a3a66-dae9-4a67-936d-2681397a6bc2.jpg?1789752945"
+			}
+		},
+		"Necrotic Hex": {
+			"id": "815334d8-8f4b-47dd-b24a-07ac297e14c8",
+			"oracle_id": "a6e720a2-9819-40ec-a811-7812898b531a",
+			"name": "Necrotic Hex",
+			"mana_cost": "{6}{B}",
+			"cmc": 7,
+			"type_line": "Sorcery",
+			"oracle_text": "Each player sacrifices six creatures of their choice. You create six tapped 2/2 black Zombie creature tokens.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/8/1/815334d8-8f4b-47dd-b24a-07ac297e14c8.jpg?1789753047",
+				"normal": "https://cards.scryfall.io/normal/front/8/1/815334d8-8f4b-47dd-b24a-07ac297e14c8.jpg?1789753047",
+				"large": "https://cards.scryfall.io/large/front/8/1/815334d8-8f4b-47dd-b24a-07ac297e14c8.jpg?1789753047",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/8/1/815334d8-8f4b-47dd-b24a-07ac297e14c8.jpg?1789753047"
+			}
+		},
+		"Champion of the Perished": {
+			"id": "d3bfa5bc-bcb9-4649-96b8-3cded84a25a2",
+			"oracle_id": "f3654fbd-16a5-4953-84ac-534e8421032f",
+			"name": "Champion of the Perished",
+			"mana_cost": "{B}",
+			"cmc": 1,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "Whenever another Zombie you control enters, put a +1/+1 counter on this creature.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "1",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/d/3/d3bfa5bc-bcb9-4649-96b8-3cded84a25a2.jpg?1789752933",
+				"normal": "https://cards.scryfall.io/normal/front/d/3/d3bfa5bc-bcb9-4649-96b8-3cded84a25a2.jpg?1789752933",
+				"large": "https://cards.scryfall.io/large/front/d/3/d3bfa5bc-bcb9-4649-96b8-3cded84a25a2.jpg?1789752933",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/d/3/d3bfa5bc-bcb9-4649-96b8-3cded84a25a2.jpg?1789752933"
+			}
+		},
+		"Undead Butler": {
+			"id": "da046d5a-9a44-4efb-af0f-229898edc051",
+			"oracle_id": "426fa8e8-b0f9-4b6c-b22b-04ec2073187a",
+			"name": "Undead Butler",
+			"mana_cost": "{1}{B}",
+			"cmc": 2,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "When this creature enters, mill three cards. (Put the top three cards of your library into your graveyard.)\nWhen this creature dies, you may exile it. When you do, return target creature card from your graveyard to your hand.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [
+				"Mill"
+			],
+			"power": "1",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/d/a/da046d5a-9a44-4efb-af0f-229898edc051.jpg?1789753057",
+				"normal": "https://cards.scryfall.io/normal/front/d/a/da046d5a-9a44-4efb-af0f-229898edc051.jpg?1789753057",
+				"large": "https://cards.scryfall.io/large/front/d/a/da046d5a-9a44-4efb-af0f-229898edc051.jpg?1789753057",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/d/a/da046d5a-9a44-4efb-af0f-229898edc051.jpg?1789753057"
+			}
+		},
+		"Headless Rider": {
+			"id": "54280b46-470f-46bd-9407-5bb5e34302b1",
+			"oracle_id": "d4fdacd7-3101-44e2-a880-dde7326137a4",
+			"name": "Headless Rider",
+			"mana_cost": "{2}{B}",
+			"cmc": 3,
+			"type_line": "Creature — Zombie",
+			"oracle_text": "Whenever this creature or another nontoken Zombie you control dies, create a 2/2 black Zombie creature token.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "3",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/5/4/54280b46-470f-46bd-9407-5bb5e34302b1.jpg?1789753036",
+				"normal": "https://cards.scryfall.io/normal/front/5/4/54280b46-470f-46bd-9407-5bb5e34302b1.jpg?1789753036",
+				"large": "https://cards.scryfall.io/large/front/5/4/54280b46-470f-46bd-9407-5bb5e34302b1.jpg?1789753036",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/5/4/54280b46-470f-46bd-9407-5bb5e34302b1.jpg?1789753036"
+			}
+		},
+		"Razorlash Transmogrant": {
+			"id": "a789aea2-bf82-430e-ab6d-8beac52964a8",
+			"oracle_id": "580996d4-db9a-4b57-a0e1-a2dbb524121a",
+			"name": "Razorlash Transmogrant",
+			"mana_cost": "{2}",
+			"cmc": 2,
+			"type_line": "Artifact Creature — Zombie",
+			"oracle_text": "This creature can't block.\n{4}{B}{B}: Return this card from your graveyard to the battlefield with a +1/+1 counter on it. This ability costs {4} less to activate if an opponent controls four or more nonbasic lands.",
+			"colors": [],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "3",
+			"toughness": "1",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/a/7/a789aea2-bf82-430e-ab6d-8beac52964a8.jpg?1789753054",
+				"normal": "https://cards.scryfall.io/normal/front/a/7/a789aea2-bf82-430e-ab6d-8beac52964a8.jpg?1789753054",
+				"large": "https://cards.scryfall.io/large/front/a/7/a789aea2-bf82-430e-ab6d-8beac52964a8.jpg?1789753054",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/a/7/a789aea2-bf82-430e-ab6d-8beac52964a8.jpg?1789753054"
+			}
+		},
+		"Infernal Idol": {
+			"id": "21a72531-329c-43fd-adc1-a671b3b1edc4",
+			"oracle_id": "a0802918-e18a-4716-befb-96ae6667f2f3",
+			"name": "Infernal Idol",
+			"mana_cost": "{3}",
+			"cmc": 3,
+			"type_line": "Artifact",
+			"oracle_text": "{T}: Add {B}.\n{1}{B}{B}, {T}, Sacrifice this artifact: You draw two cards and lose 2 life.",
+			"colors": [],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/1/21a72531-329c-43fd-adc1-a671b3b1edc4.jpg?1789753335",
+				"normal": "https://cards.scryfall.io/normal/front/2/1/21a72531-329c-43fd-adc1-a671b3b1edc4.jpg?1789753335",
+				"large": "https://cards.scryfall.io/large/front/2/1/21a72531-329c-43fd-adc1-a671b3b1edc4.jpg?1789753335",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/1/21a72531-329c-43fd-adc1-a671b3b1edc4.jpg?1789753335"
+			}
+		},
+		"Consuming Corruption": {
+			"id": "1d175191-6946-434d-90c8-73412472a543",
+			"oracle_id": "3bc0bd36-70be-4180-9fb3-b10ce054107b",
+			"name": "Consuming Corruption",
+			"mana_cost": "{B}{B}",
+			"cmc": 2,
+			"type_line": "Instant",
+			"oracle_text": "Consuming Corruption deals X damage to target creature or planeswalker and you gain X life, where X is the number of Swamps you control.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/1/d/1d175191-6946-434d-90c8-73412472a543.jpg?1789752935",
+				"normal": "https://cards.scryfall.io/normal/front/1/d/1d175191-6946-434d-90c8-73412472a543.jpg?1789752935",
+				"large": "https://cards.scryfall.io/large/front/1/d/1d175191-6946-434d-90c8-73412472a543.jpg?1789752935",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/1/d/1d175191-6946-434d-90c8-73412472a543.jpg?1789752935"
+			}
+		},
+		"Consumed by Greed": {
+			"id": "dc334dac-bd40-44f2-8550-c80f73056ade",
+			"oracle_id": "b548578c-4910-402c-8e78-498924e0a9be",
+			"name": "Consumed by Greed",
+			"mana_cost": "{1}{B}{B}",
+			"cmc": 3,
+			"type_line": "Instant",
+			"oracle_text": "Gift a card (You may promise an opponent a gift as you cast this spell. If you do, they draw a card before its other effects.)\nTarget opponent sacrifices a creature with the greatest power among creatures they control. If the gift was promised, return target creature card from your graveyard to your hand.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [
+				"Gift"
+			],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/d/c/dc334dac-bd40-44f2-8550-c80f73056ade.jpg?1789752934",
+				"normal": "https://cards.scryfall.io/normal/front/d/c/dc334dac-bd40-44f2-8550-c80f73056ade.jpg?1789752934",
+				"large": "https://cards.scryfall.io/large/front/d/c/dc334dac-bd40-44f2-8550-c80f73056ade.jpg?1789752934",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/d/c/dc334dac-bd40-44f2-8550-c80f73056ade.jpg?1789752934"
+			}
+		},
+		"Patchwork Banner": {
+			"id": "205c527c-0055-4d2a-86b1-18d1c58a898d",
+			"oracle_id": "4fb00dbe-1f82-4ba6-b18c-97e816d10d3a",
+			"name": "Patchwork Banner",
+			"mana_cost": "{3}",
+			"cmc": 3,
+			"type_line": "Artifact",
+			"oracle_text": "As this artifact enters, choose a creature type.\nCreatures you control of the chosen type get +1/+1.\n{T}: Add one mana of any color.",
+			"colors": [],
+			"color_identity": [],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/2/0/205c527c-0055-4d2a-86b1-18d1c58a898d.jpg?1789753341",
+				"normal": "https://cards.scryfall.io/normal/front/2/0/205c527c-0055-4d2a-86b1-18d1c58a898d.jpg?1789753341",
+				"large": "https://cards.scryfall.io/large/front/2/0/205c527c-0055-4d2a-86b1-18d1c58a898d.jpg?1789753341",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/2/0/205c527c-0055-4d2a-86b1-18d1c58a898d.jpg?1789753341"
+			}
+		},
+		"Withering Torment": {
+			"id": "0868f94e-235d-4f65-a7af-8aacd58dd61e",
+			"oracle_id": "ffce81c5-1b58-4882-a4e7-6f8d7cb170de",
+			"name": "Withering Torment",
+			"mana_cost": "{2}{B}",
+			"cmc": 3,
+			"type_line": "Instant",
+			"oracle_text": "Destroy target creature or enchantment. You lose 2 life.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [],
+			"power": "",
+			"toughness": "",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/0/8/0868f94e-235d-4f65-a7af-8aacd58dd61e.jpg?1789753063",
+				"normal": "https://cards.scryfall.io/normal/front/0/8/0868f94e-235d-4f65-a7af-8aacd58dd61e.jpg?1789753063",
+				"large": "https://cards.scryfall.io/large/front/0/8/0868f94e-235d-4f65-a7af-8aacd58dd61e.jpg?1789753063",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/0/8/0868f94e-235d-4f65-a7af-8aacd58dd61e.jpg?1789753063"
+			}
+		},
+		"Zul Ashur, Lich Lord": {
+			"id": "e92dcd69-8978-4afe-b83d-c9224dfb6a9e",
+			"oracle_id": "a7c6c9b3-91f2-4ecf-b2b0-b0edd96974d9",
+			"name": "Zul Ashur, Lich Lord",
+			"mana_cost": "{1}{B}",
+			"cmc": 2,
+			"type_line": "Legendary Creature — Zombie Warlock",
+			"oracle_text": "Ward—Pay 2 life. (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays 2 life.)\n{T}: You may cast target Zombie creature card from your graveyard this turn.",
+			"colors": [
+				"B"
+			],
+			"color_identity": [
+				"B"
+			],
+			"keywords": [
+				"Ward"
+			],
+			"power": "2",
+			"toughness": "2",
+			"loyalty": "",
+			"layout": "normal",
+			"commander_legal": true,
+			"images": {
+				"small": "https://cards.scryfall.io/small/front/e/9/e92dcd69-8978-4afe-b83d-c9224dfb6a9e.jpg?1789753064",
+				"normal": "https://cards.scryfall.io/normal/front/e/9/e92dcd69-8978-4afe-b83d-c9224dfb6a9e.jpg?1789753064",
+				"large": "https://cards.scryfall.io/large/front/e/9/e92dcd69-8978-4afe-b83d-c9224dfb6a9e.jpg?1789753064",
+				"art_crop": "https://cards.scryfall.io/art_crop/front/e/9/e92dcd69-8978-4afe-b83d-c9224dfb6a9e.jpg?1789753064"
+			}
+		}
+	},
+	"validation": {
+		"ok": true,
+		"errors": [],
+		"warnings": [],
+		"total": 100
+	}
+}

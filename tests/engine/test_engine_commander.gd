@@ -43,3 +43,53 @@ func test_commander_tax_increases() -> void:
 	assert_true(engine.submit(Fixtures.cast_spell(0, k1.object_id)).ok)
 	assert_eq(engine._payment.generic, 4)
 	assert_eq(engine._payment.r, 2)
+
+
+## CR 903.10a: 21 combat damage from one commander loses the game even at high life.
+func test_21_commander_damage_loses_the_game() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	engine.state.players[1].life = 100
+	engine.state.players[1].commander_damage_from["0:Krenko, Mob Boss"] = 18
+	var krenko: GameObject = Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.BATTLEFIELD, "Krenko, Mob Boss")
+	krenko.is_commander = true
+	krenko.summoned_this_turn = false
+	engine.state.combat = CombatState.new()
+	(engine.state.combat as CombatState).attacker_ids = [krenko.object_id]
+	engine.apply_combat_damage()
+	engine.sba.check(engine)
+	assert_eq(engine.state.players[1].commander_damage_from["0:Krenko, Mob Boss"], 21)
+	assert_true(engine.state.players[1].life > 0)
+	assert_true(engine.state.players[1].lost)
+	assert_true(engine.is_over())
+	assert_eq(engine.state.winners, [0])
+
+
+func test_20_commander_damage_is_not_enough() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	engine.state.players[1].commander_damage_from["0:Krenko, Mob Boss"] = 20
+	engine.sba.check(engine)
+	assert_false(engine.state.players[1].lost)
+	assert_false(engine.is_over())
+
+
+func test_non_commander_damage_is_not_tallied() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	var krenko: GameObject = Fixtures.spawn_named(engine, db, 0, EngineEnums.ZoneId.BATTLEFIELD, "Krenko, Mob Boss")
+	krenko.summoned_this_turn = false
+	engine.state.combat = CombatState.new()
+	(engine.state.combat as CombatState).attacker_ids = [krenko.object_id]
+	engine.apply_combat_damage()
+	assert_true(engine.state.players[1].commander_damage_from.is_empty())
+
+
+func test_table_view_reports_commander_damage_and_reason() -> void:
+	var engine := Fixtures.empty_engine_1v1()
+	engine.state.players[1].life = 100
+	engine.state.players[1].commander_damage_from["0:Krenko, Mob Boss"] = 21
+	engine.sba.check(engine)
+	var view := TableView.from_engine(engine, null)
+	assert_eq(view.rival.cmdr_need, 21)
+	assert_eq(view.rival.cmdr_damage.size(), 1)
+	assert_eq(int(view.rival.cmdr_damage[0].amount), 21)
+	assert_true(str(view.rival.lose_reason).contains("commander damage"))
+	assert_true(view.game_over)

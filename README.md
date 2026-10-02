@@ -45,7 +45,12 @@ At the table:
 
 - **Keep** or **Mulligan** your opening 7.
 - Click a card in hand to play a land or cast it.
-- **Attack** sends every creature that can attack.
+- **Your turn starts with a draw.** Your deck (bottom right) flashes and the turn will not move on until you click it. Nothing is handed to you.
+- The bar under the header shows the turn: Upkeep, Draw, Main 1, Combat, Main 2, End. Draw, Combat and End are clickable.
+- A **gold border** on a card in your hand (or your commander) means you can play it right now: the timing is legal and you have enough untapped mana sources for its cost, commander tax included. Light-blue border = selected.
+- Your **commander** and the rival's sit in the **Command zone** panel in the sidebar. Click yours to cast it; its tax shows underneath.
+- **Attack** moves to combat. Click the creatures you want to send (red outline), then press **Attack (N)** — or **No attack** to skip combat. Creatures that came in this turn are dimmed: they have summoning sickness and can attack on your next turn. The bot then decides its blocks.
+- When the bot attacks you, the game pauses for blocks: click one of your untapped creatures, then the attacker it should block (repeat for more), then **Confirm blocks** — or **No blocks**. Click an assigned blocker again to take it back. Attackers have a red border, blockers blue.
 - **Pass** advances a step / resolves the stack.
 - **End turn** — Talrand takes his turn, then you draw.
 - **Menu** → difficulty (how hard the bot plays) or **New game**.
