@@ -18,7 +18,6 @@ var engine: RulesEngine
 var db: CardDatabase
 var view: TableView
 var selected_id: String = ""
-var difficulty: int = 1
 var pending_draw_anim: bool = false
 var pending_draw_card: Dictionary = {}
 var last_error: String = ""
@@ -161,9 +160,69 @@ func _deal_opening_hands() -> void:
 	dbg("Opening draw: 7")
 	dbg("Library remaining: %d" % engine.library_size(0))
 	dbg("Rival library remaining: %d" % engine.library_size(1))
+	if not skip_ai:
+		_bot_mulligans(1)
 	kept[1] = not skip_ai
 	match_start = MatchStart.MULLIGAN_DECISION
 	rebuild_view()
+
+
+## The bot's opening hand: a 7-card hand needs 2 to 5 lands to be kept, otherwise it mulligans (London mulligan: draw
+## seven, put the extras on the bottom), up to three times. So the bot never starts stuck without lands or flooded.
+const BOT_MIN_LANDS := 2
+const BOT_MAX_LANDS := 5
+const BOT_MAX_MULLIGANS := 3
+
+
+func _bot_mulligans(seat: int) -> void:
+	var n := 0
+	while n < BOT_MAX_MULLIGANS and not _bot_keeps(seat):
+		engine.return_hand_to_library(seat)
+		engine.state.players[seat].mulligan_count += 1
+		engine.draw_n(seat, 7)
+		n += 1
+	if n > 0:
+		_bot_bottom(seat, n)
+		history.add_note("%s mulligans to %d." % [str(engine.state.players[seat].name), 7 - n], "info")
+
+
+func _bot_keeps(seat: int) -> bool:
+	var lands := _bot_land_count(seat)
+	return lands >= BOT_MIN_LANDS and lands <= BOT_MAX_LANDS
+
+
+func _bot_land_count(seat: int) -> int:
+	var n := 0
+	for oid in engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, seat).object_ids:
+		var o: GameObject = engine.state.objects.get(oid)
+		if o != null and o.definition is CardDefinition and (o.definition as CardDefinition).is_land():
+			n += 1
+	return n
+
+
+## Puts `n` cards from the bot's hand on the bottom: lands beyond four first, then the most expensive spells.
+func _bot_bottom(seat: int, n: int) -> void:
+	var hand: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, seat)
+	for _i in n:
+		var lands := _bot_land_count(seat)
+		var pick := 0
+		var best := -1
+		for oid in hand.object_ids:
+			var o: GameObject = engine.state.objects.get(oid)
+			if o == null or not (o.definition is CardDefinition):
+				continue
+			var d := o.definition as CardDefinition
+			var score := 0
+			if d.is_land():
+				score = 100 if lands > 4 else -1  ## only excess lands are expendable
+			else:
+				score = int(d.cmc)
+			if score > best:
+				best = score
+				pick = int(oid)
+		if pick == 0:
+			break
+		engine.put_library_bottom(pick, seat)
 
 
 ## You call heads or tails; the coin decides who goes first (CR 103.1).

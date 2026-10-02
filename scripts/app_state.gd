@@ -11,7 +11,6 @@ var player_rec: Dictionary = {}
 var rival_rec: Dictionary = {}
 var rival_name: String = ""
 var player_name: String = ""
-var difficulty: int = 1
 var mp_role: String = ""
 var mp_code: String = ""
 var skip_ai: bool = false

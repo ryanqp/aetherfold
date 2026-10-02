@@ -11,7 +11,6 @@ var turn: int = 1
 var active_is_you: bool = true
 var phase_name_str: String = "Main"
 var selected_id: String = ""
-var difficulty: int = 1
 var you_drew_this_turn: bool = true
 var stack: Array = []
 var your_priority: bool = true
@@ -113,7 +112,6 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 	)
 	if session != null:
 		v.selected_id = session.selected_id
-		v.difficulty = session.difficulty
 		v.you_drew_this_turn = not session.pending_draw_anim
 		v.prompt = session.prompt_text()
 		v.history = session.history.lines
@@ -156,7 +154,6 @@ func to_plain() -> Dictionary:
 		active_is_you = active_is_you,
 		phase_name_str = phase_name_str,
 		selected_id = selected_id,
-		difficulty = difficulty,
 		you_drew_this_turn = you_drew_this_turn,
 		stack = stack,
 		your_priority = your_priority,
@@ -224,7 +221,6 @@ static func from_plain(d: Dictionary) -> TableView:
 	v.active_is_you = bool(d.get("active_is_you", true))
 	v.phase_name_str = str(d.get("phase_name_str", "Main"))
 	v.selected_id = str(d.get("selected_id", ""))
-	v.difficulty = int(d.get("difficulty", 1))
 	v.you_drew_this_turn = bool(d.get("you_drew_this_turn", true))
 	v.stack = d.get("stack", [])
 	v.your_priority = bool(d.get("your_priority", true))

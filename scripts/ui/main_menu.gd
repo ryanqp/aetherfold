@@ -5,14 +5,12 @@ const INK := Color(0.93, 0.93, 0.90)
 const MUTED := Color(0.72, 0.74, 0.70)
 const PANEL := Color(0.09, 0.10, 0.11, 0.96)
 const YOU_EMBER := Color(0.42, 0.18, 0.08)
-const RivalAI := preload("res://scripts/rival_ai.gd")
 
 var pages: Dictionary = {}
 var current: String = "hub"
 var status_label: Label
 var vs_player_id: String = "builtin:krenko"
 var vs_bot_id: String = "builtin:talrand"
-var vs_diff: int = 1
 var mp_code_edit: LineEdit
 var mp_ip_edit: LineEdit
 var mp_status: Label
@@ -344,7 +342,7 @@ func _build_vs() -> void:
 	pages["vs"] = p
 	var c := _col(p)
 	_title(c, "Vs. AI", 32)
-	_sub(c, "Pick a deck for you and the bot, then set difficulty.")
+	_sub(c, "Pick a deck for you and for the bot.")
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 24)
 	row.size_flags_vertical = SIZE_EXPAND_FILL
@@ -366,20 +364,6 @@ func _build_vs() -> void:
 	var cat0 := get_node_or_null("/root/ScryfallCatalog")
 	if cat0 != null and cat0.has_signal("art_updated"):
 		cat0.art_updated.connect(func(_cid: String) -> void: _update_vs_preview())
-	var diff_row := HBoxContainer.new()
-	diff_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	var dl := Label.new()
-	dl.text = "Bot difficulty"
-	dl.add_theme_color_override("font_color", GOLD)
-	diff_row.add_child(dl)
-	var opt := OptionButton.new()
-	opt.custom_minimum_size = Vector2(220, 36)
-	for i in 4:
-		opt.add_item("%s — %s" % [RivalAI.label(i), ["Misses plays", "Land + a spell", "Dumps cheap spells", "Attacks and counters"][i]], i)
-	opt.select(1)
-	opt.item_selected.connect(func(i): vs_diff = i)
-	diff_row.add_child(opt)
-	c.add_child(diff_row)
 	_back_row(c, _btn("Start Match", _on_start_vs, 200, true))
 
 
@@ -517,7 +501,6 @@ func _on_start_vs() -> void:
 	if app:
 		app.player_deck_id = vs_player_id
 		app.rival_deck_id = vs_bot_id
-		app.difficulty = vs_diff
 		app.skip_ai = false
 		app.mp_role = ""
 		app.you_seat = 0

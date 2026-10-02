@@ -235,3 +235,15 @@ func _assert_no_dual_zone(engine: RulesEngine) -> void:
 		for oid in bf.object_ids:
 			assert_false(seen.has(int(oid)))
 			seen[int(oid)] = true
+
+
+## The bot mulligans an opening hand without 2 to 5 lands (up to three times), and bottoms extra cards London-style.
+func test_bot_opening_hand_has_a_playable_number_of_lands() -> void:
+	for seed in [1, 2, 3, 4, 5, 6, 7, 8]:
+		var session := GameSession.new()
+		session.start_table_demo(seed)
+		var lands := session._bot_land_count(1)
+		var mulls: int = session.engine.state.players[1].mulligan_count
+		assert_true((lands >= 2 and lands <= 5) or mulls == GameSession.BOT_MAX_MULLIGANS, "seed %d: bot kept %d lands after %d mulligans" % [seed, lands, mulls])
+		assert_eq(session.engine.hand_size(1), 7 - mulls, "seed %d: hand is 7 minus the mulligans" % seed)
+		assert_true(bool(session.kept.get(1, false)), "the bot has kept")

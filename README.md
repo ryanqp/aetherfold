@@ -35,7 +35,7 @@ Or on GitHub: **Code → Download ZIP**, then unzip.
 
 From the main menu:
 
-- **Vs. AI** — pick your deck, the bot’s deck, and difficulty, then Start Match.
+- **Vs. AI** — pick your deck and the bot's deck, then Start Match. The bot is a single, fixed-strength opponent; it mulligans hands without 2 to 5 lands.
 - **Multiplayer** — create or join a 6-character room code (LAN). Host starts the match.
 - **Library Builder** — import a URL/list, build a deck, or browse the gallery.
 - **Menu** — audio / fullscreen.
@@ -53,7 +53,7 @@ At the table:
 - When the bot attacks you, the game pauses for blocks: click one of your untapped creatures, then the attacker it should block (repeat for more), then **Confirm blocks** — or **No blocks**. Click an assigned blocker again to take it back. Attackers have a red border, blockers blue.
 - **Pass** advances a step / resolves the stack.
 - **End turn** — Talrand takes his turn, then you draw.
-- **Menu** → difficulty (how hard the bot plays) or **New game**.
+- **Menu** → **New game**.
 - **Menu → Import Deck** to paste a Moxfield/Archidekt URL or a text decklist (optional).
 
 Without a local Scryfall catalog, the demo still runs (Krenko vs Talrand). Card art downloads from Scryfall when names resolve.

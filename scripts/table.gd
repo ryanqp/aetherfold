@@ -25,12 +25,6 @@ const TRACK := [["upkeep", "Upkeep"], ["draw", "Draw"], ["main1", "Main 1"], ["c
 const TURN_RED := Color(0.86, 0.16, 0.14)
 const ATTACK_RED := Color(0.92, 0.22, 0.16)
 const BLOCK_BLUE := Color(0.30, 0.62, 0.98)
-const DIFFICULTY_HINTS := [
-	"Misses draws, rarely attacks.",
-	"Plays a land and one spell.",
-	"Dumps cheap spells for Drakes.",
-	"Always attacks, casts commander, holds counters.",
-]
 
 var state = MatchStateScript.new()
 var session = null
@@ -54,8 +48,7 @@ var rival_zones: Dictionary = {}
 var hand_row: HBoxContainer
 var pile_labels: Dictionary = {}
 var menu_overlay: ColorRect
-var menu_diff_buttons: Array = []
-## Menu controls that only make sense against the bot: hidden in online matches (new game, import, difficulty).
+## Menu controls that only make sense against the bot: hidden in online matches (new game, import).
 var menu_solo_nodes: Array = []
 var turn_border: Panel
 var hover_wrap: CenterContainer
@@ -180,7 +173,6 @@ func _start_from_app_state() -> void:
 		session.coin_flip = true
 		session.debug_enabled = DEBUG_MATCH
 	if app != null:
-		session.difficulty = int(app.difficulty)
 		session.skip_ai = bool(app.skip_ai)
 		session.you_seat = int(app.you_seat)
 		if app.is_mp_client():
@@ -542,7 +534,7 @@ func _build_sidebar() -> Control:
 	var life_row := HBoxContainer.new()
 	life_row.add_theme_constant_override("separation", 8)
 	life_row.add_child(_life_block("You", "Krenko", true))
-	life_row.add_child(_life_block("Rival", "Talrand · Normal", false))
+	life_row.add_child(_life_block("Rival", "Talrand", false))
 	col.add_child(life_row)
 	col.add_child(_pile_table())
 	col.add_child(_build_command_panel())
@@ -966,21 +958,11 @@ func _build_menu() -> void:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 8)
 	var title := Label.new()
-	title.text = "Talrand difficulty"
+	title.text = "Menu"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 22)
 	title.add_theme_color_override("font_color", GOLD)
 	col.add_child(title)
-	menu_solo_nodes.append(title)
-	menu_diff_buttons.clear()
-	for i in 4:
-		var b := Button.new()
-		b.text = "%s — %s" % [RivalAI.label(i), DIFFICULTY_HINTS[i]]
-		b.custom_minimum_size = Vector2(360, 36)
-		b.pressed.connect(_on_pick_difficulty.bind(i))
-		menu_diff_buttons.append(b)
-		col.add_child(b)
-		menu_solo_nodes.append(b)
 	var actions := HBoxContainer.new()
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	actions.add_theme_constant_override("separation", 12)
@@ -1644,7 +1626,7 @@ func _refresh() -> void:
 		if app_rt != null and app_rt.is_mp():
 			rival_title_label.text = str(b.rival.get("name", "Rival"))
 		else:
-			rival_title_label.text = "Talrand · %s" % RivalAI.label(b.difficulty)
+			rival_title_label.text = "Talrand"
 		var rs := str(b.rival.get("status", ""))
 		if rs != "":
 			rival_title_label.text += " · " + rs
@@ -1689,7 +1671,6 @@ func _refresh() -> void:
 		if cat:
 			art = cat.texture_for(selected, "small")
 		inspector_art.texture = art
-	_paint_difficulty_buttons()
 	_paint_turn_border()
 	_paint_library_btn()
 	_paint_match_buttons()
@@ -1708,16 +1689,6 @@ func _refresh() -> void:
 			_set_status(str(session.view.prompt))
 		elif not session.pending_draw_anim and str(session.view.prompt) != "" and log_label:
 			log_label.text = str(session.view.prompt)
-
-func _paint_difficulty_buttons() -> void:
-	for i in menu_diff_buttons.size():
-		var b: Button = menu_diff_buttons[i]
-		var on: bool = i == int(_board().difficulty)
-		var st := StyleBoxFlat.new()
-		st.bg_color = GOLD.darkened(0.15) if on else Color(0.16, 0.17, 0.18)
-		st.set_corner_radius_all(6)
-		b.add_theme_stylebox_override("normal", st)
-		b.add_theme_color_override("font_color", Color(0.12, 0.10, 0.04) if on else INK)
 
 func _short_cmd(player: Dictionary) -> String:
 	var cmd: Array = player["command"]
@@ -3466,22 +3437,9 @@ func _on_menu() -> void:
 	for node in menu_solo_nodes:
 		(node as Control).visible = not (app_m != null and app_m.is_mp())
 	menu_overlay.visible = true
-	_paint_difficulty_buttons()
 
 func _hide_menu() -> void:
 	menu_overlay.visible = false
-
-func _on_pick_difficulty(d: int) -> void:
-	var v := clampi(d, 0, 3)
-	if USE_ENGINE and session != null:
-		session.difficulty = v
-		session.rebuild_view()
-	else:
-		state.difficulty = v
-	_paint_difficulty_buttons()
-	if rival_title_label:
-		rival_title_label.text = "Talrand · %s" % RivalAI.label(v)
-	_set_status("Talrand set to %s. End turn to let the rival play." % RivalAI.label(v))
 
 func _on_open_import() -> void:
 	_hide_menu()
@@ -3502,18 +3460,15 @@ func _on_play_imported(deck: NormalizedDeck, rows: Dictionary) -> void:
 
 
 func _on_new_game() -> void:
-	var d := int(_board().difficulty)
 	_mulligan_sig = ""
 	if USE_ENGINE:
 		session = GameSession.new()
 		session.manual_draw = true
 		session.coin_flip = true
-		session.difficulty = d
 		session.debug_enabled = DEBUG_MATCH
 		session.start_table_demo()
 	else:
 		state = MatchStateScript.new()
-		state.difficulty = d
 		_hydrate_from_scryfall()
 	menu_overlay.visible = false
 	if dice_overlay:
@@ -3523,7 +3478,7 @@ func _on_new_game() -> void:
 	if USE_ENGINE:
 		_set_status("Opening hand — Keep or Mulligan. Library %d." % session.engine.library_size(0))
 	else:
-		_set_status("New game vs Talrand · %s. Hover a card to enlarge it. Click a card to play it." % RivalAI.label(d))
+		_set_status("New game vs Talrand. Hover a card to enlarge it. Click a card to play it.")
 
 func _on_art_updated(_card_id: String) -> void:
 	_refresh()
