@@ -1741,7 +1741,10 @@ func _set_pile(who: String, player: Dictionary) -> void:
 func _set_selected(card_id: String) -> void:
 	if USE_ENGINE and session != null:
 		session.selected_id = card_id
-		session.rebuild_view()
+		## A guest's stand-in session has no engine: rebuilding its view would replace the host's board with an empty one
+		## (everything then reads "your turn, Main 1"). The view comes from the host (see _sync_guest).
+		if not _is_guest():
+			session.rebuild_view()
 	else:
 		state.selected_id = card_id
 
@@ -2207,6 +2210,9 @@ func _on_next_phase() -> void:
 
 
 func _next_phase_label(v) -> String:
+	## Holding priority with something on the stack (online): the button passes it.
+	if bool(v.your_priority) and not v.stack.is_empty() and app_is_mp():
+		return "Pass priority ▶"
 	if not bool(v.active_is_you):
 		return "Rival's turn"
 	if session.draw_waiting():
@@ -3598,3 +3604,8 @@ func _net_card_menu(kind: String, oid: int, index: int, player_id: int) -> void:
 ## Guest: the host sent the ways to play the card that was clicked.
 func _on_menu_received(oid: int, title: String, entries: Array) -> void:
 	_open_card_menu(oid, entries, title, "Choose how to play it")
+
+
+func app_is_mp() -> bool:
+	var app := get_node_or_null("/root/AppState")
+	return app != null and app.is_mp()
