@@ -80,6 +80,10 @@ func _ready() -> void:
 		net.lobby_changed.connect(_on_lobby_changed)
 		net.countdown_changed.connect(_on_countdown)
 		net.match_begin.connect(_start_table)
+	## Every button in the menu (the pages, the lobby, the import window, lists that are rebuilt later) clicks.
+	## The table scene never connects this, so there is no click in the game itself.
+	get_tree().node_added.connect(_on_menu_node_added)
+	_click_buttons_under(self)
 	_show("hub")
 
 
@@ -429,6 +433,7 @@ func _deck_button(rec: Dictionary, selected: String, is_player: bool) -> Button:
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(0, 64)
 	b.toggle_mode = true
+	b.set_meta("silent", true)  ## no menu click while picking decks
 	b.button_pressed = id == selected
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	var nm := str(rec.get("name", DeckCatalog.commander_name(rec)))
@@ -1025,7 +1030,8 @@ func _build_settings() -> void:
 	_sub(c, "Audio and display.")
 	settings_music = _btn("Music: On", _toggle_music, 280)
 	c.add_child(settings_music)
-	_volume_row(c)
+	_volume_row(c, "Music volume", "/root/Music")
+	_volume_row(c, "Effects volume", "/root/Sfx")
 	c.add_child(_btn("Toggle fullscreen", _toggle_fullscreen, 280))
 	_sub(c, "Aetherfold  ·  Godot 4.7  ·  fan Commander table")
 	_back_row(c)
@@ -1040,13 +1046,14 @@ func _toggle_music() -> void:
 		settings_music.text = "Music: Off" if off else "Music: On"
 
 
-func _volume_row(parent: Control) -> void:
-	var music := get_node_or_null("/root/Music")
+func _volume_row(parent: Control, label_text: String, node_path: String) -> void:
+	var music := get_node_or_null(node_path)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 10)
 	var lab := Label.new()
-	lab.text = "Volume"
+	lab.text = label_text
+	lab.custom_minimum_size = Vector2(150, 0)
 	row.add_child(lab)
 	var sl := HSlider.new()
 	sl.min_value = 0
@@ -1106,3 +1113,29 @@ func _on_mp_copy_address() -> void:
 		return
 	DisplayServer.clipboard_set(addr)
 	mp_status.text = "Copied address %s. Send it to your friend." % addr
+
+
+func _on_menu_node_added(node: Node) -> void:
+	if node is BaseButton and is_ancestor_of(node):
+		_click_button(node as BaseButton)
+
+
+func _click_buttons_under(root: Node) -> void:
+	for child in root.get_children():
+		if child is BaseButton:
+			_click_button(child as BaseButton)
+		_click_buttons_under(child)
+
+
+func _click_button(b: BaseButton) -> void:
+	if b.has_meta("silent"):
+		return
+	var cb := Callable(self, "_play_click")
+	if not b.pressed.is_connected(cb):
+		b.pressed.connect(cb)
+
+
+func _play_click() -> void:
+	var sfx := get_node_or_null("/root/Sfx")
+	if sfx != null:
+		sfx.play_select()

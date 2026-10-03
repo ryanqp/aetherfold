@@ -35,7 +35,7 @@ func show_choices(title: String, sub: String, options: Array, cancel_text: Strin
 	add_child(center)
 	var panel := PanelContainer.new()
 	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.09, 0.10, 0.11, 0.98)
+	st.bg_color = Color(0.035, 0.065, 0.06, 0.97)
 	st.border_color = GOLD
 	st.set_border_width_all(2)
 	st.set_corner_radius_all(10)
@@ -95,7 +95,7 @@ func _option_button(o: Dictionary) -> Button:
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var n := StyleBoxFlat.new()
 	var mine := bool(o.get("mine", true))
-	n.bg_color = Color(0.17, 0.19, 0.2) if mine else Color(0.24, 0.15, 0.14)
+	n.bg_color = Color(0.10, 0.15, 0.14) if mine else Color(0.22, 0.12, 0.11)
 	n.set_corner_radius_all(6)
 	n.content_margin_left = 12
 	n.content_margin_right = 12

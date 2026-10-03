@@ -7,6 +7,8 @@ const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
 const RivalAI := preload("res://scripts/rival_ai.gd")
 const CardFaceScript := preload("res://scripts/card_face.gd")
+const UiStyle := preload("res://scripts/ui/ui_style.gd")
+const AudioIcon := preload("res://scripts/ui/audio_icon.gd")
 const RIVAL_TEAL := Color(0.18, 0.42, 0.48)
 const YOU_EMBER := Color(0.42, 0.18, 0.08)
 const PANEL := Color(0.10, 0.11, 0.12, 0.94)
@@ -17,6 +19,11 @@ const HAND_CHIP := Vector2(80, 112)
 const BOARD_CHIP := Vector2(48, 68)
 const SIDE_W := 228
 const TURN_GREEN := Color(0.18, 0.78, 0.32)
+## The match chrome: bronze header, green-black panels with brass rims (see the concept mock-up).
+const BRONZE := Color(0.21, 0.14, 0.08)
+const BRONZE_DARK := Color(0.12, 0.08, 0.05)
+const BRASS := Color(0.62, 0.48, 0.20)
+const PANEL_GREEN := Color(0.04, 0.075, 0.06)
 ## Gold border: a card you can play right now. Light blue border: the card you have selected.
 const PLAYABLE_GOLD := Color(1.0, 0.84, 0.18)
 const SELECT_BLUE := Color(0.62, 0.84, 1.0)
@@ -38,7 +45,8 @@ var inspector_title: Label
 var inspector_type: Label
 var inspector_text: Label
 var log_label: Label
-var mute_button: Button
+var audio_button: Button
+var audio_panel: PanelContainer
 var quit_dialog: ConfirmationDialog
 var music
 ## Sound effects were removed (they cost frames); _tap_sfx stays as a no-op so the call sites don't change.
@@ -123,8 +131,12 @@ var _peer_left := false
 
 func _ready() -> void:
 	clip_contents = true
+	theme = UiStyle.make_theme()  ## the match look (panels, pick screens, buttons, sliders, menus)
 	set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	music = get_node_or_null("/root/Music")
+	var sfx_node := get_node_or_null("/root/Sfx")
+	if sfx_node != null:
+		sfx_node.set_match_active(true)  ## tavern, cork and glasses play only during a match
 	var cat := _catalog()
 	if cat and cat.has_signal("art_updated") and not cat.art_updated.is_connected(_on_art_updated):
 		cat.art_updated.connect(_on_art_updated)
@@ -366,7 +378,6 @@ func _build() -> void:
 	_build_deck_pile()
 	_build_chat()
 	_build_history_panel()
-	_build_draw_button()
 	_build_dice_tray()
 	_build_menu()
 	_build_gameover()
@@ -378,57 +389,102 @@ func _build() -> void:
 	_paint_turn_border()
 
 func _build_header() -> Control:
+	## A bronze bar (darker at the bottom) with a brass line under it. Left: the turn; middle: the turn actions;
+	## right: history / audio / dice, then the menus. Thin brass dividers keep the groups apart.
+	var holder := VBoxContainer.new()
+	holder.add_theme_constant_override("separation", 0)
 	var bar := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.07, 0.08, 0.09)
-	style.content_margin_left = 14
-	style.content_margin_right = 10
-	style.content_margin_top = 6
-	style.content_margin_bottom = 6
+	var grad := Gradient.new()
+	grad.set_color(0, Color(0.20, 0.13, 0.08))
+	grad.set_color(1, Color(0.09, 0.06, 0.04))
+	var gtex := GradientTexture2D.new()
+	gtex.gradient = grad
+	gtex.fill_from = Vector2(0, 0)
+	gtex.fill_to = Vector2(0, 1)
+	gtex.width = 4
+	gtex.height = 64
+	var style := StyleBoxTexture.new()
+	style.texture = gtex
+	style.content_margin_left = 16
+	style.content_margin_right = 12
+	style.content_margin_top = 7
+	style.content_margin_bottom = 7
 	bar.add_theme_stylebox_override("panel", style)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	header_label = Label.new()
 	header_label.size_flags_horizontal = SIZE_EXPAND_FILL
 	## Clipped so a long header ("... · GAME OVER") can never make the row wider than the window and push the sidebar off-screen.
 	header_label.custom_minimum_size = Vector2(0, 0)
 	header_label.clip_text = true
 	header_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	header_label.add_theme_font_size_override("font_size", 18)
-	header_label.add_theme_color_override("font_color", INK)
+	header_label.add_theme_font_size_override("font_size", 19)
+	header_label.add_theme_color_override("font_color", Color(0.98, 0.93, 0.78))
+	header_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
+	header_label.add_theme_constant_override("outline_size", 4)
 	row.add_child(header_label)
-	pass_btn = _header_button("Next phase ▶", Color(0.20, 0.42, 0.18), Color(0.95, 1.0, 0.92), _on_next_phase, 150)
+	## Turn actions
+	pass_btn = _header_button("Next phase ▶", Color(0.20, 0.45, 0.20), Color(0.95, 1.0, 0.92), _on_next_phase, 150)
 	pass_btn.tooltip_text = "Move to the next part of the turn: Upkeep, Draw, Main 1, Combat, Main 2, End."
 	row.add_child(pass_btn)
-	attack_btn = _header_button("Attack", Color(0.62, 0.16, 0.12), Color(0.98, 0.94, 0.88), _on_attack, 96)
-	attack_btn.tooltip_text = "Declare every creature that can attack. Space passes priority. Enter ends the turn."
+	attack_btn = _header_button("Attack", Color(0.58, 0.16, 0.12), Color(0.98, 0.94, 0.88), _on_attack, 100)
+	attack_btn.tooltip_text = "Attack: double-click the creatures to send, then press this (or right-click one and choose Attack). Space passes priority. Enter ends the turn."
 	row.add_child(attack_btn)
-	next_turn_btn = _header_button("End turn", Color(0.16, 0.17, 0.18), INK, _on_end_turn, 100)
+	next_turn_btn = _header_button("End turn", BRONZE, INK, _on_end_turn, 104)
 	next_turn_btn.tooltip_text = "Skip the rest of your turn. The rival plays, then it is your turn again."
 	row.add_child(next_turn_btn)
-	mute_button = _header_button("Mute", Color(0.16, 0.17, 0.18), INK, _on_mute, 72)
-	if music != null and music.muted:
-		mute_button.text = "Music"
-	row.add_child(mute_button)
-	row.add_child(_volume_slider())
-	history_button = _header_button("Hide history", Color(0.16, 0.17, 0.18), INK, _toggle_history, 110)
+	row.add_child(_header_divider())
+	## Table tools
+	history_button = _header_button("Hide history", BRONZE, INK, _toggle_history, 116)
 	row.add_child(history_button)
-	row.add_child(_header_button("Dice", Color(0.16, 0.17, 0.18), INK, _on_dice, 72))
-	row.add_child(_header_button("Menu", Color(0.16, 0.17, 0.18), INK, _on_menu, 72))
-	row.add_child(_header_button("Main menu", Color(0.16, 0.17, 0.18), INK, _on_main_menu, 100))
+	audio_button = _header_button("Audio", BRONZE, INK, _toggle_audio, 80)
+	audio_button.tooltip_text = "Master, music and effects volume"
+	row.add_child(audio_button)
+	row.add_child(_header_button("Dice", BRONZE, INK, _on_dice, 72))
+	row.add_child(_header_divider())
+	## Menus
+	row.add_child(_header_button("Menu", BRONZE, INK, _on_menu, 76))
+	row.add_child(_header_button("Main menu", BRONZE, INK, _on_main_menu, 106))
+	row.add_child(_header_divider())
+	var build := Label.new()
+	build.text = "BF-%d" % BUILD
+	build.add_theme_font_size_override("font_size", 12)
+	build.add_theme_color_override("font_color", Color(0.65, 0.55, 0.38))
+	row.add_child(build)
 	bar.add_child(row)
-	return bar
+	holder.add_child(bar)
+	var line := ColorRect.new()
+	line.color = BRASS
+	line.custom_minimum_size = Vector2(0, 2)
+	holder.add_child(line)
+	return holder
+
+
+func _header_divider() -> Control:
+	var d := ColorRect.new()
+	d.color = Color(0.62, 0.48, 0.20, 0.55)
+	d.custom_minimum_size = Vector2(2, 24)
+	d.size_flags_vertical = SIZE_SHRINK_CENTER
+	return d
+
 
 func _header_button(text: String, bg: Color, fg: Color, cb: Callable, width: float = 120) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(width, 32)
+	b.custom_minimum_size = Vector2(width, 34)
 	var n := StyleBoxFlat.new()
 	n.bg_color = bg
-	n.set_corner_radius_all(6)
+	n.set_corner_radius_all(5)
+	n.set_border_width_all(1)
+	n.border_color = BRASS
 	n.content_margin_left = 10
 	n.content_margin_right = 10
 	b.add_theme_stylebox_override("normal", n)
+	var hv := n.duplicate() as StyleBoxFlat
+	hv.bg_color = bg.lightened(0.12)
+	hv.border_color = GOLD
+	b.add_theme_stylebox_override("hover", hv)
 	b.add_theme_color_override("font_color", fg)
 	b.pressed.connect(cb)
 	return b
@@ -472,7 +528,6 @@ func _make_field(parent: Control, tint: Color, zone_order: Array) -> Dictionary:
 		cards.custom_minimum_size = Vector2(0, BOARD_CHIP.y + 8)
 		cards.add_theme_constant_override("separation", 5)
 		scroll.add_child(cards)
-		zone.add_child(lab)
 		zone.add_child(scroll)
 		zones_col.add_child(zone)
 		map[str(zone_name)] = cards
@@ -520,7 +575,9 @@ func _build_sidebar() -> Control:
 	side.size_flags_vertical = SIZE_EXPAND_FILL
 	side.clip_contents = true
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.09, 0.09)
+	style.bg_color = PANEL_GREEN
+	style.border_width_left = 2
+	style.border_color = BRASS
 	style.content_margin_left = 8
 	style.content_margin_right = 8
 	style.content_margin_top = 8
@@ -613,7 +670,20 @@ func _life_block(who: String, subtitle: String, is_you: bool) -> Control:
 	else:
 		rival_cmdr_label = cmdr
 	if is_you:
-		return box
+		var mine := PanelContainer.new()
+		mine.size_flags_horizontal = SIZE_EXPAND_FILL
+		var gs := StyleBoxFlat.new()
+		gs.bg_color = Color(0.02, 0.07, 0.03)
+		gs.border_color = Color(0.30, 0.72, 0.34)
+		gs.set_border_width_all(3)
+		gs.set_corner_radius_all(10)
+		gs.set_content_margin_all(3)
+		gs.shadow_color = Color(0, 0, 0, 0.55)
+		gs.shadow_size = 7
+		gs.shadow_offset = Vector2(0, 3)
+		mine.add_theme_stylebox_override("panel", gs)
+		mine.add_child(_life_face(box, Color(0.25, 0.65, 0.30)))
+		return mine
 	## The rival's life box is also the target of your attack: click it to send your attackers.
 	_rival_target = PanelContainer.new()
 	_rival_target.size_flags_horizontal = SIZE_EXPAND_FILL
@@ -621,16 +691,21 @@ func _life_block(who: String, subtitle: String, is_you: bool) -> Control:
 	_rival_target.tooltip_text = "While you are attacking, click here to send your attackers at the rival."
 	_rival_target.add_theme_stylebox_override("panel", _target_style(0.0, false))
 	_rival_target.gui_input.connect(_on_rival_target_input)
-	_rival_target.add_child(box)
+	_rival_target.add_child(_life_face(box, Color(0.78, 0.20, 0.15)))
 	return _rival_target
 
 
 func _target_style(pulse: float, active: bool) -> StyleBoxFlat:
 	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.5, 0.08, 0.06, 0.25 + 0.2 * pulse) if active else Color(0, 0, 0, 0)
-	st.border_color = ATTACK_RED.lerp(Color(1, 1, 1), pulse * 0.6) if active else Color(0, 0, 0, 0)
-	st.set_border_width_all(4 if active else 2)
-	st.set_corner_radius_all(8)
+	## The rival's box is always framed in red (yours is green); it flares while you pick attackers.
+	st.bg_color = Color(0.5, 0.08, 0.06, 0.25 + 0.2 * pulse) if active else Color(0.20, 0.05, 0.04, 0.75)
+	st.border_color = ATTACK_RED.lerp(Color(1, 1, 1), pulse * 0.6) if active else Color(0.72, 0.18, 0.14)
+	st.set_border_width_all(4 if active else 3)
+	st.set_corner_radius_all(10)
+	st.set_content_margin_all(3)
+	st.shadow_color = Color(0, 0, 0, 0.55)
+	st.shadow_size = 7
+	st.shadow_offset = Vector2(0, 3)
 	return st
 
 
@@ -685,7 +760,7 @@ func _chip_style(bg: Color, border: Color) -> StyleBoxFlat:
 	st.bg_color = bg
 	st.border_color = border
 	st.set_border_width_all(2)
-	st.set_corner_radius_all(6)
+	st.set_corner_radius_all(12)
 	st.content_margin_left = 8
 	st.content_margin_right = 8
 	return st
@@ -694,7 +769,7 @@ func _chip_style(bg: Color, border: Color) -> StyleBoxFlat:
 func _build_phase_track() -> Control:
 	var bar := PanelContainer.new()
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.05, 0.06, 0.07)
+	style.bg_color = PANEL_GREEN
 	style.content_margin_left = 14
 	style.content_margin_right = 10
 	style.content_margin_top = 4
@@ -743,9 +818,9 @@ func _paint_phase_track() -> void:
 	for key in phase_chips.keys():
 		var chip: Button = phase_chips[key]
 		var now: bool = str(v.turn_track) == str(key)
-		var bg := Color(0.13, 0.14, 0.15)
-		var fg := MUTED
-		var border := Color(0.2, 0.21, 0.22)
+		var bg := Color(0.07, 0.16, 0.09)
+		var fg := Color(0.80, 0.86, 0.76)
+		var border := Color(0.36, 0.30, 0.14)
 		if now:
 			bg = TURN_GREEN.darkened(0.15) if mine else TURN_RED.darkened(0.2)
 			fg = Color(0.04, 0.1, 0.04) if mine else Color(1, 0.94, 0.9)
@@ -946,7 +1021,7 @@ func _build_menu() -> void:
 	menu_overlay.add_child(center)
 	var panel := PanelContainer.new()
 	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.09, 0.10, 0.11, 0.98)
+	st.bg_color = UiStyle.BG
 	st.set_corner_radius_all(12)
 	st.set_border_width_all(2)
 	st.border_color = GOLD.darkened(0.2)
@@ -1002,7 +1077,7 @@ func _build_gameover() -> void:
 	gameover_overlay.add_child(center)
 	var panel := PanelContainer.new()
 	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.07, 0.06, 0.10, 0.97)
+	st.bg_color = UiStyle.BG
 	st.set_corner_radius_all(16)
 	st.set_border_width_all(3)
 	st.border_color = GOLD
@@ -1085,6 +1160,7 @@ func _build_turn_border() -> void:
 	turn_border.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	turn_border.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	turn_border.z_index = 20
+	turn_border.visible = false  ## no coloured frame around the window for whose turn it is
 	add_child(turn_border)
 
 func _waiting_for_draw() -> bool:
@@ -1123,22 +1199,20 @@ func _paint_flash() -> void:
 	if deck_btn:
 		if wait:
 			var dst := StyleBoxFlat.new()
-			dst.bg_color = Color(0.38, 0.12, 0.08).lerp(Color(0.62, 0.3, 0.1), pulse)
-			dst.set_corner_radius_all(8)
-			dst.set_border_width_all(6)
+			dst.draw_center = false
+			dst.set_corner_radius_all(6)
+			dst.set_border_width_all(5)
 			dst.border_color = GOLD.lerp(Color(1, 1, 1), pulse)
 			dst.shadow_color = Color(1.0, 0.84, 0.18, 0.35 + 0.4 * pulse)
 			dst.shadow_size = 10 + int(10.0 * pulse)
-			deck_btn.add_theme_stylebox_override("normal", dst)
-			deck_btn.add_theme_stylebox_override("hover", dst)
+			_deck_frame.add_theme_stylebox_override("panel", dst)
 			deck_btn.pivot_offset = deck_btn.size * 0.5
 			deck_btn.scale = Vector2.ONE * (1.0 + 0.07 * pulse)
 			_deck_flashing = true
 		elif _deck_flashing:
 			_deck_flashing = false
 			deck_btn.scale = Vector2.ONE
-			deck_btn.add_theme_stylebox_override("normal", _deck_style)
-			deck_btn.add_theme_stylebox_override("hover", _deck_style)
+			_deck_frame.add_theme_stylebox_override("panel", _deck_style)
 	if turn_border and wait:
 		var st := StyleBoxFlat.new()
 		st.bg_color = Color(0, 0, 0, 0)
@@ -1161,7 +1235,7 @@ func _build_history_panel() -> void:
 	history_panel.offset_bottom = -170
 	history_panel.z_index = 30
 	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.05, 0.06, 0.07, 0.94)
+	st.bg_color = UiStyle.BG
 	st.border_color = GOLD.darkened(0.3)
 	st.set_border_width_all(2)
 	st.set_corner_radius_all(8)
@@ -1287,9 +1361,9 @@ func _build_chat() -> void:
 	chat_panel.anchor_top = 1.0
 	chat_panel.anchor_right = 1.0
 	chat_panel.anchor_bottom = 1.0
-	chat_panel.offset_left = -672
+	chat_panel.offset_left = -(SIDE_W + 12 + 106 + 12 + 388)
 	chat_panel.offset_top = -128
-	chat_panel.offset_right = -284
+	chat_panel.offset_right = -(SIDE_W + 12 + 106 + 12)
 	chat_panel.offset_bottom = -16
 	chat_panel.z_index = 25
 	var st := StyleBoxFlat.new()
@@ -1347,34 +1421,87 @@ func _on_chat_received(sender: String, text: String, mine: bool) -> void:
 	var color := "#f0c850" if mine else "#7fd0ff"
 	chat_log_box.append_text("[color=%s][b]%s:[/b][/color] %s\n" % [color, sender.replace("[", "[lb]"), clean])
 
+const CARD_BACK := "res://assets/ui/card_back.jpg"
+const DECK_SIZE := Vector2(106, 148)
+var _deck_frame: Panel
+var _deck_count: Label
+static var _card_back_tex: Texture2D = null
+
+
+## The standard Magic card back (assets/ui/card_back.jpg), read straight from the file so it needs no import step.
+## Resized once with Lanczos to twice its on-screen size and given mipmaps, so it stays sharp instead of aliasing.
+static func _card_back() -> Texture2D:
+	if _card_back_tex == null:
+		var img := Image.load_from_file(ProjectSettings.globalize_path(CARD_BACK))
+		if img != null and not img.is_empty():
+			img.resize(int(DECK_SIZE.x * 2.0), int(DECK_SIZE.y * 2.0), Image.INTERPOLATE_LANCZOS)
+			img.generate_mipmaps()
+			_card_back_tex = ImageTexture.create_from_image(img)
+	return _card_back_tex
+
+
 func _build_deck_pile() -> void:
 	deck_btn = Button.new()
-	deck_btn.text = "92"
-	deck_btn.custom_minimum_size = Vector2(72, 100)
+	deck_btn.custom_minimum_size = DECK_SIZE
 	deck_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	deck_btn.anchor_left = 1.0
 	deck_btn.anchor_top = 1.0
 	deck_btn.anchor_right = 1.0
 	deck_btn.anchor_bottom = 1.0
-	deck_btn.offset_left = -272
-	deck_btn.offset_top = -128
-	deck_btn.offset_right = -196
-	deck_btn.offset_bottom = -16
+	## Right edge sits just left of the sidebar (SIDE_W wide) so the deck never overlaps its gold edge.
+	deck_btn.offset_right = -(SIDE_W + 12)
+	deck_btn.offset_left = deck_btn.offset_right - DECK_SIZE.x
+	deck_btn.offset_bottom = -12
+	deck_btn.offset_top = deck_btn.offset_bottom - DECK_SIZE.y
 	deck_btn.z_index = 25
-	deck_btn.add_theme_font_size_override("font_size", 16)
-	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.38, 0.12, 0.08)
-	st.border_color = GOLD
-	st.set_border_width_all(3)
-	st.set_corner_radius_all(8)
-	st.shadow_color = Color(0, 0, 0, 0.55)
-	st.shadow_size = 6
-	st.shadow_offset = Vector2(3, 4)
-	_deck_style = st
-	deck_btn.add_theme_stylebox_override("normal", st)
-	deck_btn.add_theme_color_override("font_color", GOLD)
+	var empty := StyleBoxEmpty.new()
+	for sname in ["normal", "hover", "pressed", "focus", "disabled"]:
+		deck_btn.add_theme_stylebox_override(sname, empty)
 	deck_btn.pressed.connect(_on_click_library)
-	deck_btn.tooltip_text = "Your library. On your turn it flashes: click it to draw."
+	deck_btn.tooltip_text = "Your library. On your turn it glows: click it to draw."
+	## The library is a face-down card: the Magic card back, with the card count over it.
+	var back := _card_back()
+	if back != null:
+		var pic := TextureRect.new()
+		pic.texture = back
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_SCALE
+		pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		deck_btn.add_child(pic)
+	else:
+		var flat := ColorRect.new()
+		flat.color = Color(0.38, 0.12, 0.08)
+		flat.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		flat.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		deck_btn.add_child(flat)
+	_deck_count = Label.new()
+	_deck_count.text = "92"
+	_deck_count.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_deck_count.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_deck_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_deck_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_deck_count.add_theme_font_size_override("font_size", 24)
+	_deck_count.add_theme_color_override("font_color", Color(1, 0.96, 0.82))
+	_deck_count.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+	_deck_count.add_theme_constant_override("outline_size", 8)
+	deck_btn.add_child(_deck_count)
+	## A frame over the art: a dark rim with a drop shadow normally, a pulsing gold glow while it is time to draw.
+	_deck_frame = Panel.new()
+	_deck_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_deck_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fs := StyleBoxFlat.new()
+	fs.draw_center = false
+	fs.set_border_width_all(2)
+	fs.border_color = Color(0.05, 0.04, 0.03)
+	fs.set_corner_radius_all(7)
+	fs.shadow_color = Color(0, 0, 0, 0.6)
+	fs.shadow_size = 8
+	fs.shadow_offset = Vector2(3, 5)
+	_deck_style = fs
+	_deck_frame.add_theme_stylebox_override("panel", fs)
+	deck_btn.add_child(_deck_frame)
 	add_child(deck_btn)
 
 func _build_draw_button() -> void:
@@ -1540,6 +1667,8 @@ func _card_chip(card: Dictionary, compact: bool = false, from_hand: bool = false
 		b.pressed.connect(_on_hand_card.bind(cid))
 	else:
 		b.pressed.connect(_on_select.bind(cid))
+	if not from_hand:
+		b.gui_input.connect(_on_chip_input.bind(cid))
 	return b
 
 func _clear(node: Node) -> void:
@@ -1616,7 +1745,7 @@ func _refresh() -> void:
 	var b = _board()
 	_apply_mats()
 	_playable_styles.clear()
-	header_label.text = "%s   BF-%d" % [b.header_text(), BUILD]
+	header_label.text = b.header_text()
 	_paint_life(you_life, int(b.you["life"]))
 	_paint_life(rival_life, int(b.rival["life"]))
 	_paint_cmdr_damage(you_cmdr_label, b.you)
@@ -1653,7 +1782,7 @@ func _refresh() -> void:
 	if _hint_hold <= 0.0:
 		_paint_hint()
 	if deck_btn:
-		deck_btn.text = "Deck\n%d" % int(b.you["library"])
+		_deck_count.text = "%d" % int(b.you["library"])
 		if _waiting_for_draw():
 			deck_btn.tooltip_text = "Your draw step: click to draw a card."
 		else:
@@ -1725,7 +1854,9 @@ func _on_select(card_id: String) -> void:
 		_on_block_click(card_id)
 		return
 	if _in_attack_mode():
-		_on_attack_click(card_id)
+		## Attackers are chosen by double-click (see _on_card_double_click); a single click only selects.
+		_set_selected(card_id)
+		_refresh()
 		return
 	_set_selected(card_id)
 	_refresh()
@@ -2420,38 +2551,6 @@ func _tap_sfx(kind: String) -> void:
 			sfx.play_dice()
 
 ## Music volume bar for the header (0-100%, default 70%).
-func _volume_slider() -> Control:
-	var box := HBoxContainer.new()
-	box.add_theme_constant_override("separation", 4)
-	box.custom_minimum_size = Vector2(130, 32)
-	var lab := Label.new()
-	lab.text = "Vol"
-	lab.add_theme_font_size_override("font_size", 12)
-	lab.size_flags_vertical = SIZE_SHRINK_CENTER
-	box.add_child(lab)
-	var sl := HSlider.new()
-	sl.min_value = 0
-	sl.max_value = 100
-	sl.step = 1
-	sl.value = (music.volume if music != null else 0.7) * 100.0
-	sl.custom_minimum_size = Vector2(80, 20)
-	sl.size_flags_vertical = SIZE_SHRINK_CENTER
-	sl.tooltip_text = "Music volume"
-	sl.value_changed.connect(func(v: float) -> void:
-		if music != null:
-			music.set_volume(v / 100.0)
-	)
-	box.add_child(sl)
-	return box
-
-
-func _on_mute() -> void:
-	if music == null:
-		return
-	var on: bool = music.toggle_mute()
-	mute_button.text = "Music" if on else "Mute"
-	_set_status("Music off." if on else "Music on.")
-
 
 ## Shows "⚔ 12/21 Krenko" under a life total once that player has taken commander damage.
 func _paint_cmdr_damage(label: Label, player: Dictionary) -> void:
@@ -2524,7 +2623,7 @@ func _build_dice_tray() -> void:
 	dice_overlay.add_child(center)
 	var panel := PanelContainer.new()
 	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.09, 0.10, 0.11, 0.98)
+	st.bg_color = UiStyle.BG
 	st.set_corner_radius_all(12)
 	st.set_border_width_all(2)
 	st.border_color = GOLD.darkened(0.2)
@@ -2934,7 +3033,7 @@ func _build_coin_overlay() -> void:
 	coin_overlay.add_child(center)
 	var panel := PanelContainer.new()
 	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.08, 0.09, 0.10, 0.98)
+	st.bg_color = UiStyle.BG
 	st.set_corner_radius_all(12)
 	st.set_border_width_all(2)
 	st.border_color = GOLD
@@ -3027,6 +3126,7 @@ func _refresh_coin_mp() -> void:
 	coin_continue.visible = false
 	var caller := "You" if bool(v.caller_is_you) else rival_name
 	coin_status.text = "%s called %s…" % [caller, "heads" if bool(v.you_called_heads) else "tails"]
+	_play_coin_sound()
 	var tw := create_tween()
 	var delay := 0.06
 	for i in 14:
@@ -3088,7 +3188,7 @@ func _on_coin_call(heads: bool) -> void:
 	session.call_coin(heads)
 	coin_call_row.visible = false
 	coin_status.text = "You called %s…" % ("heads" if heads else "tails")
-	_tap_sfx("dice")
+	_play_coin_sound()
 	var tw := create_tween()
 	var delay := 0.06
 	for i in 14:
@@ -3131,7 +3231,7 @@ func _build_mulligan_overlay() -> void:
 	mulligan_overlay.add_child(center)
 	var panel := PanelContainer.new()
 	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.08, 0.09, 0.10, 0.98)
+	st.bg_color = UiStyle.BG
 	st.set_corner_radius_all(12)
 	st.set_border_width_all(2)
 	st.border_color = GOLD
@@ -3564,3 +3664,213 @@ func _on_menu_received(oid: int, title: String, entries: Array) -> void:
 func app_is_mp() -> bool:
 	var app := get_node_or_null("/root/AppState")
 	return app != null and app.is_mp()
+
+
+## The Audio button beside History opens a small panel with the two volume sliders (music, effects) and a mute box.
+func _toggle_audio() -> void:
+	if audio_panel == null:
+		_build_audio_panel()
+	audio_panel.visible = not audio_panel.visible
+
+
+func _build_audio_panel() -> void:
+	audio_panel = PanelContainer.new()
+	audio_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	audio_panel.anchor_left = 1.0
+	audio_panel.anchor_right = 1.0
+	audio_panel.offset_left = -340
+	audio_panel.offset_right = -12
+	audio_panel.offset_top = 48
+	audio_panel.z_index = 95
+	var st := StyleBoxFlat.new()
+	st.bg_color = UiStyle.BG
+	st.border_color = GOLD.darkened(0.3)
+	st.set_border_width_all(2)
+	st.set_corner_radius_all(8)
+	st.content_margin_left = 16
+	st.content_margin_right = 16
+	st.content_margin_top = 12
+	st.content_margin_bottom = 14
+	audio_panel.add_theme_stylebox_override("panel", st)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 10)
+	var head := HBoxContainer.new()
+	var title := Label.new()
+	title.text = "AUDIO"
+	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_color_override("font_color", GOLD)
+	title.size_flags_horizontal = SIZE_EXPAND_FILL
+	head.add_child(title)
+	var close := Button.new()
+	close.text = "✕"
+	close.flat = true
+	close.pressed.connect(_toggle_audio)
+	head.add_child(close)
+	col.add_child(head)
+	var sub := Label.new()
+	sub.text = "SOUND SETTINGS"
+	sub.add_theme_font_size_override("font_size", 12)
+	sub.add_theme_color_override("font_color", MUTED)
+	col.add_child(sub)
+	var sfx_node := get_node_or_null("/root/Sfx")
+	col.add_child(_audio_row("Master Volume", "speaker", sfx_node.master if sfx_node != null else 1.0, func(v: float) -> void:
+		if sfx_node != null:
+			sfx_node.set_master(v)))
+	col.add_child(_audio_row("Music", "note", music.volume if music != null else 0.7, func(v: float) -> void:
+		if music != null:
+			music.set_volume(v)))
+	col.add_child(_audio_row("Effects", "swords", sfx_node.volume if sfx_node != null else 0.7, func(v: float) -> void:
+		if sfx_node != null:
+			sfx_node.set_volume(v)))
+	var mute := CheckBox.new()
+	mute.text = "Mute music"
+	mute.button_pressed = music != null and music.muted
+	mute.toggled.connect(func(on: bool) -> void:
+		if music != null:
+			music.set_muted(on)
+	)
+	col.add_child(mute)
+	audio_panel.add_child(col)
+	audio_panel.visible = false
+	add_child(audio_panel)
+
+
+## One audio row: icon, name, slider and percentage. `on_change` gets the new volume as 0..1.
+func _audio_row(label_text: String, icon_kind: String, start: float, on_change: Callable) -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.add_child(AudioIcon.new(icon_kind))
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 2)
+	col.size_flags_horizontal = SIZE_EXPAND_FILL
+	var head := HBoxContainer.new()
+	var lab := Label.new()
+	lab.text = label_text
+	lab.size_flags_horizontal = SIZE_EXPAND_FILL
+	head.add_child(lab)
+	var pct := Label.new()
+	pct.text = "%d%%" % int(round(start * 100.0))
+	pct.add_theme_color_override("font_color", GOLD)
+	head.add_child(pct)
+	col.add_child(head)
+	var sl := HSlider.new()
+	sl.min_value = 0
+	sl.max_value = 100
+	sl.step = 1
+	sl.value = start * 100.0
+	sl.custom_minimum_size = Vector2(190, 18)
+	sl.value_changed.connect(func(v: float) -> void:
+		pct.text = "%d%%" % int(v)
+		on_change.call(v / 100.0)
+	)
+	col.add_child(sl)
+	row.add_child(col)
+	return row
+
+
+func _exit_tree() -> void:
+	var sfx_node := get_node_or_null("/root/Sfx")
+	if sfx_node != null:
+		sfx_node.set_match_active(false)
+
+
+## The coin toss sound (Sfx synthesizes it, or plays audio/sfx/coin_flip.ogg if you add one).
+func _play_coin_sound() -> void:
+	var sfx_node := get_node_or_null("/root/Sfx")
+	if sfx_node != null:
+		sfx_node.play_coin_flip()
+
+
+# --- Attacking with the mouse: double-click each attacker, then right-click and choose Attack (or press Attack) ----
+
+var _last_chip_click := {"id": "", "t": 0}
+
+
+## Left double-click on a permanent adds / removes it as an attacker; right-click opens the Attack menu.
+func _on_chip_input(ev: InputEvent, cid: String) -> void:
+	var mb := ev as InputEventMouseButton
+	if mb == null or not mb.pressed:
+		return
+	if mb.button_index == MOUSE_BUTTON_LEFT:
+		var now := Time.get_ticks_msec()
+		## The board is rebuilt after the first click, so a double-click is recognised by card and time too.
+		var dbl: bool = mb.double_click or (str(_last_chip_click.id) == cid and now - int(_last_chip_click.t) <= 400)
+		_last_chip_click = {"id": cid, "t": now}
+		if dbl:
+			_last_chip_click = {"id": "", "t": 0}
+			_on_card_double_click.call_deferred(cid)
+	elif mb.button_index == MOUSE_BUTTON_RIGHT:
+		_on_card_right_click.call_deferred(cid)
+
+
+## Double-click one of your creatures that can attack: it joins the attack (no menu, no confirmation). The first one
+## starts the attack step; double-click it again to take it back out.
+func _on_card_double_click(cid: String) -> void:
+	if _in_blocking_mode():
+		return
+	var v = _board()
+	if v == null or not bool(v.active_is_you) or not _card_in(v.you.get("creatures", []), cid):
+		return
+	if not _in_attack_mode():
+		if _mp_wait():
+			return
+		_pending_attackers.clear()
+		if _is_guest():
+			if not bool(v.can_attack):
+				_set_status("None of your creatures can attack right now.")
+				return
+			_guest_attack = true
+		else:
+			if session == null or not session.can_play():
+				return
+			var r: SubmitResult = session.begin_attack()
+			if not r.ok:
+				_refresh()
+				_set_status(r.error)
+				return
+	_on_attack_click(cid)
+
+
+## Right-click a creature while attackers are picked: Attack with them, or clear the choice.
+func _on_card_right_click(cid: String) -> void:
+	if not _in_attack_mode():
+		return
+	var menu := PopupMenu.new()
+	var n := _pending_attackers.size()
+	menu.add_item("Attack with %d creature%s" % [n, "" if n == 1 else "s"], 0)
+	menu.set_item_disabled(0, n == 0)
+	menu.add_item("Clear attackers", 1)
+	menu.id_pressed.connect(func(id: int) -> void:
+		if id == 0:
+			_confirm_attack()
+		else:
+			_pending_attackers.clear()
+			_refresh()
+	)
+	menu.popup_hide.connect(menu.queue_free)
+	add_child(menu)
+	menu.popup(Rect2i(Vector2i(get_global_mouse_position()), Vector2i.ZERO))
+
+
+## The inside of a life box: a panel that shades from a lighter top to a darker bottom in the player's colour, so the
+## box reads as raised (the outer frame has the border and drop shadow).
+func _life_face(content: Control, accent: Color) -> Control:
+	var face := PanelContainer.new()
+	var grad := Gradient.new()
+	grad.set_color(0, accent.darkened(0.45))
+	grad.set_color(1, accent.darkened(0.80))
+	var gtex := GradientTexture2D.new()
+	gtex.gradient = grad
+	gtex.fill_from = Vector2(0, 0)
+	gtex.fill_to = Vector2(0, 1)
+	gtex.width = 4
+	gtex.height = 64
+	var st := StyleBoxTexture.new()
+	st.texture = gtex
+	st.content_margin_left = 6
+	st.content_margin_right = 6
+	st.content_margin_top = 4
+	st.content_margin_bottom = 4
+	face.add_theme_stylebox_override("panel", st)
+	face.add_child(content)
+	return face

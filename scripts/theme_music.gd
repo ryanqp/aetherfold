@@ -9,7 +9,7 @@ const TRACK := "res://audio/music/tavern_theme.ogg"
 const CONFIG := "user://audio.cfg"
 const DEFAULT_VOLUME := 0.7
 ## 0.7 sounds like the old fixed -7 dB level.
-const BASE_DB := -4.0
+const BASE_DB := -14.0
 
 var muted := false
 var volume := DEFAULT_VOLUME

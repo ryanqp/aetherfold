@@ -490,7 +490,7 @@ func prompt_text() -> String:
 	if not can_play():
 		return "Keep or Mulligan first."
 	if choosing_attackers:
-		return "Declare attackers — click creatures to send in (summoning-sick ones can't attack). Confirm when ready."
+		return "Declare attackers — double-click each creature to send in (summoning-sick ones can't attack), then right-click one and choose Attack, or press Attack."
 	if awaiting_blocks:
 		return "Blocking — click one of your creatures, then the attacker it should block. Confirm blocks when done."
 	if engine.state.mode == EngineEnums.EngineMode.AWAITING_DECISION:
