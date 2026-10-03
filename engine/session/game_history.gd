@@ -153,6 +153,8 @@ func _event(engine: RulesEngine, e: GameEvent, you_seat: int) -> void:
 				_add("%s lose%s %d life." % [_who(pid, you_seat), "" if pid == you_seat else "s", amt], _kind(pid, you_seat))
 		EngineEnums.EventType.GAME_OVER:
 			_add("Game over.", "info")
+		EngineEnums.EventType.NOTE:
+			_add(str(e.payload.get("text", "")), "info")
 
 
 func _step(p: Dictionary, you_seat: int, active: int) -> void:

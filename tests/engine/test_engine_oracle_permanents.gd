@@ -75,7 +75,7 @@ func test_lord_boosts_other_dinosaurs_only() -> void:
 
 func test_unread_lines_shrink_when_read() -> void:
 	assert_true(db.unread_lines(db.definition_for("Test Egg Layer")).is_empty(), "everything on it is read")
-	assert_eq(db.unread_lines(db.definition_for("Test Unsure")).size(), 2, "a half understood spell lists both lines")
+	assert_true(db.unread_lines(db.definition_for("Test Unsure")).is_empty(), "a half understood spell announces its unread sentence when it resolves instead")
 
 
 func test_reveal_land_enters_untapped_only_with_a_matching_card_in_hand() -> void:

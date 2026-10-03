@@ -93,6 +93,19 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 	var kw_need := str(spec.get("keyword", "")).strip_edges()
 	if kw_need != "" and not _has_printed_keyword(def, kw_need):
 		return false
+	var pw := int(def.power) if def != null and str(def.power).is_valid_int() else 0
+	var tg := int(def.toughness) if def != null and str(def.toughness).is_valid_int() else 0
+	if spec.has("power_min") and pw < int(spec["power_min"]):
+		return false
+	if spec.has("power_max") and pw > int(spec["power_max"]):
+		return false
+	if spec.has("toughness_min") and tg < int(spec["toughness_min"]):
+		return false
+	if spec.has("toughness_max") and tg > int(spec["toughness_max"]):
+		return false
+	var not_kw := str(spec.get("not_keyword", "")).strip_edges()
+	if not_kw != "" and _has_printed_keyword(def, not_kw):
+		return false
 	if spec.has("mv_max") and (def == null or def.cmc > int(spec["mv_max"])):
 		return false
 	if spec.has("mv") and (def == null or def.cmc != int(spec["mv"])):
@@ -102,6 +115,9 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 	if bool(spec.get("nonlegendary", false)) and type_line.contains("Legendary"):
 		return false
 	if spec.has("name") and (def == null or def.name != str(spec["name"])):
+		return false
+	var not_color := str(spec.get("not_color", "")).strip_edges()
+	if not_color != "" and def != null and def.colors.has(not_color):
 		return false
 	var color_need := str(spec.get("color", "")).strip_edges()
 	if color_need != "" and (def == null or not def.colors.has(color_need)):

@@ -119,3 +119,29 @@ Fix: same request / answer exchange as the card menu (`menu` / `menu_pick`), wit
 **Low · Online**
 `GameSession._can_respond` stops for the other player only when a spell or ability is on the stack. A player can't act in the other's upkeep / end step with nothing on the stack (for example flash creatures at end of turn) because priority is passed for them automatically.
 Fix: optional "stop at my opponent's end step" setting, or a hold-priority button.
+
+---
+
+## Card effects (from the 2026-10-03 audit, see ../card-effects-audit.md)
+
+| ID | Severity | Title | Status |
+|---|---|---|---|
+| T-019 | High | Modal spells ("Choose one —") are not read (43 lines) | open |
+| T-020 | High | Variable-size effects ("where X is ...", "equal to the number of ...") are not read (56 lines) | open |
+| T-021 | Medium | Static buffs and grants ("Other artifact creatures you control get +1/+1", "can't block") (~86 lines) | open |
+| T-022 | Medium | Variable tokens ("create X tokens ... where X is ...") (78 lines) | open |
+| T-023 | Medium | Characteristic-defining power/toughness (8) and "enters tapped unless ..." lands (5) | open |
+| T-024 | Medium | Impulse draw modes ("until end of turn you may play it") not read (21) | open |
+| T-025 | Medium | Triggers with unusual conditions / amounts ("whenever a creature with power 4 or greater enters") (~160) | open |
+| T-026 | Low | Destroy-all variants by mana value, copy-spell effects, gain control (33) | open |
+| T-027 | Medium | Trigger target choice only asks when the trigger resolves, not when it goes on the stack | open |
+
+Done from the same audit: ability panel crash (T-028), Mosswort Bridge self-tap payment (T-029), exile-pile casting (T-030),
+deck covering the hand (T-031), trigger target picker (Deathgorge Scavenger) (T-032).
+
+From the Endless Punishment game (all fixed, `tests/engine/test_engine_card_reports.gd`):
+T-033 import dialog showed two import buttons (now "FETCH DECK", hidden after a successful fetch), T-034 "whenever an opponent
+draws" triggers were not read (Fate Unraveler), T-035 an additional cost's discarded card could not be asked about ("if the
+discarded card wasn't a land", Grab the Prize) and a spell with one unread sentence did nothing at all (spells now run the
+sentences they understand and print "Not coded yet" for the rest), T-036 play-from-exile permissions on a permanent
+(Theater of Horrors), plus life gained / lost this turn were never counted.

@@ -100,6 +100,8 @@ func _on_enter(gs: GameState, obj: GameObject) -> void:
 		obj.counters["time"] = int(def.kw().impending.n)
 	if not def.is_land() and obj.controller_id >= 0 and obj.controller_id < gs.players.size():
 		gs.players[obj.controller_id].nonland_entered_this_turn += 1
+	for c in enters_with_counters(def):
+		obj.counters[str(c.name)] = int(obj.counters.get(str(c.name), 0)) + int(c.n)
 
 
 func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip_replacement: bool = false) -> GameObject:
@@ -131,6 +133,8 @@ func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip
 		return old
 	src.object_ids.erase(object_id)
 	_detach_from_hosts(object_id)
+	if old.zone == EngineEnums.ZoneId.BATTLEFIELD:
+		_note_left_battlefield(gs, old, dest_zone)
 	_drop_commander_id(old)
 	var last_known := _last_known(old)
 	if old.is_token and dest_zone != EngineEnums.ZoneId.BATTLEFIELD:
@@ -354,3 +358,26 @@ func _drop_commander_id(obj: GameObject) -> void:
 	if gs == null or obj.owner_id < 0 or obj.owner_id >= gs.players.size():
 		return
 	gs.players[obj.owner_id].commander_ids.erase(obj.object_id)
+
+
+## Per-turn facts the "morbid" / "revolt" family asks about: a creature died this turn, a permanent left under a
+## player's control this turn.
+func _note_left_battlefield(gs: GameState, old: GameObject, dest_zone: int) -> void:
+	if old.controller_id >= 0 and old.controller_id < gs.players.size():
+		gs.players[old.controller_id].permanents_left_this_turn += 1
+	if dest_zone == EngineEnums.ZoneId.GRAVEYARD and old.definition is CardDefinition and (old.definition as CardDefinition).is_creature():
+		gs.creatures_died_this_turn += 1
+
+
+## "~ enters with two +1/+1 counters on it" / "...with a shield counter on it": what it enters with, read from the
+## Oracle text (unconditional lines only: "if ..." forms are left to the card).
+static func enters_with_counters(def: CardDefinition) -> Array:
+	var out: Array = []
+	var re := RegEx.create_from_string("(?i)^(?:~|this [a-z]+) enters with (a|an|one|two|three|four|five|six|seven|eight|nine|ten|\\d+) (-1/-1|[a-z]+) counters? on (?:it|him|her|them)\\.?$")
+	for raw in OracleIr.normalize(def).split("\n"):
+		var m := re.search(str(raw).strip_edges())
+		if m == null:
+			continue
+		## "+1/+1" counters are already read as an ability by OracleIr.
+		out.append({"name": m.get_string(2).to_lower(), "n": OracleIr._num(m.get_string(1))})
+	return out

@@ -1,8 +1,9 @@
 extends Control
 
 const USE_ENGINE := true
-const BUILD := 54
+const BUILD := 55
 const Mats := preload("res://engine/session/playmat_catalog.gd")
+const SuperPlaymatScript := preload("res://scripts/playmat/super_playmat.gd")
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
 const RivalAI := preload("res://scripts/rival_ai.gd")
@@ -18,6 +19,8 @@ const MUTED := Color(0.72, 0.74, 0.70)
 const HAND_CHIP := Vector2(80, 112)
 const BOARD_CHIP := Vector2(48, 68)
 const SIDE_W := 228
+## The bottom-right corner is shared by the hand (left), the chat box (online) and the deck: each has its own space.
+const CHAT_W := 388
 const TURN_GREEN := Color(0.18, 0.78, 0.32)
 ## The match chrome: bronze header, green-black panels with brass rims (see the concept mock-up).
 const BRONZE := Color(0.21, 0.14, 0.08)
@@ -56,6 +59,7 @@ var rival_zones: Dictionary = {}
 var hand_row: HBoxContainer
 var pile_labels: Dictionary = {}
 var menu_overlay: ColorRect
+var mat_toggle_btn: Button
 ## Menu controls that only make sense against the bot: hidden in online matches (new game, import).
 var menu_solo_nodes: Array = []
 var turn_border: Panel
@@ -362,7 +366,7 @@ func _build() -> void:
 	board.add_theme_constant_override("separation", 2)
 	body.add_child(board)
 
-	rival_zones = _make_field(board, RIVAL_TEAL, ["Lands", "Non-creature permanents", "Creatures"])
+	rival_zones = _make_field(board, RIVAL_TEAL, ["Lands", "Non-creature permanents", "Creatures"], true)
 	you_zones = _make_field(board, YOU_EMBER, ["Creatures", "Non-creature permanents", "Lands"])
 	var build_lab := Label.new()
 	build_lab.text = "BF-%d" % BUILD
@@ -489,7 +493,7 @@ func _header_button(text: String, bg: Color, fg: Color, cb: Callable, width: flo
 	b.pressed.connect(cb)
 	return b
 
-func _make_field(parent: Control, tint: Color, zone_order: Array) -> Dictionary:
+func _make_field(parent: Control, tint: Color, zone_order: Array, rival_side: bool = false) -> Dictionary:
 	var field := PanelContainer.new()
 	field.size_flags_vertical = SIZE_EXPAND_FILL
 	field.clip_contents = false
@@ -505,6 +509,14 @@ func _make_field(parent: Control, tint: Color, zone_order: Array) -> Dictionary:
 	mat.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mat.modulate = Color(0.92, 0.92, 0.92)
 	field.add_child(mat)
+	## Animated mat (scripts/playmat): same spot as the felt, one is shown at a time (Menu ▸ Playmat).
+	## The rival's is flipped so its effects face them; both glow along the center line between the fields.
+	var live: SuperPlaymatScript = SuperPlaymatScript.new()
+	live.flip = rival_side
+	live.seam_glow = 0.5
+	live.sigil_amount = 0.2
+	live.brightness = 0.82  ## a touch dimmer than the demo so cards and zone labels stay easy to read
+	field.add_child(live)
 	var zones_col := VBoxContainer.new()
 	zones_col.clip_contents = true
 	var map := {}
@@ -534,6 +546,8 @@ func _make_field(parent: Control, tint: Color, zone_order: Array) -> Dictionary:
 	field.add_child(zones_col)
 	parent.add_child(field)
 	map["__mat"] = mat
+	map["__live"] = live
+	_show_mat_mode(map)
 	return map
 
 func _build_hand() -> Control:
@@ -543,7 +557,13 @@ func _build_hand() -> Control:
 	var hand_style := StyleBoxFlat.new()
 	hand_style.bg_color = Color(0.04, 0.08, 0.05)
 	hand_style.content_margin_left = 8
-	hand_style.content_margin_right = 8
+	## Leave the bottom-right to the deck (and the chat box in an online match) so no card slides underneath them;
+	## a big hand scrolls inside what is left.
+	var app_h := get_node_or_null("/root/AppState")
+	var reserve := 106.0 + 24.0
+	if app_h != null and app_h.is_mp():
+		reserve += CHAT_W + 12.0
+	hand_style.content_margin_right = 8.0 + reserve
 	hand_style.content_margin_top = 4
 	hand_style.content_margin_bottom = 6
 	hand_wrap.add_theme_stylebox_override("panel", hand_style)
@@ -933,7 +953,15 @@ func _pile_table() -> Control:
 	for pile in ["Library", "GY", "Exile", "Command"]:
 		var key: String = "graveyard" if pile == "GY" else pile.to_lower()
 		grid.add_child(_mini(pile, MUTED))
-		var rival_v := _mini("0", INK)
+		var rival_v: Control = _mini("0", INK)
+		if key == "graveyard" or key == "exile":
+			var rb := Button.new()
+			rb.text = "0"
+			rb.custom_minimum_size = Vector2(52, 22)
+			rb.add_theme_font_size_override("font_size", 12)
+			rb.tooltip_text = "Look at the rival's %s" % ("graveyard" if key == "graveyard" else "exile")
+			rb.pressed.connect(_on_view_pile.bind(EngineEnums.ZoneId.GRAVEYARD if key == "graveyard" else EngineEnums.ZoneId.EXILE, false))
+			rival_v = rb
 		if key == "library":
 			you_library_btn = Button.new()
 			you_library_btn.text = "0"
@@ -955,9 +983,9 @@ func _pile_table() -> Control:
 			pile_btn.text = "0"
 			pile_btn.custom_minimum_size = Vector2(52, 22)
 			pile_btn.add_theme_font_size_override("font_size", 12)
-			pile_btn.tooltip_text = "Cast from here (flashback, escape, retrace, suspend)"
+			pile_btn.tooltip_text = "Look at your %s (and cast from it: flashback, escape, cards exiled with \"you may play it\")" % ("graveyard" if key == "graveyard" else "exile")
 			var zid: int = EngineEnums.ZoneId.GRAVEYARD if key == "graveyard" else EngineEnums.ZoneId.EXILE
-			pile_btn.pressed.connect(_on_click_pile.bind(zid, "your graveyard" if key == "graveyard" else "exile"))
+			pile_btn.pressed.connect(_on_view_pile.bind(zid, true))
 			grid.add_child(pile_btn)
 			pile_labels["you_%s" % key] = pile_btn
 		else:
@@ -1059,6 +1087,16 @@ func _build_menu() -> void:
 	menu_solo_nodes.append(import_b)
 	actions.add_child(close)
 	col.add_child(actions)
+	## Look of the table, kept in the player profile. Works in online matches too (it only changes your screen).
+	var looks := HBoxContainer.new()
+	looks.alignment = BoxContainer.ALIGNMENT_CENTER
+	mat_toggle_btn = Button.new()
+	mat_toggle_btn.custom_minimum_size = Vector2(200, 32)
+	mat_toggle_btn.tooltip_text = "Animated: the moving mat in your commander's colors.\nPainted: the felt picture for your colors."
+	mat_toggle_btn.pressed.connect(_on_toggle_mats)
+	looks.add_child(mat_toggle_btn)
+	col.add_child(looks)
+	_paint_mat_toggle()
 	panel.add_child(col)
 	center.add_child(panel)
 	add_child(menu_overlay)
@@ -1361,7 +1399,7 @@ func _build_chat() -> void:
 	chat_panel.anchor_top = 1.0
 	chat_panel.anchor_right = 1.0
 	chat_panel.anchor_bottom = 1.0
-	chat_panel.offset_left = -(SIDE_W + 12 + 106 + 12 + 388)
+	chat_panel.offset_left = -(SIDE_W + 12 + 106 + 12 + CHAT_W)
 	chat_panel.offset_top = -128
 	chat_panel.offset_right = -(SIDE_W + 12 + 106 + 12)
 	chat_panel.offset_bottom = -16
@@ -1713,14 +1751,66 @@ func _apply_mats() -> void:
 	_set_mat(rival_zones, b.rival.get("identity", []))
 
 func _set_mat(zones: Dictionary, identity: Array) -> void:
+	var live = zones.get("__live")
+	if live != null:
+		var letters := PackedStringArray()
+		for c in identity:
+			letters.append(str(c))
+		## The first time snaps straight to the commander's colors; later changes play the color wave.
+		var first: bool = not live.has_meta("shown")
+		live.set_meta("shown", true)
+		live.set_identity("".join(letters), not first)
 	var mat := zones.get("__mat") as TextureRect
-	if mat == null:
-		return
+	if mat == null or not mat.visible:
+		return  ## the felt picture is only loaded while it is the one on show
 	var file := Mats.file_for(identity)
 	if str(mat.get_meta("file", "")) == file:
 		return
 	mat.set_meta("file", file)
 	mat.texture = Mats.texture(file)
+
+## Animated or painted playmat, as chosen in Menu ▸ Playmat (saved in the player profile).
+func _animated_mats() -> bool:
+	var app := get_node_or_null("/root/AppState")
+	return app == null or bool(app.get("animated_mats"))
+
+func _show_mat_mode(zones: Dictionary) -> void:
+	var on := _animated_mats()
+	var live = zones.get("__live")
+	if live != null:
+		live.visible = on
+		live.paused = not on
+	var mat := zones.get("__mat") as TextureRect
+	if mat != null:
+		mat.visible = not on
+
+func _on_toggle_mats() -> void:
+	var app := get_node_or_null("/root/AppState")
+	if app != null and app.has_method("set_animated_mats"):
+		app.set_animated_mats(not _animated_mats())
+	for zones in [you_zones, rival_zones]:
+		_show_mat_mode(zones)
+	if session != null:
+		_apply_mats()  ## loads the felt picture if it was just switched on
+	_paint_mat_toggle()
+
+func _paint_mat_toggle() -> void:
+	if mat_toggle_btn:
+		mat_toggle_btn.text = "Playmat: %s" % ("Animated" if _animated_mats() else "Painted")
+
+## A quick flash on a player's mat when their life total changes: red for a loss, gold for a gain.
+func _pulse_on_life(zones: Dictionary, life: int) -> void:
+	var live = zones.get("__live")
+	if live == null:
+		return
+	var before := int(zones.get("__life", life))
+	zones["__life"] = life
+	if not live.visible or life == before:
+		return
+	if life < before:
+		live.pulse(Color(1.0, 0.18, 0.12), clampf(0.45 + 0.08 * (before - life), 0.45, 1.0), 0.8)
+	else:
+		live.pulse(Color(1.0, 0.85, 0.35), 0.5, 0.9)
 
 ## A guest's table has no engine of its own: its stand-in session mirrors the host's view, so the checks that ask the
 ## session (can I play yet?) work, and the card you select stays yours instead of following the host's selection.
@@ -1748,6 +1838,8 @@ func _refresh() -> void:
 	header_label.text = b.header_text()
 	_paint_life(you_life, int(b.you["life"]))
 	_paint_life(rival_life, int(b.rival["life"]))
+	_pulse_on_life(you_zones, int(b.you["life"]))
+	_pulse_on_life(rival_zones, int(b.rival["life"]))
 	_paint_cmdr_damage(you_cmdr_label, b.you)
 	_paint_cmdr_damage(rival_cmdr_label, b.rival)
 	if rival_title_label:
@@ -2748,7 +2840,7 @@ func _refresh_ability_panel() -> void:
 	while ability_box.get_child_count() > 0:
 		var old := ability_box.get_child(0)
 		ability_box.remove_child(old)
-		old.free()
+		old.queue_free()  ## not free(): this runs from a button inside this very box, still emitting "pressed"
 	if not USE_ENGINE or session == null or session.engine == null:
 		return
 	var eng: RulesEngine = session.engine
@@ -3874,3 +3966,150 @@ func _life_face(content: Control, accent: Color) -> Control:
 	face.add_theme_stylebox_override("panel", st)
 	face.add_child(content)
 	return face
+
+
+# --- Looking inside the graveyard and exile piles -------------------------------------------------------------
+
+var _pile_overlay: ColorRect
+
+
+## Click a Graveyard or Exile count (yours or the rival's) to see every card in it. Your own cards you can play from
+## the pile (flashback, "you may play it this turn" ...) glow gold; click one to choose how.
+func _on_view_pile(zone_id: int, is_you: bool) -> void:
+	var v = _board()
+	if v == null:
+		return
+	var owner: Dictionary = v.you if is_you else v.rival
+	var is_gy: bool = zone_id == EngineEnums.ZoneId.GRAVEYARD
+	var cards: Array = owner.get("graveyard_cards" if is_gy else "exile_cards", [])
+	var who := "Your" if is_you else "%s's" % str(owner.get("name", "Rival"))
+	_open_pile_viewer("%s %s" % [who, "graveyard" if is_gy else "exile"], cards, is_you)
+
+
+func _close_pile_viewer() -> void:
+	if _pile_overlay != null:
+		_pile_overlay.queue_free()
+		_pile_overlay = null
+
+
+func _open_pile_viewer(title: String, cards: Array, is_you: bool) -> void:
+	_close_pile_viewer()
+	_pile_overlay = ColorRect.new()
+	_pile_overlay.color = Color(0, 0, 0, 0.62)
+	_pile_overlay.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	_pile_overlay.z_index = 110
+	_pile_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_pile_overlay.gui_input.connect(func(ev: InputEvent) -> void:
+		var mb := ev as InputEventMouseButton
+		if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+			_close_pile_viewer()
+	)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pile_overlay.add_child(center)
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(980, 620)
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	center.add_child(panel)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 10)
+	panel.add_child(col)
+	var head := HBoxContainer.new()
+	var lab := Label.new()
+	lab.text = "%s  (%d)" % [title, cards.size()]
+	lab.add_theme_font_size_override("font_size", 22)
+	lab.add_theme_color_override("font_color", GOLD)
+	lab.size_flags_horizontal = SIZE_EXPAND_FILL
+	head.add_child(lab)
+	var close := Button.new()
+	close.text = "✕  Close"
+	close.pressed.connect(_close_pile_viewer)
+	head.add_child(close)
+	col.add_child(head)
+	if cards.is_empty():
+		var none := Label.new()
+		none.text = "Nothing here."
+		none.add_theme_color_override("font_color", MUTED)
+		col.add_child(none)
+	else:
+		var scroll := ScrollContainer.new()
+		scroll.size_flags_vertical = SIZE_EXPAND_FILL
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		col.add_child(scroll)
+		var grid := GridContainer.new()
+		grid.columns = 6
+		grid.add_theme_constant_override("h_separation", 10)
+		grid.add_theme_constant_override("v_separation", 10)
+		scroll.add_child(grid)
+		for card in cards:
+			grid.add_child(_pile_card(card as Dictionary, is_you))
+	add_child(_pile_overlay)
+
+
+## One card in the pile viewer: its face (or a card back for a hidden hideaway card), glowing if you can play it.
+func _pile_card(card: Dictionary, is_you: bool) -> Control:
+	var size := Vector2(130, 182)
+	var b := Button.new()
+	b.custom_minimum_size = size
+	b.clip_contents = true
+	var plain := StyleBoxEmpty.new()
+	for sname in ["normal", "hover", "pressed", "focus"]:
+		b.add_theme_stylebox_override(sname, plain)
+	var hidden: bool = bool(card.get("hidden", false)) or (not is_you and bool(card.get("hideaway", false)))
+	if hidden:
+		var back := _card_back()
+		var pic := TextureRect.new()
+		pic.texture = back
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_SCALE
+		pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		b.add_child(pic)
+		b.tooltip_text = "Exiled face down (hideaway)."
+		return b
+	var face := _make_card_face(card, size)
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	b.add_child(face)
+	b.mouse_entered.connect(_on_dialog_option_hover.bind(card.duplicate()))
+	b.mouse_exited.connect(_on_unhover_card)
+	var cid := str(card.get("id", ""))
+	var playable := false
+	if is_you and session != null and session.engine != null and not _is_guest():
+		playable = not session.card_menu(int(cid)).is_empty()
+	var frame := Panel.new()
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var fs := StyleBoxFlat.new()
+	fs.draw_center = false
+	fs.set_corner_radius_all(6)
+	fs.set_border_width_all(4 if playable else 1)
+	fs.border_color = PLAYABLE_GOLD if playable else Color(0, 0, 0, 0.6)
+	if playable:
+		fs.shadow_color = Color(1.0, 0.84, 0.18, 0.5)
+		fs.shadow_size = 8
+	frame.add_theme_stylebox_override("panel", fs)
+	b.add_child(frame)
+	if playable:
+		b.tooltip_text = "You can play this from here. Click to choose how."
+	if is_you:
+		b.pressed.connect(_on_pile_card_clicked.bind(cid))
+	return b
+
+
+func _on_pile_card_clicked(cid: String) -> void:
+	if _is_guest():
+		_close_pile_viewer()
+		_client_net("menu", {"id": int(cid)})
+		return
+	if session == null or session.engine == null:
+		return
+	var entries: Array = session.card_menu(int(cid))
+	if entries.is_empty():
+		_set_status("Nothing can be done with that card right now.")
+		return
+	var card: Dictionary = _board().find_card(cid)
+	_close_pile_viewer()
+	_open_card_menu(int(cid), entries, str(card.get("name", "Card")), "Choose how to play it")

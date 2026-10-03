@@ -40,3 +40,6 @@ var life_lost_this_turn: int = 0
 var enduring_story: bool = false
 ## Freerunning (CR 702.173): your commander dealt combat damage to a player this turn.
 var commander_hit_this_turn: bool = false
+## This player attacked with a creature this turn (raid), and how many permanents left the battlefield under their control (revolt).
+var attacked_this_turn: bool = false
+var permanents_left_this_turn: int = 0

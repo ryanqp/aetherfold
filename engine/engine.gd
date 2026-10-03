@@ -162,6 +162,17 @@ func legal_actions(player_id: int) -> Array:
 					a.player_id = player_id
 					a.object_id = int(oid)
 					out.append(a)
+		## A land exiled with "you may play it this turn" can be played from exile too.
+		var xz: Zone = state.zones.get_zone(EngineEnums.ZoneId.EXILE, player_id)
+		if xz != null:
+			for xid in xz.object_ids:
+				var xo: GameObject = state.objects.get(xid)
+				if xo != null and can_play_from_exile(player_id, xo) and _is_land(xo):
+					var xa := GameAction.new()
+					xa.kind = GameAction.Kind.PLAY_LAND
+					xa.player_id = player_id
+					xa.object_id = int(xid)
+					out.append(xa)
 	for zone_id in [EngineEnums.ZoneId.HAND, EngineEnums.ZoneId.COMMAND, EngineEnums.ZoneId.EXILE]:
 		var z: Zone = state.zones.get_zone(zone_id, player_id)
 		if z == null:
@@ -170,7 +181,7 @@ func legal_actions(player_id: int) -> Array:
 			var obj: GameObject = state.objects.get(oid)
 			if obj == null or _is_land(obj):
 				continue
-			if obj.zone == EngineEnums.ZoneId.EXILE and obj.may_play_controller != player_id:
+			if obj.zone == EngineEnums.ZoneId.EXILE and not can_play_from_exile(player_id, obj):
 				## Foretold, plotted, warped and airbent cards are cast from exile in their own mode.
 				if obj.exile_cast != "" and obj.owner_id == player_id:
 					for xo in kw.cast_options(player_id, obj):
@@ -590,7 +601,7 @@ func _submit_play_land(action: GameAction) -> SubmitResult:
 		return r
 	var obj: GameObject = state.objects.get(action.object_id)
 	var land_ok := obj != null and obj.controller_id == action.player_id and obj.zone == EngineEnums.ZoneId.HAND
-	var exile_land := obj != null and obj.zone == EngineEnums.ZoneId.EXILE and obj.may_play_controller == action.player_id
+	var exile_land := obj != null and obj.zone == EngineEnums.ZoneId.EXILE and can_play_from_exile(action.player_id, obj)
 	if not land_ok and not exile_land:
 		r.error = "land not in hand"
 		return r
@@ -685,12 +696,12 @@ func _submit_cast_spell(action: GameAction) -> SubmitResult:
 		r.error = "illegal spell"
 		return r
 	var cast_mode := str(action.extra.get("mode", ""))
-	var from_exile := obj.zone == EngineEnums.ZoneId.EXILE and (obj.may_play_controller == action.player_id or (cast_mode in KeywordRules.EXILE_MODES and obj.owner_id == action.player_id))
+	var from_exile := obj.zone == EngineEnums.ZoneId.EXILE and (can_play_from_exile(action.player_id, obj) or (cast_mode in KeywordRules.EXILE_MODES and obj.owner_id == action.player_id))
 	var from_graveyard := obj.zone == EngineEnums.ZoneId.GRAVEYARD and cast_mode in KeywordRules.GRAVEYARD_MODES
 	if obj.zone != EngineEnums.ZoneId.HAND and obj.zone != EngineEnums.ZoneId.COMMAND and not from_exile and not from_graveyard:
 		r.error = "not in hand or command"
 		return r
-	if from_exile and obj.controller_id != action.player_id and obj.may_play_controller != action.player_id:
+	if from_exile and obj.controller_id != action.player_id and not can_play_from_exile(action.player_id, obj):
 		r.error = "illegal spell"
 		return r
 	if _is_land(obj):
@@ -1000,9 +1011,19 @@ func _legal_mana_abilities(player_id: int) -> Array:
 	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
 	if bf == null:
 		return out
+	## While paying an ability whose cost includes {T}, that permanent can't also tap for the mana (Mosswort Bridge's
+	## "{G}, {T}": it must not tap itself for its own {G}, or the {T} can no longer be paid).
+	var own_tap_source := 0
+	if _act_paying and _cast_source != 0:
+		var pay_src: GameObject = state.objects.get(_cast_source)
+		var pay_ab: Ability = _ability_on(pay_src, _act_ability_id) if pay_src != null else null
+		if pay_ab != null and pay_ab.uses_tap_symbol_cost():
+			own_tap_source = _cast_source
 	for oid in bf.object_ids:
 		var obj: GameObject = state.objects.get(oid)
 		if obj == null or obj.controller_id != player_id:
+			continue
+		if own_tap_source != 0 and int(oid) == own_tap_source:
 			continue
 		if obj.definition == null or not (obj.definition is CardDefinition):
 			continue
@@ -1790,6 +1811,8 @@ func _submit_declare_attackers(action: GameAction) -> SubmitResult:
 		var oid := int(raw)
 		cs.attacker_ids.append(oid)
 		var obj: GameObject = state.objects.get(oid)
+		if obj != null and obj.controller_id >= 0 and obj.controller_id < state.players.size():
+			state.players[obj.controller_id].attacked_this_turn = true
 		if obj != null:
 			obj.attacked_turn = state.turn_number
 		if obj != null and not has_keyword(obj, "Vigilance"):
@@ -2426,6 +2449,24 @@ func put_synthetic(source: GameObject, controller: int, effects: Array, ctx: Dic
 		trigger = true,
 	})
 	return entry
+
+
+## A card in exile its controller may play: "you may play it this turn" (impulse draw), or a permission on a permanent
+## that exiled it ("you may play lands and cast spells from among cards exiled with ~", Theater of Horrors).
+func can_play_from_exile(pid: int, obj: GameObject) -> bool:
+	if obj == null or obj.zone != EngineEnums.ZoneId.EXILE:
+		return false
+	if obj.may_play_controller == pid:
+		return true
+	var sid := int(obj.marks.get("exiled_with", 0))
+	var src: GameObject = state.objects.get(sid) if sid != 0 else null
+	if src == null or src.zone != EngineEnums.ZoneId.BATTLEFIELD or src.controller_id != pid or not (src.definition is CardDefinition):
+		return false
+	for a in (src.definition as CardDefinition).abilities:
+		var ab := a as Ability
+		if ab != null and ab.kind == &"STATIC" and ab.static_spec.has("play_exiled_with") and layers.condition_met(state, src, ab.static_spec.get("condition", {})):
+			return true
+	return false
 
 
 ## Discarding (CR 701.8): a card with madness goes to exile and its owner may cast it (CR 702.35).

@@ -38,6 +38,11 @@ func _resolve_once(engine: RulesEngine, entry: StackEntry) -> bool:
 	var source: GameObject = engine.state.objects.get(entry.source_id)
 	if source == null:
 		source = engine.state.objects.get(entry.object_id)
+	## Targets a person still has to choose (see TriggerManager._put_trigger) are asked first.
+	if entry.ctx.has("pick_slots") and not bool(entry.ctx.get("picked_targets", false)):
+		if not _pick_trigger_targets(engine, entry, source):
+			return false
+		entry.ctx["picked_targets"] = true
 	while entry.cursor < entry.effects.size():
 		var raw: Variant = entry.effects[entry.cursor]
 		if not (raw is AbilityEffect):
@@ -90,6 +95,10 @@ func _resolve_once(engine: RulesEngine, entry: StackEntry) -> bool:
 		if bool(fx.params.get("if_defender_most_life", false)) and not defender_has_most_life(engine, source):
 			entry.cursor += 1
 			continue
+		## Generic condition (ability words, "if you control ...", "if it's your turn"): see LayerManager.condition_met.
+		if fx.params.has("if_cond") and not engine.layers.condition_met(engine.state, source, fx.params["if_cond"] as Dictionary):
+			entry.cursor += 1
+			continue
 		_apply(engine, entry, source, fx)
 		## An effect that needs a player's pick leaves a decision open: wait, and run this effect again after.
 		if engine.state.mode == EngineEnums.EngineMode.AWAITING_DECISION and engine.state.pending_decision is PlayerDecision \
@@ -137,6 +146,9 @@ func _opponent_damaged(engine: RulesEngine, entry: StackEntry) -> bool:
 
 func _apply(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
 	match str(fx.kind):
+		## A sentence of the card the reader could not turn into an effect: the rest of the spell still happens.
+		"NOTE_UNREAD":
+			_note(engine, entry.controller_id, "Not coded yet: \"%s\" - apply it by hand." % str(fx.params.get("text", "")))
 		"DRAW":
 			var n := _value(engine, entry, source, fx.params.get("n", 1))
 			for pid in _players_for(engine, entry, str(fx.params.get("who", "CONTROLLER"))):
@@ -290,6 +302,15 @@ func _value(engine: RulesEngine, entry: StackEntry, source: GameObject, raw: Var
 						base += 1
 			else:
 				base = Query.count_objects(engine.state, _ref(entry, source), cq)
+		## Domain: the number of basic land types among lands you control.
+		"DOMAIN":
+			var kinds := {}
+			for lo in _each(engine, entry, source, {"controller": "SOURCE_CONTROLLER", "type": "land"}):
+				var ltl := (lo.definition as CardDefinition).type_line if lo.definition is CardDefinition else ""
+				for bt in ["Plains", "Island", "Swamp", "Mountain", "Forest"]:
+					if ltl.contains(bt):
+						kinds[bt] = true
+			base = kinds.size()
 		"TARGET_MV":
 			var mi := int(d.get("target", 0))
 			if mi >= 0 and mi < entry.targets.size():
@@ -314,6 +335,20 @@ func _ref(entry: StackEntry, source: GameObject) -> GameObject:
 
 func _players_for(engine: RulesEngine, entry: StackEntry, who: String) -> Array:
 	var out: Array = []
+	## "TARGET_<n>": the player chosen for target slot n ("target player draws two cards").
+	## "that player": the player whose event set the trigger off (a draw, a life change).
+	if who == "TRIGGER_PLAYER":
+		var tpid := int(entry.ctx.get("player_id", -1))
+		if tpid >= 0 and tpid < engine.state.players.size() and not engine.state.players[tpid].lost:
+			out.append(tpid)
+		return out
+	if who.begins_with("TARGET_"):
+		var slot := int(who.substr(7))
+		if slot >= 0 and slot < entry.targets.size():
+			var tp := TargetingManager.decode_player(int(entry.targets[slot]))
+			if tp >= 0 and tp < engine.state.players.size() and not engine.state.players[tp].lost:
+				out.append(tp)
+		return out
 	for p in engine.state.players:
 		if p.lost:
 			continue
@@ -560,7 +595,7 @@ func _damage_player(engine: RulesEngine, entry: StackEntry, pid: int, n: int) ->
 
 ## "deals N damage to each other creature".
 func _deal_damage_each(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
-	var n := int(fx.params.get("n", 0))
+	var n := _value(engine, entry, source, fx.params.get("n", 0))
 	if n <= 0:
 		return
 	var src := source if source != null else _ref(entry, null)
@@ -746,6 +781,9 @@ func _exile_top(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> vo
 		var moved: GameObject = engine.state.zones.move(top_id, EngineEnums.ZoneId.EXILE, pid)
 		if moved != null and may_play == "END_OF_TURN":
 			moved.may_play_controller = pid
+		## "cards exiled with ~": remembered so a later permission (Theater of Horrors) can find them.
+		if moved != null and bool(fx.params.get("link", false)):
+			moved.marks["exiled_with"] = entry.source_id
 
 
 func _put_counter(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
@@ -1383,6 +1421,7 @@ func _play_hidden(engine: RulesEngine, entry: StackEntry, source: GameObject, fx
 		for o in _each(engine, entry, source, {"controller": "SOURCE_CONTROLLER", "type": "creature"}):
 			total += engine.power_of(o)
 		if total < need:
+			_note(engine, pid, "%s: creatures you control have total power %d, and you need %d to play the exiled card." % [_name_of(engine, source.object_id), total, need])
 			return
 	var card: GameObject = engine.state.objects.get(source.hideaway_card)
 	if card == null or card.zone != EngineEnums.ZoneId.EXILE or not (card.definition is CardDefinition):
@@ -1395,6 +1434,7 @@ func _play_hidden(engine: RulesEngine, entry: StackEntry, source: GameObject, fx
 		return
 	if def.is_land():
 		if not engine.can_play_land_now(pid):
+			_note(engine, pid, "You can't play another land this turn, so %s stays exiled." % def.name)
 			return
 		engine.state.zones.move(card.object_id, EngineEnums.ZoneId.BATTLEFIELD, pid)
 		engine.note_land_played(pid)
@@ -1402,6 +1442,8 @@ func _play_hidden(engine: RulesEngine, entry: StackEntry, source: GameObject, fx
 		return
 	if engine.cast_free(pid, card.object_id):
 		source.hideaway_card = 0
+	else:
+		_note(engine, pid, "%s couldn't be cast right now, so it stays exiled." % def.name)
 
 
 func _mill(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
@@ -1538,3 +1580,55 @@ func _count(engine: RulesEngine, source: GameObject, raw: Variant) -> int:
 		if q is Dictionary:
 			return Query.count_objects(engine.state, source, q)
 	return int(raw)
+
+
+## A message in the History panel (why something did nothing).
+func _note(engine: RulesEngine, pid: int, text: String) -> void:
+	engine.state.log.append(EngineEnums.EventType.NOTE, pid, {"text": text})
+
+
+## Asks the controller to choose each target a trigger left open. Returns false while the game waits for an answer.
+## A "you may" slot can be skipped. The answers are added to entry.targets in slot order.
+func _pick_trigger_targets(engine: RulesEngine, entry: StackEntry, source: GameObject) -> bool:
+	var slots: Array = entry.ctx.get("pick_slots", [])
+	var pid := entry.controller_id
+	var chosen: Array = []
+	var src_name := _name_of(engine, source.object_id) if source != null else "the ability"
+	for i in slots.size():
+		var slot: Dictionary = slots[i]
+		var options: Array = []
+		for tid in engine.targeting.legal_ids(engine, slot, entry.source_id):
+			if chosen.has(int(tid)) or entry.targets.has(int(tid)):
+				continue
+			options.append(_target_option(engine, int(tid)))
+		if options.is_empty():
+			continue
+		var optional := bool(slot.get("optional", false))
+		var prompt := "%s: choose a target%s." % [src_name, " (or skip it)" if optional else ""]
+		var ans := _ask(engine, entry, pid, "trigger_target_%d" % i, prompt, options, optional)
+		if ans.s == "paused":
+			return false
+		if ans.s == "picked":
+			chosen.append(int(ans.value))
+		elif ans.s == "auto" and not options.is_empty():
+			chosen.append(int((options[0] as Dictionary).value))
+	entry.targets.append_array(chosen)
+	return true
+
+
+## {value, label, detail} for choosing a target: a player, a card (with its rules text) or a spell on the stack.
+func _target_option(engine: RulesEngine, tid: int) -> Dictionary:
+	var player := TargetingManager.decode_player(tid)
+	if player >= 0:
+		return {"value": tid, "label": str(engine.state.players[player].name), "detail": "Player · %d life" % int(engine.state.players[player].life)}
+	var obj: GameObject = engine.state.objects.get(tid)
+	if obj != null and obj.definition is CardDefinition:
+		var o := _card_option(engine, tid)
+		var where := ""
+		if obj.zone == EngineEnums.ZoneId.GRAVEYARD:
+			where = "  (in %s's graveyard)" % str(engine.state.players[obj.owner_id].name)
+		elif obj.zone == EngineEnums.ZoneId.EXILE:
+			where = "  (in exile)"
+		o["detail"] = str(o.get("detail", "")) + where
+		return o
+	return {"value": tid, "label": "Spell on the stack", "detail": ""}

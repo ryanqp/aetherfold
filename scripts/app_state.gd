@@ -16,12 +16,15 @@ var mp_code: String = ""
 var skip_ai: bool = false
 var you_seat: int = 0
 var sfx_muted: bool = false
+## Table playmats: true = animated Super Playmat (scripts/playmat), false = the painted felt in assets/playmats.
+var animated_mats: bool = true
 
 
 func _ready() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(PROFILE_FILE) == OK:
 		player_name = str(cfg.get_value("player", "name", ""))
+		animated_mats = bool(cfg.get_value("table", "animated_mats", true))
 	if player_name.strip_edges() == "":
 		player_name = OS.get_environment("USERNAME").strip_edges()
 	if player_name == "":
@@ -32,8 +35,19 @@ func set_player_name(n: String) -> void:
 	player_name = n.strip_edges().substr(0, 20)
 	if player_name == "":
 		player_name = "Planeswalker"
+	_save_profile("player", "name", player_name)
+
+
+func set_animated_mats(on: bool) -> void:
+	animated_mats = on
+	_save_profile("table", "animated_mats", on)
+
+
+## Loads the profile first so saving one setting keeps the others.
+func _save_profile(section: String, key: String, value: Variant) -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("player", "name", player_name)
+	cfg.load(PROFILE_FILE)
+	cfg.set_value(section, key, value)
 	cfg.save(PROFILE_FILE)
 
 

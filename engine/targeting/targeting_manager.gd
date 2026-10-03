@@ -174,6 +174,10 @@ func legal_ids(engine: RulesEngine, query: Dictionary, source_id: int = -1) -> A
 					continue
 				if not engine.is_creature_now(creature) and not engine.is_planeswalker_now(creature):
 					continue
+				## "target opponent or planeswalker": players and planeswalkers, not creatures.
+				var any_q: Variant = query.get("query", {})
+				if any_q is Dictionary and bool((any_q as Dictionary).get("pw_only", false)) and not engine.is_planeswalker_now(creature):
+					continue
 				if _cant_be_targeted(engine, creature, src):
 					continue
 				out.append(creature.object_id)

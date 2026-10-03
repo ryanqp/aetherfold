@@ -203,6 +203,14 @@ func to_plain_for_remote() -> Dictionary:
 static func _redacted_player(p: Dictionary) -> Dictionary:
 	var out := p.duplicate(true)
 	out.hand = _redacted_hand(p.get("hand", []))
+	## A hideaway card in exile is hidden from the other player.
+	var pile: Array = []
+	for c in p.get("exile_cards", []):
+		if bool((c as Dictionary).get("hideaway", false)):
+			pile.append({hidden = true, id = str((c as Dictionary).get("id", "")), hideaway = true})
+		else:
+			pile.append(c)
+	out.exile_cards = pile
 	return out
 
 
@@ -289,6 +297,8 @@ static func _player_dict(engine: RulesEngine, player_id: int, cat: Object) -> Di
 		status = _status(engine, player_id),
 		identity = engine.commander_identity(player_id),
 		mulligans = p.mulligan_count,
+		graveyard_cards = _zone_cards(engine, EngineEnums.ZoneId.GRAVEYARD, player_id, cat),
+		exile_cards = _exile_cards(engine, player_id, cat),
 		cmdr_damage = _commander_damage(p),
 		cmdr_need = engine.state.rules.commander_damage_to_lose if engine.state.rules else 21,
 		lost = p.lost,
@@ -631,3 +641,16 @@ static func _catalog() -> Object:
 		if root != null:
 			return root.get_node_or_null("ScryfallCatalog")
 	return null
+
+
+## The cards in a player's exile pile. A hideaway card is flagged (`hideaway`) so only its owner's screen shows it.
+static func _exile_cards(engine: RulesEngine, player_id: int, cat: Object) -> Array:
+	var hidden := {}
+	for oid in engine.state.objects.keys():
+		var o: GameObject = engine.state.objects[oid]
+		if o != null and o.hideaway_card != 0:
+			hidden[o.hideaway_card] = true
+	var out := _zone_cards(engine, EngineEnums.ZoneId.EXILE, player_id, cat)
+	for c in out:
+		(c as Dictionary)["hideaway"] = hidden.has(int(str((c as Dictionary).get("id", "0"))))
+	return out

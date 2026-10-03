@@ -19,7 +19,7 @@ const EFFECT_PARAM_KEYS := {
 	"LOOK": ["n"],
 	"SHUFFLE": ["n"],
 	"SET_CHARACTERISTICS": ["if_subtype", "subtypes", "power", "toughness", "keywords", "gain_abilities", "duration"],
-	"EXILE_TOP": ["n", "who", "may_play"],
+	"EXILE_TOP": ["n", "who", "may_play", "link"],
 	"MAY": ["link", "prompt"],
 	"CHOOSE": ["choice", "link", "options", "optional", "prompt"],
 	"PUT_COUNTER": ["name", "n", "target", "self", "each", "trigger_object"],
@@ -83,6 +83,7 @@ const EFFECT_PARAM_KEYS := {
 	"GRAVEYARD_EXILED_WITH": [],
 	"REVEAL_TOP_CAST_FREE": [],
 	"EXILE_TOP_EACH_CAST_FREE": [],
+	"NOTE_UNREAD": ["text"],
 	"RIOT": [],
 	"AURA_ATTACH": ["target", "helpful"],
 	"LIVING_WEAPON": [],
@@ -163,9 +164,9 @@ const EFFECT_PARAM_KEYS := {
 	"COUNTERS_X": [],
 }
 ## Gates any effect may carry: only run if the spell was kicked / an opponent was dealt damage this turn.
-const GATE_KEYS := ["if_kicked", "if_opp_damaged", "if_cast", "if_cast_from_hand", "if_link", "if_exiled_creature", "if_exiled_noncreature", "if_trigger_subtype", "if_gift", "if_defender_most_life"]
+const GATE_KEYS := ["if_kicked", "if_opp_damaged", "if_cast", "if_cast_from_hand", "if_link", "if_exiled_creature", "if_exiled_noncreature", "if_trigger_subtype", "if_gift", "if_defender_most_life", "if_cond"]
 const ABILITY_KINDS := ["SPELL", "ACTIVATED", "TRIGGERED", "STATIC", "REPLACEMENT", "MANA"]
-const COST_KINDS := ["MANA", "TAP", "UNTAP", "ADDITIONAL_MANA", "SACRIFICE_SELF", "LOYALTY", "PAY_LIFE", "ADD_COUNTER"]
+const COST_KINDS := ["MANA", "TAP", "UNTAP", "ADDITIONAL_MANA", "SACRIFICE_SELF", "SACRIFICE", "LOYALTY", "PAY_LIFE", "ADD_COUNTER"]
 
 var errors: PackedStringArray = PackedStringArray()
 

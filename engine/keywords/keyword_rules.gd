@@ -838,6 +838,9 @@ func cast_options(pid: int, obj: GameObject) -> Array:
 				out.append(_opt("%s — promise the gift" % str(od.label), "Your opponent gets the gift (%s); the gift bonus happens" % _gift_text(str(kw.gift)), ex2))
 		_more_hand_options(pid, obj, def, kw, out)
 	elif zone == EngineEnums.ZoneId.EXILE:
+		## "You may play it this turn" (impulse draw and similar): a plain cast from exile for its controller.
+		if engine.can_play_from_exile(pid, obj) and obj.exile_cast == "":
+			out.append(_opt("Cast %s" % def.mana_cost, "You may play it from exile until the end of the turn", {}))
 		match obj.exile_cast:
 			"foretell":
 				if obj.foretold_turn < engine.state.turn_number:
@@ -1074,9 +1077,11 @@ func pay_extras(pid: int, plan_dict: Dictionary, covered: Dictionary) -> void:
 		engine.state.zones.move(sac, EngineEnums.ZoneId.GRAVEYARD, v.owner_id)
 	var disc := int(plan_dict.get("discard_id", 0))
 	if disc != 0 and _obj(disc) != null:
+		_note_paid(plan_dict, disc)
 		engine.discard_card(pid, disc)
 	for d2 in plan_dict.get("discard_ids", []):
 		if _obj(int(d2)) != null:
+			_note_paid(plan_dict, int(d2))
 			engine.discard_card(pid, int(d2))
 	for t in plan_dict.get("tap_ids", []):
 		if _obj(int(t)) != null:
@@ -1084,6 +1089,7 @@ func pay_extras(pid: int, plan_dict: Dictionary, covered: Dictionary) -> void:
 	for sv in plan_dict.get("sac_ids", []):
 		var so := _obj(int(sv))
 		if so != null:
+			_note_paid(plan_dict, so.object_id)
 			engine.state.zones.move(so.object_id, EngineEnums.ZoneId.GRAVEYARD, so.owner_id)
 	for rid in plan_dict.get("return_ids", []):
 		var ro := _obj(int(rid))
@@ -1095,11 +1101,24 @@ func pay_extras(pid: int, plan_dict: Dictionary, covered: Dictionary) -> void:
 		pass
 
 
+## What was discarded or sacrificed as an additional cost, by type line, so "if the discarded card wasn't a land" can be
+## answered after the card is gone.
+func _note_paid(plan_dict: Dictionary, object_id: int) -> void:
+	var o := _obj(object_id)
+	var d := _def(o) if o != null else null
+	if d == null:
+		return
+	var paid: Array = plan_dict.get("paid_types", [])
+	paid.append(d.type_line)
+	plan_dict["paid_types"] = paid
+
+
 ## Marks the spell object with how it was cast (kicked, flashback, ...). The permanent keeps these.
 func mark_cast(spell: GameObject, plan_dict: Dictionary) -> void:
 	if spell == null:
 		return
 	spell.kicked = int(plan_dict.get("kicks", 0))
+	spell.marks["paid_types"] = plan_dict.get("paid_types", [])
 	spell.cast_from = int(plan_dict.get("from_zone", -1))
 	spell.cast_mode = str(plan_dict.get("mode", ""))
 	spell.face_down = bool(plan_dict.get("face_down", false))
@@ -2084,11 +2103,16 @@ func note_player_damaged(pid: int, source: GameObject, combat: bool) -> void:
 ## Start of a new turn: the per-turn flags reset.
 func on_new_turn() -> void:
 	_day_night_turn()
+	engine.state.creatures_died_this_turn = 0
 	for p in engine.state.players:
 		p.damaged_this_turn = false
 		p.combat_damagers_types = []
 		p.draws_this_turn = 0
 		p.nonland_entered_this_turn = 0
+		p.attacked_this_turn = false
+		p.life_gained_this_turn = 0
+		p.life_lost_this_turn = 0
+		p.permanents_left_this_turn = 0
 		p.spells_this_turn = []
 
 

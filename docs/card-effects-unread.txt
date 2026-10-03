@@ -1,0 +1,327 @@
+# Cards (from the 8 bundled precon decks) with Oracle lines the engine does not read yet
+# Generated 2026-10-03 with the coverage tool. Format: card | type | unread line | unread line ...
+Jace, Multiverse Architect|Legendary Planeswalker — Jace|At the beginning of combat on each opponent's turn, they may pay {2}. If they don't, creatures they control can't attack ~s you control this turn.
+Brainstorm|Instant|SPELL:Draw three cards, then put two cards from your hand on top of your library in any order.|Draw three cards, then put two cards from your hand on top of your library in any order.
+Chromatic Lantern|Artifact|Lands you control have "{T}: Add one mana of any color."
+Fact or Fiction|Instant|SPELL:Reveal the top five cards of your library. An opponent separates those cards into two piles. Put one pile into your hand and the other into your graveyard.|Reveal the top five cards of your library. An opponent separates those cards into two piles. Put one pile into your hand and the other into your graveyard.
+Swords to Plowshares|Instant|SPELL:Exile target creature. Its controller gains life equal to its power.|Exile target creature. Its controller gains life equal to its power.
+Martial Coup|Sorcery|SPELL:Create X 1/1 white Soldier creature tokens. If X is 5 or more, destroy all other creatures.|Create X 1/1 white Soldier creature tokens. If X is 5 or more, destroy all other creatures.
+Kher Keep|Legendary Land|{1}{R}, {T}: Create a 0/1 red Kobold creature token named Kobolds of ~.
+Archfiend of Despair|Creature — Demon|Your opponents can't gain life.|At the beginning of each end step, each opponent loses life equal to the life that player lost this turn.
+Fetid Heath|Land|{W/B}, {T}: Add {W}{W}, {W}{B}, or {B}{B}.
+Sunken Ruins|Land|{U/B}, {T}: Add {U}{U}, {U}{B}, or {B}{B}.
+Mystic Gate|Land|{W/U}, {T}: Add {W}{W}, {W}{U}, or {U}{U}.
+Mass Polymorph|Sorcery|SPELL:Exile all creatures you control, then reveal cards from the top of your library until you reveal that many creature cards. Put all creature cards revealed this way onto the battlefield, then shuffle the rest of the revealed cards into your library.|Exile all creatures you control, then reveal cards from the top of your library until you reveal that many creature cards. Put all creature cards revealed this way onto the battlefield, then shuffle the rest of the revealed cards into your library.
+Reflecting Pool|Land|{T}: Add one mana of any type that a land you control could produce.
+Despark|Instant|SPELL:Exile target permanent with mana value 4 or greater.|Exile target permanent with mana value 4 or greater.
+Dreadhorde Invasion|Enchantment|Whenever a Zombie token you control with power 6 or greater attacks, it gains lifelink until end of turn.
+Flawless Maneuver|Instant|SPELL:If you control a commander, you may cast ~ without paying its mana cost. / Creatures you control gain indestructible until end of turn.|If you control a commander, you may cast ~ without paying its mana cost.|Creatures you control gain indestructible until end of turn.
+Synthetic Destiny|Instant|SPELL:Exile all creatures you control. At the beginning of the next end step, reveal cards from the top of your library until you reveal that many creature cards, put all creature cards revealed this way onto the battlefield, then shuffle the rest of the revealed cards into your library.|Exile all creatures you control. At the beginning of the next end step, reveal cards from the top of your library until you reveal that many creature cards, put all creature cards revealed this way onto the battlefield, then shuffle the rest of the revealed cards into your library.
+Shark Typhoon|Enchantment|Whenever you cast a noncreature spell, create an X/X blue Shark creature token with flying, where X is that spell's mana value.|When you cycle ~, create an X/X blue Shark creature token with flying.
+Secure the Wastes|Instant|SPELL:Create X 1/1 white Warrior creature tokens.|Create X 1/1 white Warrior creature tokens.
+Proteus Staff|Artifact|{2}{U}, {T}: Put target creature on the bottom of its owner's library. That creature's controller reveals cards from the top of their library until they reveal a creature card. The player puts that card onto the battlefield and the rest on the bottom of their library in any order. Activate only as a sorcery.
+Cursed Mirror|Artifact|As ~ enters, you may have it become a copy of any creature on the battlefield until end of turn, except it has haste.
+Serra's Emissary|Creature — Angel|As ~ enters, choose a card type.|You and creatures you control have protection from the chosen card type.
+Archon of Cruelty|Creature — Archon|Whenever ~ enters or attacks, target opponent sacrifices a creature or planeswalker of their choice, discards a card, and loses 3 life. You draw a card and gain 3 life.
+Occult Epiphany|Instant|SPELL:Draw X cards, then discard X cards. Create a 1/1 white Spirit creature token with flying for each card type among cards discarded this way.|Draw X cards, then discard X cards. Create a 1/1 white Spirit creature token with flying for each card type among cards discarded this way.
+Grand Crescendo|Instant|SPELL:Create X 1/1 green and white Citizen creature tokens. Creatures you control gain indestructible until end of turn.|Create X 1/1 green and white Citizen creature tokens. Creatures you control gain indestructible until end of turn.
+Currency Converter|Artifact|Whenever you discard a card, you may exile that card from your graveyard.|{2}, {T}: Draw a card, then discard a card.|{T}: Put a card exiled with ~ into its owner's graveyard. If it's a land card, create a Treasure token. If it's a nonland card, create a 2/2 black Rogue creature token.
+White Sun's Twilight|Sorcery|SPELL:You gain X life. Create X 1/1 colorless Phyrexian Mite artifact creature tokens with toxic 1 and "~ can't block." If X is 5 or more, destroy all other creatures. |You gain X life. Create X 1/1 colorless Phyrexian Mite artifact creature tokens with toxic 1 and "~ can't block." If X is 5 or more, destroy all other creatures.
+Staff of the Storyteller|Artifact|Whenever you create one or more creature tokens, put a story counter on ~.|{W}, {T}, Remove a story counter from ~: Draw a card.
+Restless Spire|Land|{U}{R}: Until end of turn, ~ becomes a 2/1 blue and red Elemental creature with "During your turn, ~ has first strike." It's still a land.
+Restless Anchorage|Land|{1}{W}{U}: Until end of turn, ~ becomes a 2/3 white and blue Bird creature with flying. It's still a land.|Whenever ~ attacks, create a Map token.
+Brainsurge|Instant|SPELL:Draw four cards, then put two cards from your hand on top of your library in any order.|Draw four cards, then put two cards from your hand on top of your library in any order.
+Contaminated Landscape|Land|{T}, Sacrifice ~: Search your library for a basic Plains, Island, or Swamp card, put it onto the battlefield tapped, then shuffle.
+Perilous Landscape|Land|{T}, Sacrifice ~: Search your library for a basic Island, Mountain, or Plains card, put it onto the battlefield tapped, then shuffle.
+Windcrag Siege|Enchantment|As ~ enters, choose Mardu or Jeskai.|• Jeskai — At the beginning of your upkeep, create a 1/1 red Goblin creature token. It gains lifelink and haste until end of turn.
+Darksteel Angel|Artifact Creature — Angel|You can't lose the game and your opponents can't win the game.|Creatures you control can't have -1/-1 counters put on them.
+The Ur-Sphinx|Legendary Creature — Sphinx Avatar|Whenever one or more Sphinxes you control attack, each player mills that many cards. For each player, you may cast a card that player milled this way without paying its mana cost.
+Niv-Mizzet, Ghost Counsel|Legendary Creature — Spirit Dragon|Whenever you gain life, you may pay that much life. If you do, draw that many cards.
+Tamiyo, Upriser Crowned|Legendary Creature — Moonfolk Warrior|Whenever one or more creatures deal combat damage to you while you're the monarch, tap those creatures and put a stun counter on each of them.
+Avacyn, Angel of Horror|Legendary Creature — Angel|Whenever ~ or another nontoken creature you control dies, return that card to the battlefield under your control at the beginning of the next end step.
+Dack Fayden, Helping Hand|Legendary Creature — Human Advisor|When ~ enters, reveal cards from the top of your library until you reveal X creature cards, where X is the number of opponents you have. Put those creature cards onto the battlefield, then shuffle. They're goaded for the rest of the game. For each of those permanents, choose a different opponent. Each opponent gains control of the permanent for which they were chosen.
+Venser, Fervent Forger|Legendary Creature — Human Sorcerer|When ~ enters, choose one —|• Copy target instant or sorcery spell an opponent controls twice. You may choose new targets for the copies.|• Create two tokens that are copies of target permanent an opponent controls. They gain haste. At the beginning of the next end step, sacrifice them.
+Ob Nixilis, the Ascended|Legendary Creature — Angel|When ~ enters, destroy all tapped creatures your opponents control. You gain 1 life for each creature destroyed this way.|At the beginning of each end step, if you gained life this turn, create a 4/4 white Angel creature token with flying.
+Jhoira, Weatherlight Corsair|Legendary Creature — Human Pirate|Whenever ~ enters or attacks, target opponent reveals cards from the top of their library until they reveal a historic permanent card. You put that card onto the battlefield under your control and lose life equal to that permanent's mana value. That player puts the rest of the revealed cards on the bottom of their library in a random order.
+Ginger, Queen of Sweets|Legendary Artifact Creature — Food Noble|At the beginning of each upkeep, if you're the monarch, create a ~brute token.
+Omnath, Locus of the Void|Legendary Creature — Elemental|~ gets +1/+1 for each unspent mana you have.|If you would lose unspent mana, that mana becomes colorless instead.
+Turbulent Shore|Land — Plains Island|~ enters tapped unless your opponents control eight or more lands.
+Turbulent Crater|Land — Swamp Mountain|~ enters tapped unless your opponents control eight or more lands.
+Turbulent Wetlands|Land — Island Swamp|~ enters tapped unless your opponents control eight or more lands.
+Teferi's Reproach|Instant|SPELL:Choose target opponent. Until that player's next turn, they gain protection from everything and their life total can't change. All nonland permanents they control phase out.  / Exile ~.|Choose target opponent. Until that player's next turn, they gain protection from everything and their life total can't change. All nonland permanents they control phase out.|Exile ~.
+Ghalta, Primal Hunger|Legendary Creature — Elder Dinosaur|~ costs {X} less to cast, where X is the total power of creatures you control.
+Whiptongue Hydra|Creature — Lizard Hydra|When ~ enters, destroy all creatures with flying. Put a +1/+1 counter on ~ for each creature destroyed this way.
+Colossal Majesty|Enchantment|At the beginning of your upkeep, if you control a creature with power 4 or greater, draw a card.
+Elemental Bond|Enchantment|Whenever a creature you control with power 3 or greater enters, draw a card.
+Garruk's Packleader|Creature — Beast|Whenever another creature you control with power 3 or greater enters, you may draw a card.
+Overwhelming Stampede|Sorcery|SPELL:Until end of turn, creatures you control gain trample and get +X/+X, where X is the greatest power among creatures you control.|Until end of turn, creatures you control gain trample and get +X/+X, where X is the greatest power among creatures you control.
+Managorger Hydra|Creature — Hydra|Whenever a player casts a spell, put a +1/+1 counter on ~.
+Ilysian Caryatid|Creature — Plant|{T}: Add one mana of any color. If you control a creature with power 4 or greater, add two mana of any one color instead.
+Scavenger Grounds|Land — Desert|{2}, {T}, Sacrifice a Desert: Exile all graveyards.
+Monstrous Onslaught|Sorcery|SPELL:~ deals X damage divided as you choose among any number of target creatures, where X is the greatest power among creatures you control as you cast ~.|~ deals X damage divided as you choose among any number of target creatures, where X is the greatest power among creatures you control as you cast ~.
+Rishkar, Peema Renegade|Legendary Creature — Elf Druid|When ~ enters, put a +1/+1 counter on each of up to two target creatures.|Each creature you control with a counter on it has "{T}: Add {G}."
+Challenger Troll|Creature — Troll|Each creature you control with power 4 or greater can't be blocked by more than one creature.
+Paradise Druid|Creature — Elf Druid|~ has hexproof as long as it's untapped.
+Rhonas the Indomitable|Legendary Creature — God|Rhonas can't attack or block unless you control another creature with power 4 or greater.|{2}{G}: Another target creature gets +2/+0 and gains trample until end of turn.
+Whisperer of the Wilds|Creature — Human Shaman|{T}: Add {G}{G}. Activate only if you control a creature with power 4 or greater.
+Arachnogenesis|Instant|SPELL:Create X 1/2 green Spider creature tokens with reach, where X is the number of creatures attacking you. Prevent all combat damage that would be dealt this turn by non-Spider creatures.|Create X 1/2 green Spider creature tokens with reach, where X is the number of creatures attacking you. Prevent all combat damage that would be dealt this turn by non-Spider creatures.
+Ezuri's Predation|Sorcery|SPELL:For each creature your opponents control, create a 4/4 green Phyrexian Beast creature token. Each of those tokens fights a different one of those creatures.|For each creature your opponents control, create a 4/4 green Phyrexian Beast creature token. Each of those tokens fights a different one of those creatures.
+Ram Through|Instant|SPELL:Target creature you control deals damage equal to its power to target creature you don't control. If the creature you control has trample, excess damage is dealt to that creature's controller instead.|Target creature you control deals damage equal to its power to target creature you don't control. If the creature you control has trample, excess damage is dealt to that creature's controller instead.
+Steel Leaf Champion|Creature — Elf Knight|~ can't be blocked by creatures with power 2 or less.
+Surrak, the Hunt Caller|Legendary Creature — Human Warrior|At the beginning of combat on your turn, if creatures you control have total power 8 or greater, target creature you control gains haste until end of turn.
+Goreclaw, Terror of Qal Sisma|Legendary Creature — Bear|Creature spells you cast with power 4 or greater cost {2} less to cast.|Whenever ~ attacks, each creature you control with power 4 or greater gets +1/+1 and gains trample until end of turn.
+War Room|Land|{3}, {T}, Pay life equal to the number of colors in your commanders' color identity: Draw a card.
+Pugnacious Hammerskull|Creature — Dinosaur|Whenever ~ attacks while you don't control another Dinosaur, put a stun counter on it.
+Hulking Raptor|Creature — Dinosaur|At the beginning of your first main phase, add {G}{G}.
+Thickest in the Thicket|Enchantment|When ~ enters, put X +1/+1 counters on target creature, where X is that creature's power.|At the beginning of your end step, draw two cards if you control the creature with the greatest power or tied for the greatest power.
+Loot, Exuberant Explorer|Legendary Creature — Beast Noble|{4}{G}{G}, {T}: Look at the top six cards of your library. You may reveal a creature card with mana value less than or equal to the number of lands you control from among them and put it onto the battlefield. Put the rest on the bottom in a random order.
+Dungrove Elder|Creature — Treefolk|~'s power and toughness are each equal to the number of Forests you control.
+Rhonas's Monument|Legendary Artifact|Green creature spells you cast cost {1} less to cast.
+Shamanic Revelation|Sorcery|SPELL:Draw a card for each creature you control. / Ferocious — You gain 4 life for each creature you control with power 4 or greater.|Draw a card for each creature you control.|You gain 4 life for each creature you control with power 4 or greater.
+Elder Gargaroth|Creature — Beast|Whenever ~ attacks or blocks, choose one —|• Create a 3/3 green Beast creature token.|• You gain 3 life.|• Draw a card.
+Garruk's Uprising|Enchantment|When ~ enters, if you control a creature with power 4 or greater, draw a card.|Whenever a creature you control with power 4 or greater enters, draw a card.
+Sai, Master Thopterist|Legendary Creature — Human Artificer|{1}{U}, Sacrifice two artifacts: Draw a card.
+Shimmer Dragon|Creature — Dragon|As long as you control four or more artifacts, ~ has hexproof.|Tap two untapped artifacts you control: Draw a card.
+All Is Dust|Kindred Sorcery — Eldrazi|SPELL:Each player sacrifices all permanents they control that are one or more colors.|Each player sacrifices all permanents they control that are one or more colors.
+Master Transmuter|Artifact Creature — Human Artificer|{U}, {T}, Return an artifact you control to its owner's hand: You may put an artifact card from your hand onto the battlefield.
+Myr Retriever|Artifact Creature — Myr|When ~ dies, return another target artifact card from your graveyard to your hand.
+Propaganda|Enchantment|Creatures can't attack you unless their controller pays {2} for each creature they control that's attacking you.
+Thought Vessel|Artifact|You have no maximum hand size.
+Mazemind Tome|Artifact — Book|When there are four or more page counters on ~, exile it. If you do, you gain 4 life.
+Nevinyrral's Disk|Artifact|{1}, {T}: Destroy all artifacts, creatures, and enchantments.
+Steel Overseer|Artifact Creature — Construct|{T}: Put a +1/+1 counter on each artifact creature you control.
+Ichor Wellspring|Artifact|When ~ enters or is put into a graveyard from the battlefield, draw a card.
+Myr Battlesphere|Artifact Creature — Myr Construct|Whenever ~ attacks, you may tap X untapped Myr you control. If you do, ~ gets +X/+0 until end of turn and deals X damage to the player or planeswalker it's attacking.
+Steel Hellkite|Artifact Creature — Dragon|{X}: Destroy each nonland permanent with mana value X whose controller was dealt combat damage by ~ this turn. Activate only once each turn.
+Master of Etherium|Artifact Creature — Vedalken Wizard|~'s power and toughness are each equal to the number of artifacts you control.|Other artifact creatures you control get +1/+1.
+Aetherize|Instant|SPELL:Return all attacking creatures to their owner's hand.|Return all attacking creatures to their owner's hand.
+Mind's Eye|Artifact|Whenever an opponent draws a card, you may pay {1}. If you do, draw a card.
+Thopter Spy Network|Enchantment|At the beginning of your upkeep, if you control an artifact, create a 1/1 colorless Thopter artifact creature token with flying.|Whenever one or more artifact creatures you control deal combat damage to a player, draw a card.
+Whirler Rogue|Creature — Human Rogue Artificer|Tap two untapped artifacts you control: Target creature can't be blocked this turn.
+Chief of the Foundry|Artifact Creature — Construct|Other artifact creatures you control get +1/+1.
+Padeem, Consul of Innovation|Legendary Creature — Vedalken Artificer|At the beginning of your upkeep, if you control the artifact with the greatest mana value or tied for the greatest mana value, draw a card.
+Thirst for Knowledge|Instant|SPELL:Draw three cards. Then discard two cards unless you discard an artifact card.|Draw three cards. Then discard two cards unless you discard an artifact card.
+Darksteel Juggernaut|Artifact Creature — Juggernaut|~'s power and toughness are each equal to the number of artifacts you control.|~ attacks each combat if able.
+Psychosis Crawler|Artifact Creature — Phyrexian Horror|~'s power and toughness are each equal to the number of cards in your hand.|Whenever you draw a card, each opponent loses 1 life.
+Pull from Tomorrow|Instant|SPELL:Draw X cards, then discard a card.|Draw X cards, then discard a card.
+Soul-Guide Lantern|Artifact|{T}, Sacrifice ~: Exile each opponent's graveyard.
+Broodstar|Creature — Beast|~'s power and toughness are each equal to the number of artifacts you control.
+Forsaken Monument|Legendary Artifact|Colorless creatures you control get +2/+2.|Whenever you tap a permanent for {C}, add an additional {C}.
+Research Thief|Artifact Creature — Moonfolk Wizard|Whenever an artifact creature you control deals combat damage to a player, draw a card.
+Launch Mishap|Instant|SPELL:Counter target creature or planeswalker spell. Create a 1/1 colorless Thopter artifact creature token with flying.|Counter target creature or planeswalker spell. Create a 1/1 colorless Thopter artifact creature token with flying.
+Graaz, Unstoppable Juggernaut|Legendary Artifact Creature — Juggernaut|Juggernauts you control attack each combat if able.|Juggernauts you control can't be blocked by Walls.|Other creatures you control have base power and toughness 5/3 and are Juggernauts in addition to their other creature types.
+Misleading Signpost|Artifact|When ~ enters during the declare attackers step, you may reselect which player or permanent target attacking creature is attacking.
+Scrawling Crawler|Artifact Creature — Phyrexian Construct|At the beginning of your upkeep, each player draws a card.|Whenever an opponent draws a card, that player loses 1 life.
+Thopter Fabricator|Artifact — Vehicle|Whenever you draw your second card each turn, create a 1/1 colorless Thopter artifact creature token with flying.
+Adaptive Omnitool|Artifact — Equipment|Whenever equipped creature attacks, look at the top six cards of your library. You may reveal an artifact card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
+Ghoulcaller Gisa|Legendary Creature — Human Wizard|{B}, {T}, Sacrifice another creature: Create X 2/2 black Zombie creature tokens, where X is the sacrificed creature's power.
+Ayara, First of Locthwain|Legendary Creature — Elf Noble|Whenever ~ or another black creature you control enters, each opponent loses 1 life and you gain 1 life.|{T}, Sacrifice another black creature: Draw a card.
+Castle Locthwain|Land|{1}{B}{B}, {T}: Draw a card, then you lose life equal to the number of cards in your hand.
+Witch's Cottage|Land — Swamp|~ enters tapped unless you control three or more other Swamps.|When ~ enters untapped, you may put target creature card from your graveyard on top of your library.
+Bojuka Bog|Land|When ~ enters, exile target player's graveyard.
+Carrion Feeder|Creature — Zombie|~ can't block.|Sacrifice a creature: Put a +1/+1 counter on ~.
+Go for the Throat|Instant|SPELL:Destroy target nonartifact creature.|Destroy target nonartifact creature.
+Gravecrawler|Creature — Zombie|~ can't block.|You may cast ~ from your graveyard as long as you control a Zombie.
+Gray Merchant of Asphodel|Creature — Zombie|When ~ enters, each opponent loses X life, where X is your devotion to black. You gain life equal to the life lost this way.
+Lord of the Accursed|Creature — Zombie|{1}{B}, {T}: All Zombies gain menace until end of turn.
+Tendrils of Corruption|Instant|SPELL:~ deals X damage to target creature and you gain X life, where X is the number of Swamps you control.|~ deals X damage to target creature and you gain X life, where X is the number of Swamps you control.
+Wight of Precinct Six|Creature — Zombie|~ gets +1/+1 for each creature card in your opponents' graveyards.
+Cryptbreaker|Creature — Zombie|{1}{B}, {T}, Discard a card: Create a 2/2 black Zombie creature token.|Tap three untapped Zombies you control: You draw a card and lose 1 life.
+Bad Moon|Enchantment|Black creatures get +1/+1.
+Fleshbag Marauder|Creature — Zombie Warrior|When ~ enters, each player sacrifices a creature of their choice.
+Sign in Blood|Sorcery|SPELL:Target player draws two cards and loses 2 life.|Target player draws two cards and loses 2 life.
+Syphon Flesh|Sorcery|SPELL:Each other player sacrifices a creature of their choice. You create a 2/2 black Zombie creature token for each creature sacrificed this way.|Each other player sacrifices a creature of their choice. You create a 2/2 black Zombie creature token for each creature sacrificed this way.
+Marchesa's Decree|Enchantment|Whenever a creature attacks you or a planeswalker you control, that creature's controller loses 1 life.
+Geier Reach Sanitarium|Legendary Land|{2}, {T}: Each player draws a card, then discards a card.
+Mutilate|Sorcery|SPELL:All creatures get -1/-1 until end of turn for each Swamp you control.|All creatures get -1/-1 until end of turn for each Swamp you control.
+Army of the Damned|Sorcery|SPELL:Create thirteen tapped 2/2 black Zombie creature tokens. / Flashback {7}{B}{B}{B} |Create thirteen tapped 2/2 black Zombie creature tokens.
+Diregraf Colossus|Creature — Zombie Giant|~ enters with a +1/+1 counter on it for each Zombie card in your graveyard.
+Cemetery Recruitment|Sorcery|SPELL:Return target creature card from your graveyard to your hand. If it's a Zombie card, draw a card.|Return target creature card from your graveyard to your hand. If it's a Zombie card, draw a card.
+Midnight Reaper|Creature — Zombie Knight|Whenever a nontoken creature you control dies, ~ deals 1 damage to you and you draw a card.
+Graveborn Muse|Creature — Zombie Spirit|At the beginning of your upkeep, you draw X cards and lose X life, where X is the number of Zombies you control.
+Lord of the Undead|Creature — Zombie|Other Zombie creatures get +1/+1.
+Undead Warchief|Creature — Zombie|Zombie creatures you control get +2/+1.
+Vengeful Dead|Creature — Zombie|Whenever ~ or another Zombie dies, each opponent loses 1 life.
+God-Eternal Bontu|Legendary Creature — Zombie God|When ~ enters, sacrifice any number of other permanents, then draw that many cards.|When ~ dies or is put into exile from the battlefield, you may put her into her owner's library third from the top.
+Undead Augur|Creature — Zombie Wizard|Whenever ~ or another Zombie you control dies, you draw a card and lose 1 life.
+Bontu's Monument|Legendary Artifact|Black creature spells you cast cost {1} less to cast.
+Cemetery Reaper|Creature — Zombie|Other Zombie creatures you control get +1/+1.|{2}{B}, {T}: Exile target creature card from a graveyard. Create a 2/2 black Zombie creature token.
+Death Baron|Creature — Zombie Wizard|Skeletons you control and other Zombies you control get +1/+1 and have deathtouch.
+Noxious Ghoul|Creature — Zombie|Whenever ~ or another Zombie enters, all non-Zombie creatures get -1/-1 until end of turn.
+Liliana's Reaver|Creature — Zombie|Whenever ~ deals combat damage to a player, that player discards a card and you create a tapped 2/2 black Zombie creature token.
+Oversold Cemetery|Enchantment|At the beginning of your upkeep, if you have four or more creature cards in your graveyard, you may return target creature card from your graveyard to your hand.
+Soulless One|Creature — Zombie Avatar|~'s power and toughness are each equal to the number of Zombies on the battlefield plus the number of Zombie cards in all graveyards.
+Kalitas, Traitor of Ghet|Legendary Creature — Vampire Warrior|If a nontoken creature an opponent controls would die, instead exile that card and create a 2/2 black Zombie creature token.|{2}{B}, Sacrifice another Vampire or Zombie: Put two +1/+1 counters on ~.
+Josu Vess, Lich Knight|Legendary Creature — Zombie Knight|When ~ enters, if he was kicked, create eight 2/2 black Zombie Knight creature tokens with menace.
+Endless Ranks of the Dead|Enchantment|At the beginning of your upkeep, create X 2/2 black Zombie creature tokens, where X is half the number of Zombies you control, rounded down.
+Necrotic Hex|Sorcery|SPELL:Each player sacrifices six creatures of their choice. You create six tapped 2/2 black Zombie creature tokens.|Each player sacrifices six creatures of their choice. You create six tapped 2/2 black Zombie creature tokens.
+Undead Butler|Creature — Zombie|When ~ dies, you may exile it. When you do, return target creature card from your graveyard to your hand.
+Headless Rider|Creature — Zombie|Whenever ~ or another nontoken Zombie you control dies, create a 2/2 black Zombie creature token.
+Razorlash Transmogrant|Artifact Creature — Zombie|~ can't block.|{4}{B}{B}: Return ~ from your graveyard to the battlefield with a +1/+1 counter on it. This ability costs {4} less to activate if an opponent controls four or more nonbasic lands.
+Consuming Corruption|Instant|SPELL:~ deals X damage to target creature or planeswalker and you gain X life, where X is the number of Swamps you control.|~ deals X damage to target creature or planeswalker and you gain X life, where X is the number of Swamps you control.
+Zul Ashur, Lich Lord|Legendary Creature — Zombie Warlock|{T}: You may cast target Zombie creature card from your graveyard this turn.
+Giada, Font of Hope|Legendary Creature — Angel|Each other Angel you control enters with an additional +1/+1 counter on it for each Angel you already control.
+Heraldic Banner|Artifact|As ~ enters, choose a color.|Creatures you control of the chosen color get +1/+0.
+Tome of Legends|Artifact — Book|~ enters with a page counter on it.|Whenever your commander enters or attacks, put a page counter on ~.|{1}, {T}, Remove a page counter from ~: Draw a card.
+Angel of Vitality|Creature — Angel|If you would gain life, you gain that much life plus 1 instead.|~ gets +2/+2 as long as you have 25 or more life.
+Angel of Finality|Creature — Angel|When ~ enters, exile target player's graveyard.
+Metallic Mimic|Artifact Creature — Shapeshifter|~ is the chosen type in addition to its other types.|Each other creature you control of the chosen type enters with an additional +1/+1 counter on it.
+Sunblast Angel|Creature — Angel|When ~ enters, destroy all tapped creatures.
+Cleansing Nova|Sorcery|SPELL:Choose one — / • Destroy all creatures. / • Destroy all artifacts and enchantments.|Choose one —|• Destroy all creatures.|• Destroy all artifacts and enchantments.
+Austere Command|Sorcery|SPELL:Choose two — / • Destroy all artifacts. / • Destroy all enchantments. / • Destroy all creatures with mana value 3 or less. / • Destroy all creatures with mana value 4 or greater.|Choose two —|• Destroy all artifacts.|• Destroy all enchantments.|• Destroy all creatures with mana value 3 or less.|• Destroy all creatures with mana value 4 or greater.
+Valorous Stance|Instant|SPELL:Choose one — / • Target creature gains indestructible until end of turn.  / • Destroy target creature with toughness 4 or greater.|Choose one —|• Target creature gains indestructible until end of turn.|• Destroy target creature with toughness 4 or greater.
+Serra Avenger|Creature — Angel|You can't cast ~ during your first, second, or third turns of the game.
+Defy Death|Sorcery|SPELL:Return target creature card from your graveyard to the battlefield. If it's an Angel, put two +1/+1 counters on it.|Return target creature card from your graveyard to the battlefield. If it's an Angel, put two +1/+1 counters on it.
+Herald of War|Creature — Angel|Angel spells and Human spells you cast cost {1} less to cast for each +1/+1 counter on ~.
+Seraph of the Sword|Creature — Angel|Prevent all combat damage that would be dealt to ~.
+Angelic Field Marshal|Creature — Angel|As long as you control your commander, ~ gets +2/+2 and creatures you control have vigilance.
+Archangel of Tithes|Creature — Angel|As long as ~ is untapped, creatures can't attack you or planeswalkers you control unless their controller pays {1} for each of those creatures.|As long as ~ is attacking, creatures can't block unless their controller pays {1} for each of those creatures.
+Linvala, the Preserver|Legendary Creature — Angel|When ~ enters, if an opponent has more life than you, you gain 5 life.|When ~ enters, if an opponent controls more creatures than you, create a 3/3 white Angel creature token with flying.
+Righteous Valkyrie|Creature — Angel Cleric|Whenever another Angel or Cleric you control enters, you gain life equal to that creature's toughness.|As long as you have at least 7 life more than your starting life total, creatures you control get +2/+2.
+Secret Rendezvous|Sorcery|SPELL:You and target opponent each draw three cards.|You and target opponent each draw three cards.
+Angel of the Ruins|Artifact Creature — Angel|When ~ enters, exile up to two target artifacts and/or enchantments.
+Angelic Sleuth|Creature — Angel Advisor|Whenever another permanent you control leaves the battlefield, if it had counters on it, investigate.
+Cut a Deal|Sorcery|SPELL:Each opponent draws a card, then you draw a card for each opponent who drew a card this way.|Each opponent draws a card, then you draw a card for each opponent who drew a card this way.
+Destroy Evil|Instant|SPELL:Choose one — / • Destroy target creature with toughness 4 or greater. / • Destroy target enchantment.|Choose one —|• Destroy target creature with toughness 4 or greater.|• Destroy target enchantment.
+Firemane Commando|Creature — Angel Soldier|Whenever you attack with two or more creatures, draw a card.|Whenever another player attacks with two or more creatures, they draw a card if none of those creatures attacked you.
+Metropolis Reformer|Creature — Angel Cleric|You have hexproof.|Whenever ~ is dealt damage, you gain that much life.
+Wojek Investigator|Creature — Angel Detective|At the beginning of your upkeep, investigate once for each opponent who has more cards in hand than you.
+Merchant of Truth|Creature — Angel Detective|Clues you control have exalted.
+Exorcise|Sorcery|SPELL:Exile target artifact, enchantment, or creature with power 4 or greater.|Exile target artifact, enchantment, or creature with power 4 or greater.
+Herald of Eternal Dawn|Creature — Angel|You can't lose the game and your opponents can't win the game.
+Exemplar of Light|Creature — Angel|Whenever you put one or more +1/+1 counters on ~, draw a card. This ability triggers only once each turn.
+Vanguard Seraph|Creature — Angel Warrior|Whenever you gain life for the first time each turn, surveil 1.
+Drakuseth, Maw of Flames|Legendary Creature — Dragon|Whenever ~ attacks, ~ deals 4 damage to any target and 3 damage to each of up to two other targets.
+Blasphemous Act|Sorcery|SPELL:~ costs {1} less to cast for each creature on the battlefield. / ~ deals 13 damage to each creature.|~ costs {1} less to cast for each creature on the battlefield.|~ deals 13 damage to each creature.
+Magmaquake|Instant|SPELL:~ deals X damage to each creature without flying and each planeswalker.|~ deals X damage to each creature without flying and each planeswalker.
+Tyrant's Familiar|Creature — Dragon|As long as you control your commander, ~ gets +2/+2 and has "Whenever ~ attacks, it deals 7 damage to target creature defending player controls."
+Warstorm Surge|Enchantment|Whenever a creature you control enters, it deals damage equal to its power to any target.
+Skyline Despot|Creature — Dragon|At the beginning of your upkeep, if you're the monarch, create a 5/5 red Dragon creature token with flying.
+Mana Geyser|Sorcery|SPELL:Add {R} for each tapped land your opponents control.|Add {R} for each tapped land your opponents control.
+Crucible of Fire|Enchantment|Dragon creatures you control get +3/+3.
+Outpost Siege|Enchantment|As ~ enters, choose Khans or Dragons.|• Khans — At the beginning of your upkeep, exile the top card of your library. Until end of turn, you may play that card.|• Dragons — Whenever a creature you control leaves the battlefield, ~ deals 1 damage to any target.
+Spinerock Knoll|Land|{R}, {T}: You may play the exiled card without paying its mana cost if an opponent was dealt 7 or more damage this turn.
+Hazoret's Monument|Legendary Artifact|Red creature spells you cast cost {1} less to cast.|Whenever you cast a creature spell, you may discard a card. If you do, draw a card.
+Scourge of the Throne|Creature — Dragon|Whenever ~ attacks for the first time each turn, if it's attacking the player with the most life or tied for most life, untap all attacking creatures. After this phase, there is an additional combat phase.
+Thunderbreak Regent|Creature — Dragon|Whenever a Dragon you control becomes the target of a spell or ability an opponent controls, ~ deals 3 damage to that player.
+Chain Reaction|Sorcery|SPELL:~ deals X damage to each creature, where X is the number of creatures on the battlefield.|~ deals X damage to each creature, where X is the number of creatures on the battlefield.
+Scourge of Valkas|Creature — Dragon|Whenever ~ or another Dragon you control enters, it deals X damage to any target, where X is the number of Dragons you control.
+Dragon Tempest|Enchantment|Whenever a creature you control with flying enters, it gains haste until end of turn.|Whenever a Dragon you control enters, it deals X damage to any target, where X is the number of Dragons you control.
+Haven of the Spirit Dragon|Land|{T}: Add one mana of any color. Spend this mana only to cast a Dragon creature spell.
+Dragon's Hoard|Artifact|Whenever a Dragon you control enters, put a gold counter on ~.|{T}, Remove a gold counter from ~: Draw a card.
+Spit Flame|Instant|SPELL:~ deals 4 damage to target creature. / Whenever a Dragon you control enters, you may pay {R}. If you do, return ~ from your graveyard to your hand.|~ deals 4 damage to target creature.|Whenever a Dragon you control enters, you may pay {R}. If you do, return ~ from your graveyard to your hand.
+Leyline Tyrant|Creature — Dragon|You don't lose unspent red mana as steps and phases end.|When ~ dies, you may pay any amount of {R}. When you do, it deals that much damage to any target.
+Orb of Dragonkind|Artifact|{1}, {T}: Add two mana in any combination of colors. Spend this mana only to cast Dragon spells or activate abilities of Dragons.|{R}, {T}, Sacrifice ~: Look at the top seven cards of your library. You may reveal a Dragon card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
+Atsushi, the Blazing Sky|Legendary Creature — Dragon Spirit|When ~ dies, choose one —|• Exile the top two cards of your library. Until the end of your next turn, you may play those cards.|• Create three Treasure tokens.
+Carnelian Orb of Dragonkind|Artifact|{T}: Add {R}. If that mana is spent on a Dragon creature spell, it gains haste until end of turn.
+Breath Weapon|Instant|SPELL:~ deals 2 damage to each non-Dragon creature.|~ deals 2 damage to each non-Dragon creature.
+Nogi, Draco-Zealot|Legendary Creature — Kobold Shaman|Whenever ~ attacks, if you control three or more Dragons, until end of turn, ~ becomes a Dragon with base power and toughness 5/5 and gains flying.
+Shivan Devastator|Creature — Dragon Hydra|~ enters with X +1/+1 counters on it.
+Bitter Reunion|Enchantment|When ~ enters, you may discard a card. If you do, draw two cards.
+Dragonhawk, Fate's Tempest|Legendary Creature — Bird Dragon|Whenever ~ enters or attacks, exile the top X cards of your library, where X is the number of creatures you control with power 4 or greater. You may play those cards until your next end step. At the beginning of your next end step, ~ deals 2 damage to each opponent for each of those cards that are still exiled.
+Firespitter Whelp|Creature — Dragon|Whenever you cast a noncreature or Dragon spell, ~ deals 1 damage to each opponent.
+Count on Luck|Enchantment|At the beginning of your upkeep, exile the top card of your library. You may play that card this turn.
+Breaching Dragonstorm|Enchantment|When ~ enters, exile cards from the top of your library until you exile a nonland card. You may cast it without paying its mana cost if that spell's mana value is 8 or less. If you don't, put that card into your hand.
+Dragonstorm Globe|Artifact|Each Dragon you control enters with an additional +1/+1 counter on it.
+Parapet Thrasher|Creature — Dragon|Whenever one or more Dragons you control deal combat damage to an opponent, choose one that hasn't been chosen this turn —|• Destroy target artifact that opponent controls.|• ~ deals 4 damage to each other opponent.|• Exile the top card of your library. You may play it this turn.
+Thundermane Dragon|Creature — Dragon|You may look at the top card of your library any time.|You may cast creature spells with power 4 or greater from the top of your library. If you cast a creature spell this way, it gains haste until end of turn.
+Dragonmaster Outcast|Creature — Human Shaman|At the beginning of your upkeep, if you control six or more lands, create a 5/5 red Dragon creature token with flying.
+Chaos Warp|Instant|SPELL:The owner of target permanent shuffles it into their library, then reveals the top card of their library. If it's a permanent card, they put it onto the battlefield.|The owner of target permanent shuffles it into their library, then reveals the top card of their library. If it's a permanent card, they put it onto the battlefield.
+Herald's Horn|Artifact|At the beginning of your upkeep, look at the top card of your library. If it's a creature card of the chosen type, you may reveal it and put it into your hand.
+Taurean Mauler|Creature — Shapeshifter|Whenever an opponent casts a spell, you may put a +1/+1 counter on ~.
+Aetherflux Reservoir|Artifact|Whenever you cast a spell, you gain 1 life for each spell you've cast this turn.
+Crested Sunmare|Creature — Horse|At the beginning of each end step, if you gained life this turn, create a 5/5 white Horse creature token.
+Song of Freyalise|Enchantment — Saga|I, II — Until your next turn, creatures you control gain "{T}: Add one mana of any color."
+Nykthos Paragon|Enchantment Creature — Human Soldier|Whenever you gain life, you may put that many +1/+1 counters on each creature you control. Do this only once each turn.
+Cleric Class|Enchantment — Class|If you would gain life, you gain that much life plus 1 instead.|{3}{W}: Level 2|{4}{W}: Level 3|When this Class becomes level 3, return target creature card from your graveyard to the battlefield. You gain life equal to that creature's toughness.
+Phyrexian Processor|Artifact|As ~ enters, pay any amount of life.|{4}, {T}: Create an X/X black Phyrexian Minion creature token, where X is the life paid as ~ entered.
+Angel of Indemnity|Creature — Angel Warrior|When ~ enters, return target permanent card with mana value 4 or less from your graveyard to the battlefield.
+Conclave Evangelist|Creature — Elephant Cleric|Whenever ~ deals combat damage to a player, create a token that's a copy of ~.
+Voice of Resurgence|Creature — Elemental|Whenever an opponent casts a spell during your turn and when ~ dies, create a green and white Elemental creature token with "~'s power and toughness are each equal to the number of creatures you control."
+Lazotep Quarry|Land — Desert|{T}, Sacrifice a creature: Add one mana of any color.|{X}{2}, {T}, Sacrifice a Desert: Exile target creature card with mana value X from your graveyard. Create a token that's a copy of it, except it's a 4/4 black Zombie. Activate only as a sorcery.
+Gruff Triplets|Creature — Satyr Warrior|When ~ enters, if it isn't a token, create two tokens that are copies of it.|When ~ dies, put a number of +1/+1 counters equal to its power on each creature you control named ~.
+Soul of Eternity|Creature — Avatar|~'s power and toughness are each equal to your life total.
+Bramble Sovereign|Creature — Dryad|Whenever another nontoken creature enters, you may pay {1}{G}. If you do, that creature's controller creates a token that's a copy of that creature.
+Rhys the Redeemed|Legendary Creature — Elf Warrior|{4}{G/W}{G/W}, {T}: For each creature token you control, create a token that's a copy of that creature.
+Congregate|Instant|SPELL:Target player gains 2 life for each creature on the battlefield.|Target player gains 2 life for each creature on the battlefield.
+Ancient Cornucopia|Artifact|Whenever you cast a spell that's one or more colors, you may gain 1 life for each of that spell's colors. Do this only once each turn.
+Fanatic of Rhonas|Creature — Snake Druid|{T}: Add {G}{G}{G}{G}. Activate only if you control a creature with power 4 or greater.
+Krosan Verge|Land|{2}, {T}, Sacrifice ~: Search your library for a Forest card and a Plains card, put them onto the battlefield tapped, then shuffle.
+Voice of the Blessed|Creature — Spirit Cleric|As long as ~ has four or more +1/+1 counters on it, it has flying and vigilance.|As long as ~ has ten or more +1/+1 counters on it, it has indestructible.
+Brokers Hideout|Land|When ~ enters, sacrifice it. When you do, search your library for a basic Forest, Plains, or Island card, put it onto the battlefield tapped, then shuffle and you gain 1 life.
+Restless Prairie|Land|{2}{G}{W}: ~ becomes a 3/3 green and white Llama creature until end of turn. It's still a land.|Whenever ~ attacks, other creatures you control get +1/+1 until end of turn.
+Skullclamp|Artifact — Equipment|Whenever equipped creature dies, draw two cards.
+Camaraderie|Sorcery|SPELL:You gain X life and draw X cards, where X is the number of creatures you control. Creatures you control get +1/+1 until end of turn.|You gain X life and draw X cards, where X is the number of creatures you control. Creatures you control get +1/+1 until end of turn.
+Storm Herd|Sorcery|SPELL:Create X 1/1 white Pegasus creature tokens with flying, where X is your life total.|Create X 1/1 white Pegasus creature tokens with flying, where X is your life total.
+Selesnya Sanctuary|Land|When ~ enters, return a land you control to its owner's hand.
+Dazzling Theater // Prop Room|Enchantment — Room|Creature spells you cast have convoke.
+Silverquill Lecturer|Creature — Kor Wizard|Creature spells you cast have demonstrate.
+Pest Infestation|Sorcery|SPELL:Destroy up to X target artifacts and/or enchantments. Create twice X 1/1 black and green Pest creature tokens with "When ~ dies, you gain 1 life."|Destroy up to X target artifacts and/or enchantments. Create twice X 1/1 black and green Pest creature tokens with "When ~ dies, you gain 1 life."
+Ghalta and Mavren|Legendary Creature — Dinosaur Vampire|Whenever you attack, choose one —|• Create a tapped and attacking X/X green Dinosaur creature token with trample, where X is the greatest power among other attacking creatures.|• Create X 1/1 white Vampire creature tokens with lifelink, where X is the number of other attacking creatures.
+Grove of the Guardian|Land|{3}{G}{W}, {T}, Tap two untapped creatures you control, Sacrifice ~: Create an 8/8 green and white Elemental creature token with vigilance.
+Angelic Chorus|Enchantment|Whenever a creature you control enters, you gain life equal to its toughness.
+Invincible Hymn|Sorcery|SPELL:Count the number of cards in your library. Your life total becomes that number.|Count the number of cards in your library. Your life total becomes that number.
+Boon Reflection|Enchantment|If you would gain life, you gain twice that much life instead.
+Springleaf Drum|Artifact|{T}, Tap an untapped creature you control: Add one mana of any color.
+Resplendent Angel|Creature — Angel|At the beginning of each end step, if you gained 5 or more life this turn, create a 4/4 white Angel creature token with flying and vigilance.|{3}{W}{W}{W}: Until end of turn, ~ gets +2/+2 and gains lifelink.
+Mirari's Wake|Enchantment|Whenever you tap a land for mana, add one mana of any type that land produced.
+Explore|Sorcery|SPELL:You may play an additional land this turn. / Draw a card.|You may play an additional land this turn.|Draw a card.
+Lathiel, the Bounteous Dawn|Legendary Creature — Unicorn|At the beginning of each end step, if you gained life this turn, distribute up to that many +1/+1 counters among any number of other target creatures.
+Suture Priest|Creature — Phyrexian Cleric|Whenever a creature an opponent controls enters, you may have that player lose 1 life.
+Vorinclex, Voice of Hunger|Legendary Creature — Phyrexian Praetor|Whenever you tap a land for mana, add one mana of any type that land produced.|Whenever an opponent taps a land for mana, that land doesn't untap during its controller's next untap step.
+Shalai, Voice of Plenty|Legendary Creature — Angel|You, planeswalkers you control, and other creatures you control have hexproof.
+Halo Fountain|Artifact|{W}, {T}, Untap a tapped creature you control: Create a 1/1 green and white Citizen creature token.|{W}{W}, {T}, Untap two tapped creatures you control: Draw a card.|{W}{W}{W}{W}{W}, {T}, Untap fifteen tapped creatures you control: You win the game.
+Bountiful Promenade|Land|~ enters tapped unless you have two or more opponents.
+Soul Warden|Creature — Human Cleric|Whenever another creature enters, you gain 1 life.
+Finale of Devastation|Sorcery|SPELL:Search your library and/or graveyard for a creature card with mana value X or less and put it onto the battlefield. If you search your library this way, shuffle. If X is 10 or more, creatures you control get +X/+X and gain haste until end of turn.|Search your library and/or graveyard for a creature card with mana value X or less and put it onto the battlefield. If you search your library this way, shuffle. If X is 10 or more, creatures you control get +X/+X and gain haste until end of turn.
+Break Down|Instant|SPELL:Destroy target artifact or enchantment. Create a Junk token. |Destroy target artifact or enchantment. Create a Junk token.
+Yennett, Cryptic Sovereign|Legendary Creature — Sphinx|Whenever ~ attacks, reveal the top card of your library. You may cast it without paying its mana cost if its mana value is odd. If you don't cast it, draw a card.
+Aeon Engine|Artifact|{T}, Exile ~: Reverse the game's turn order.
+Leadership Vacuum|Instant|SPELL:Target player returns each commander they control from the battlefield to the command zone. / Draw a card.|Target player returns each commander they control from the battlefield to the command zone.|Draw a card.
+Psychic Battle|Enchantment|Whenever a player chooses one or more targets, each player reveals the top card of their library. The player who reveals the card with the greatest mana value may change the target or targets. If two or more cards are tied for greatest, the target or targets remain unchanged. Changing targets this way doesn't trigger abilities of permanents named ~.
+Time Stop|Instant|SPELL:End the turn. |End the turn.
+Coalition Relic|Artifact|{T}: Put a charge counter on ~.|At the beginning of your first main phase, remove all charge counters from ~. Add one mana of any color for each charge counter removed this way.
+Oubliette|Enchantment|When ~ enters, target creature phases out until ~ leaves the battlefield. Tap that creature as it phases in this way.
+Rapid Hybridization|Instant|SPELL:Destroy target creature. It can't be regenerated. That creature's controller creates a 3/3 green Frog Lizard creature token.|Destroy target creature. It can't be regenerated. That creature's controller creates a 3/3 green Frog Lizard creature token.
+Command Beacon|Land|{T}, Sacrifice ~: Put your commander into your hand from the command zone.
+Enigma Sphinx|Artifact Creature — Sphinx|When ~ is put into your graveyard from the battlefield, put it into your library third from the top.
+Thief of Sanity|Creature — Specter|Whenever ~ deals combat damage to a player, look at the top three cards of that player's library, exile one of them face down, then put the rest into their graveyard. You may cast that card for as long as it remains exiled, and mana of any type can be spent to cast that spell.
+Mirage Mirror|Artifact|{2}: ~ becomes a copy of target artifact, creature, enchantment, or land until end of turn.
+Jeskai Infiltrator|Creature — Human Monk|~ can't be blocked as long as you control no other creatures.|When ~ deals combat damage to a player, exile it and the top card of your library in a face-down pile, shuffle that pile, then manifest those cards.
+Master of Predicaments|Creature — Sphinx|Whenever ~ deals combat damage to a player, choose a card in your hand. That player guesses whether the card's mana value is greater than 4. If the player guessed wrong, you may cast the card without paying its mana cost.
+Venser's Journal|Artifact — Book|You have no maximum hand size.|At the beginning of your upkeep, you gain 1 life for each card in your hand.
+Planeswalker's Mischief|Enchantment|{3}{U}: Target opponent reveals a card at random from their hand. If it's an instant or sorcery card, exile it. You may cast it without paying its mana cost for as long as it remains exiled. At the beginning of the next end step, if you haven't cast it, return it to its owner's hand. Activate only as a sorcery.
+Fatespinner|Creature — Human Wizard|At the beginning of each opponent's upkeep, that player chooses draw step, main phase, or combat phase. The player skips each instance of the chosen step or phase this turn.
+Extinction Event|Sorcery|SPELL:Choose odd or even. Exile each creature with mana value of the chosen quality. |Choose odd or even. Exile each creature with mana value of the chosen quality.
+Inniaz, the Gale Force|Legendary Creature — Djinn|Whenever three or more creatures you control with flying attack, each player gains control of a nonland permanent of your choice controlled by the player to their right.
+Chaos Wand|Artifact|{4}, {T}: Target opponent exiles cards from the top of their library until they exile an instant or sorcery card. You may cast that card without paying its mana cost. Then put the exiled cards that weren't cast this way on the bottom of that library in a random order.
+Shared Fate|Enchantment|If a player would draw a card, that player exiles the top card of one of their opponents' libraries face down instead.|Each player may look at cards they exiled with ~, and they may play lands and cast spells from among those cards.
+Skyclave Apparition|Creature — Kor Spirit|When ~ enters, exile up to one target nonland, nontoken permanent you don't control with mana value 4 or less.|When ~ leaves the battlefield, the exiled card's owner creates an X/X blue Illusion creature token, where X is the mana value of the exiled card.
+Skyclave Relic|Artifact|When ~ enters, if it was kicked, create two tapped tokens that are copies of ~.
+Profane Transfusion|Sorcery|SPELL:Two target players exchange life totals. You create an X/X colorless Horror artifact creature token, where X is the difference between those players' life totals.|Two target players exchange life totals. You create an X/X colorless Horror artifact creature token, where X is the difference between those players' life totals.
+Vega, the Watcher|Legendary Creature — Bird Spirit|Whenever you cast a spell from anywhere other than your hand, draw a card.
+Breena, the Demagogue|Legendary Creature — Bird Warlock|Whenever a player attacks one of your opponents, if that opponent has more life than another of your opponents, that attacking player draws a card and you put two +1/+1 counters on a creature you control.
+Dazzling Sphinx|Creature — Sphinx|Whenever ~ deals combat damage to a player, that player exiles cards from the top of their library until they exile an instant or sorcery card. You may cast that card without paying its mana cost. Then that player puts the exiled cards that weren't cast this way on the bottom of their library in a random order.
+Promise of Loyalty|Sorcery|SPELL:Each player puts a vow counter on a creature they control and sacrifices the rest. Each of those creatures can't attack you or planeswalkers you control for as long as it has a vow counter on it.|Each player puts a vow counter on a creature they control and sacrifices the rest. Each of those creatures can't attack you or planeswalkers you control for as long as it has a vow counter on it.
+Yavimaya, Cradle of Growth|Legendary Land|Each land is a Forest in addition to its other land types.
+Toxrill, the Corrosive|Legendary Creature — Slug Horror|At the beginning of each end step, put a slime counter on each creature you don't control.|Creatures you don't control get -1/-1 for each slime counter on them.|Whenever a creature you don't control with a slime counter on it dies, create a 1/1 black Slug creature token.|{U}{B}, Sacrifice a Slug: Draw a card.
+Aerial Extortionist|Creature — Bird Soldier|Whenever ~ enters or deals combat damage to a player, exile up to one target nonland permanent. For as long as that card remains exiled, its owner may cast it.|Whenever another player casts a spell from anywhere other than their hand, draw a card.
+Smuggler's Share|Enchantment|At the beginning of each end step, draw a card for each opponent who drew two or more cards this turn, then create a Treasure token for each opponent who had two or more lands enter the battlefield under their control this turn.
+Space Beleren|Legendary Planeswalker — Jace|+1: Creatures in each sector can be blocked this turn only by creatures in the same sector.|−1: Put a +1/+1 counter on each creature in the sector of your choice.|−5: Destroy all creatures in the sector of your choice.
+Exchange of Words|Enchantment|When ~ enters, choose two target creatures. For as long as ~ remains on the battlefield, exchange the text boxes of those creatures.
+Loran of the Third Path|Legendary Creature — Human Artificer|When Loran enters, destroy up to one target artifact or enchantment.|{T}: You and target opponent each draw a card.
+Vesuvan Drifter|Creature — Shapeshifter|You may look at the top card of your library any time.|At the beginning of each combat, you may reveal the top card of your library. If you reveal a creature card this way, ~ becomes a copy of that card until end of turn, except it has flying.
+Claim Jumper|Creature — Rabbit Mercenary|When ~ enters, if an opponent controls more lands than you, you may search your library for a Plains card and put it onto the battlefield tapped. Then if an opponent controls more lands than you, repeat this process once. If you search your library this way, shuffle.
+Nadir Kraken|Creature — Kraken|Whenever you draw a card, you may pay {1}. If you do, put a +1/+1 counter on ~ and create a 1/1 blue Tentacle creature token.
+Approach of the Second Sun|Sorcery|SPELL:If ~ was cast from your hand and you've cast another spell named ~ this game, you win the game. Otherwise, put ~ into its owner's library seventh from the top and you gain 7 life.|If ~ was cast from your hand and you've cast another spell named ~ this game, you win the game. Otherwise, put ~ into its owner's library seventh from the top and you gain 7 life.
+Reliquary Tower|Land|You have no maximum hand size.
+Soothsaying|Enchantment|{3}{U}{U}: Shuffle your library.|{X}: Look at the top X cards of your library, then put them back in any order.
+Aminatou, the Fateshifter|Legendary Planeswalker — Aminatou|−6: Choose left or right. Each player gains control of all nonland permanents other than ~ controlled by the next player in the chosen direction.
+Fractured Identity|Sorcery|SPELL:Exile target nonland permanent. Each player other than its controller creates a token that's a copy of it.|Exile target nonland permanent. Each player other than its controller creates a token that's a copy of it.
+Reconnaissance|Enchantment|{0}: Remove target attacking creature you control from combat and untap it.
+Sensei's Divining Top|Artifact|{1}: Look at the top three cards of your library, then put them back in any order.|{T}: Draw a card, then put ~ on top of its owner's library.
+Void Winnower|Creature — Eldrazi|Your opponents can't cast spells with even mana values.|Your opponents can't block with creatures with even mana values.
+Shadrix Silverquill|Legendary Creature — Elder Dragon|At the beginning of combat on your turn, you may choose two. Each mode must target a different player.|• Target player creates a 2/1 white and black Inkling creature token with flying.|• Target player draws a card and loses 1 life.|• Target player puts a +1/+1 counter on each creature they control.
+Esper Sentinel|Artifact Creature — Human Soldier|Whenever an opponent casts their first noncreature spell each turn, draw a card unless that player pays {X}, where X is ~'s power.
+Breach the Multiverse|Sorcery|SPELL:Each player mills ten cards. For each player, choose a creature or planeswalker card in that player's graveyard. Put those cards onto the battlefield under your control. Then each creature you control becomes a Phyrexian in addition to its other types.|Each player mills ten cards. For each player, choose a creature or planeswalker card in that player's graveyard. Put those cards onto the battlefield under your control. Then each creature you control becomes a Phyrexian in addition to its other types.
+Virtue of Persistence // Locthwain Scorn|Enchantment|At the beginning of your upkeep, put target creature card from a graveyard onto the battlefield under your control.

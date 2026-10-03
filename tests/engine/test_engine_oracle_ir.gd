@@ -40,9 +40,15 @@ func test_unknown_text_stays_unimplemented() -> void:
 	assert_true(db.definition_for("Test Mystery").abilities.is_empty())
 
 
-func test_half_understood_card_is_left_alone() -> void:
-	## "Roll two six-sided dice" is not understood, so the damage sentence must not run alone.
-	assert_true(db.definition_for("Test Unsure").abilities.is_empty())
+func test_half_understood_spell_runs_what_it_understands_and_announces_the_rest() -> void:
+	## "Roll two six-sided dice" is not understood: the damage sentence still happens and the dice are announced.
+	var abs: Array = db.definition_for("Test Unsure").abilities
+	assert_eq(abs.size(), 1)
+	var kinds: Array = []
+	for fx in (abs[0] as Ability).effects:
+		kinds.append(str((fx as AbilityEffect).kind))
+	assert_true(kinds.has("NOTE_UNREAD"), "the unread sentence is carried as a note")
+	assert_true(kinds.has("DEAL_DAMAGE"), "the understood sentence stays")
 
 
 func test_hand_written_ir_wins() -> void:

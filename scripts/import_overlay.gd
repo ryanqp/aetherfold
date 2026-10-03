@@ -93,9 +93,9 @@ func _ready() -> void:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 10)
-	import_btn = _btn("IMPORT", TURN_GREEN.darkened(0.1), Color(0.06, 0.12, 0.05), _on_import)
+	import_btn = _btn("FETCH DECK", TURN_GREEN.darkened(0.1), Color(0.06, 0.12, 0.05), _on_import)
 	row.add_child(import_btn)
-	retry_btn = _btn("Retry", Color(0.16, 0.17, 0.18), INK, _on_import)
+	retry_btn = _btn("Fetch again", Color(0.16, 0.17, 0.18), INK, _on_import)
 	retry_btn.visible = false
 	row.add_child(retry_btn)
 	ignore_btn = _btn("Ignore unresolved", Color(0.16, 0.17, 0.18), INK, _on_ignore)
@@ -125,6 +125,7 @@ func open() -> void:
 	visible = true
 	last_result = {}
 	existing_path = ""
+	import_btn.visible = true
 	progress_label.text = ""
 	preview_label.text = ""
 	unresolved_label.text = ""
@@ -209,6 +210,7 @@ func _show_result(result: Dictionary) -> void:
 	var lines := PackedStringArray(result.get("progress", PackedStringArray()))
 	progress_label.text = "\n".join(lines)
 	retry_btn.visible = true
+	import_btn.visible = not bool(result.get("ok", false))
 	if not bool(result.get("ok", false)):
 		preview_label.text = str(result.get("error", "Import failed."))
 		if source_link:

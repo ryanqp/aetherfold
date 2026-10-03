@@ -121,13 +121,18 @@ func on_event(engine: RulesEngine, e: GameEvent) -> void:
 		EngineEnums.EventType.STEP_BEGIN:
 			_on_step_begin(engine, int(p.get("step", -1)), e.player_id)
 		EngineEnums.EventType.DAMAGE:
+			if p.has("to_player") and int(p.get("amount", 0)) > 0:
+				_tally_life(engine, int(p.get("to_player", -1)), int(p.get("amount", 0)), false)
 			if p.has("to_object") and int(p.get("amount", 0)) > 0:
 				var hurt: GameObject = engine.state.objects.get(int(p.get("to_object", 0)))
 				if hurt != null and hurt.zone == EngineEnums.ZoneId.BATTLEFIELD:
 					var ctx := _ctx_for(engine, hurt)
 					ctx["amount"] = int(p.get("amount", 0))
 					_fire(engine, "DAMAGED", hurt, hurt, ctx)
+		EngineEnums.EventType.DRAW:
+			_on_draw(engine, e.player_id)
 		EngineEnums.EventType.LIFE_CHANGE:
+			_tally_life(engine, int(p.get("to_player", e.player_id)), int(p.get("amount", 0)), bool(p.get("gain", false)))
 			if bool(p.get("gain", false)):
 				_on_life_gained(engine, int(p.get("to_player", e.player_id)), int(p.get("amount", 0)))
 
@@ -252,6 +257,28 @@ func _on_step_begin(engine: RulesEngine, step: int, active: int) -> void:
 			_put_trigger(engine, src, ab, {player_id = active})
 
 
+## Life gained / lost this turn ("if you gained life this turn", "if an opponent lost life this turn", spectacle).
+func _tally_life(engine: RulesEngine, pid: int, amount: int, gain: bool) -> void:
+	if pid < 0 or pid >= engine.state.players.size() or amount <= 0:
+		return
+	if gain:
+		engine.state.players[pid].life_gained_this_turn += amount
+	else:
+		engine.state.players[pid].life_lost_this_turn += amount
+
+
+## "Whenever you / an opponent / a player draws a card": the drawer is the trigger's player.
+func _on_draw(engine: RulesEngine, drawer: int) -> void:
+	for src in _battlefield(engine):
+		for ab in _triggered(engine, src, "DRAWS"):
+			var who := str(ab.trigger.get("who", "YOU"))
+			if who == "YOU" and drawer != src.controller_id:
+				continue
+			if who == "OPPONENT" and drawer == src.controller_id:
+				continue
+			_put_trigger(engine, src, ab, {player_id = drawer})
+
+
 func _on_life_gained(engine: RulesEngine, player_id: int, amount: int) -> void:
 	if amount <= 0:
 		return
@@ -371,6 +398,15 @@ func _put_trigger(engine: RulesEngine, source: GameObject, ab: Ability, ctx: Dic
 	for slot in ab.targets:
 		if not (slot is Dictionary) or engine.targeting == null:
 			continue
+		## A person chooses their own trigger targets when there is a real choice (more than one legal target, or the
+		## "you may" kind): that is asked when the trigger resolves (AbilityExecutor.pick_trigger_targets).
+		if engine.interactive_seats.has(source.controller_id):
+			var legal: Array = engine.targeting.legal_ids(engine, slot, source.object_id)
+			if legal.size() > 1 or (legal.size() == 1 and bool((slot as Dictionary).get("optional", false))):
+				var pend: Array = entry.ctx.get("pick_slots", [])
+				pend.append(slot)
+				entry.ctx["pick_slots"] = pend
+				continue
 		var tid := engine.targeting.auto_pick(engine, slot, source.object_id, source.controller_id,
 			TargetingManager.slot_hostile(slot, hostile), entry.targets)
 		if tid >= 0:

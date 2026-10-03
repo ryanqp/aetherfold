@@ -66,4 +66,6 @@ enum EventType {
 	GAME_OVER,
 	ATTACK,
 	BLOCK,
+	## A plain message for the History panel: payload.text (why something did nothing, for example).
+	NOTE,
 }

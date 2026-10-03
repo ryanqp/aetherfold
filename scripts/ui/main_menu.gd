@@ -1136,6 +1136,8 @@ func _click_button(b: BaseButton) -> void:
 
 
 func _play_click() -> void:
+	if not is_inside_tree():
+		return  ## the press changed the scene (Start Match, Exit): nothing left to click
 	var sfx := get_node_or_null("/root/Sfx")
 	if sfx != null:
 		sfx.play_select()

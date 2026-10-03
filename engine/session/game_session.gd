@@ -665,6 +665,8 @@ func run_card_entry(object_id: int, entry: Dictionary) -> SubmitResult:
 	match str(entry.get("kind", "")):
 		"cast":
 			return cast_auto(you_seat, object_id, entry.get("extra", {}))
+		"land":
+			return play_land(object_id)
 		"special":
 			var r: SubmitResult = submit(entry.action as GameAction)
 			if r.ok:
@@ -683,23 +685,29 @@ func zone_menu(zone_id: int) -> Array:
 	var out: Array = []
 	if engine == null or not can_play():
 		return out
-	var z: Zone = engine.state.zones.get_zone(zone_id, 0)
+	var z: Zone = engine.state.zones.get_zone(zone_id, you_seat)
 	if z == null:
 		return out
 	var legal := {}
-	for act in engine.legal_actions(0):
+	var land_plays := {}
+	for act in engine.legal_actions(you_seat):
 		var ga := act as GameAction
 		if ga != null and ga.kind == GameAction.Kind.CAST_SPELL:
 			legal[ga.object_id] = true
+		elif ga != null and ga.kind == GameAction.Kind.PLAY_LAND:
+			land_plays[ga.object_id] = true
 	for oid in z.object_ids:
 		var obj: GameObject = engine.state.objects.get(oid)
 		var d: CardDefinition = obj.definition as CardDefinition if obj != null and obj.definition is CardDefinition else null
 		if legal.has(oid):
-			for o in engine.kw.affordable_options(0, obj):
+			for o in engine.kw.affordable_options(you_seat, obj):
 				var od: Dictionary = o
 				out.append({"label": "%s — %s" % [d.name if d != null else "Card", str(od.label)], "detail": str(od.detail), "kind": "cast", "extra": od.extra, "object_id": oid})
+		## A land that may be played from here (for example one exiled with "you may play it this turn").
+		if land_plays.has(oid):
+			out.append({"label": "%s — Play land" % (d.name if d != null else "Land"), "detail": "Play it from this pile as your land drop", "kind": "land", "object_id": oid})
 		## Special actions from this zone: encore, eternalize, embalm, unearth, scavenge, plot casts ...
-		for act in engine.kw.special_actions(0):
+		for act in engine.kw.special_actions(you_seat):
 			var sa := act as GameAction
 			if sa != null and sa.object_id == oid:
 				out.append({"label": "%s — %s" % [d.name if d != null else "Card", str(sa.extra.get("label", "Action"))], "detail": str(sa.extra.get("detail", "")), "kind": "special", "action": sa, "object_id": oid})

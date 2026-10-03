@@ -83,23 +83,64 @@ func unread_lines(d: CardDefinition) -> Array:
 		var line := OracleIr.strip_ability_word(str(raw).strip_edges())
 		if line == "" or covered.has(line) or _keyword_line(line):
 			continue
-		var low_line := line.to_lower()
-		if d.enters_tapped() and low_line.begins_with("~ enters"):
-			continue
-		## Read straight from the permanent's text by the engine (extra land drops, CR 305.2a).
-		if low_line == "you may play an additional land on each of your turns." or low_line == "creatures your opponents control enter tapped.":
-			continue
-		## Read straight from the permanent's text by the engine (counter rules, riot, Altisaur, Wayta).
-		## Deck-building and rules the engine reads straight from the text (commander choice, Probing Telepathy).
-		if low_line.ends_with("can be your commander.") or low_line.contains("causes a triggered ability of that creature to trigger"):
-			continue
-		if low_line.contains("can't be countered") or low_line.contains("have riot") or low_line.contains("prevent all but 1 of that damage") \
-				or low_line.contains("triggers an additional time") or low_line.contains("while you're the monarch, add an additional"):
-			continue
-		## "enters tapped unless ..." / reveal-or-tapped / shock: handled as it enters (EtbRules).
-		if not etb.is_empty() and low_line.contains("enters") and (low_line.contains("tapped") or low_line.contains("reveal") or low_line.contains("pay")):
+		if _handled_elsewhere(d, line, etb):
 			continue
 		out.append(KeywordDb.describe_unread(line))
+	return out
+
+
+## Lines the engine reads straight from the permanent's text, not through an ability (extra land drops, counter rules,
+## riot, "enters tapped unless ...", commander choice ...).
+func _handled_elsewhere(d: CardDefinition, line: String, etb: Dictionary) -> bool:
+	var low_line := line.to_lower()
+	if d.enters_tapped() and low_line.begins_with("~ enters"):
+		return true
+	if low_line.begins_with("~ enters with") and not low_line.contains(" if ") and not ZoneManager.enters_with_counters(d).is_empty():
+		return true
+	if low_line == "you may play an additional land on each of your turns." or low_line == "creatures your opponents control enter tapped.":
+		return true
+	if low_line.ends_with("can be your commander.") or low_line.contains("causes a triggered ability of that creature to trigger"):
+		return true
+	if low_line.contains("can't be countered") or low_line.contains("have riot") or low_line.contains("prevent all but 1 of that damage") \
+			or low_line.contains("triggers an additional time") or low_line.contains("while you're the monarch, add an additional"):
+		return true
+	## "enters tapped unless ..." / reveal-or-tapped / shock: handled as it enters (EtbRules).
+	if not etb.is_empty() and low_line.contains("enters") and (low_line.contains("tapped") or low_line.contains("reveal") or low_line.contains("pay")):
+		return true
+	return false
+
+
+## Every line of the card read on its own, so an instant or sorcery with one odd line no longer blames its simple
+## lines: [{line, read}]. Lines handled elsewhere or that are keywords count as read; mode bullets are read as part of
+## their "Choose ..." line. This is what the coverage tool counts.
+func line_status(d: CardDefinition) -> Array:
+	var out: Array = []
+	if d == null or d.is_basic_land() or not _ir_for(d).is_empty():
+		return out
+	var etb := EtbRules.parse(d)
+	var covered: Array = []
+	for a in d.abilities:
+		covered.append(str((a as Ability).text).strip_edges())
+	var text := OracleIr.normalize(d)
+	var is_spell := d.is_instant() or d.is_sorcery()
+	var lines: Array = []
+	for raw in text.split("\n"):
+		lines.append(str(raw).strip_edges())
+	for i in lines.size():
+		var raw_line: String = lines[i]
+		var line := OracleIr.strip_ability_word(raw_line)
+		if line == "" or line.begins_with("•") or _keyword_line(line) or _handled_elsewhere(d, line, etb):
+			continue
+		if covered.has(line) and not is_spell:
+			out.append({"line": line, "read": true})
+			continue
+		var ok := false
+		var clean := line.trim_suffix(".")
+		if is_spell:
+			ok = OracleIr.new()._read_effects(line)
+		else:
+			ok = not (OracleIr._read_whole_or_by_sentence(d, clean) as Array).is_empty()
+		out.append({"line": line, "read": ok})
 	return out
 
 

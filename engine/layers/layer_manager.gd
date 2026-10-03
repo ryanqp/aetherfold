@@ -423,6 +423,101 @@ func condition_met(state: GameState, src: GameObject, cond: Dictionary) -> bool:
 			return false
 	if cond.has("monarch") and (state.monarch_id == pid) != bool(cond["monarch"]):
 		return false
+	return _more_conditions(state, src, pid, cond)
+
+
+## The rest of the condition vocabulary (the ability-word family: threshold, delirium, metalcraft, hellbent, raid, morbid,
+## revolt, formidable, ferocious, coven, descend, spell mastery ...). Every key present must hold.
+##   max n (with controls)            at most n matching (0 = "you don't control any ...")
+##   my_turn bool                     it is (is not) your turn
+##   life_min / life_max n            your life total
+##   hand_min / hand_max n            cards in your hand (hellbent: hand_max 0)
+##   graveyard_types_min n            card types among cards in your graveyard (delirium)
+##   attacked bool                    you attacked with a creature this turn (raid)
+##   creature_died bool               a creature died this turn (morbid)
+##   permanent_left bool              a permanent you controlled left the battlefield this turn (revolt)
+##   gained_life bool                 you gained life this turn
+##   power_total_min n                creatures you control have total power n or more (formidable)
+##   power_any_min n                  you control a creature with power n or greater (ferocious)
+##   distinct_powers_min n            creatures you control with different powers (coven)
+##   paid_has / paid_lacks "Land"      the card discarded or sacrificed as an additional cost was (wasn't) of that type
+##   not {cond}                       the nested condition does not hold
+func _more_conditions(state: GameState, src: GameObject, pid: int, cond: Dictionary) -> bool:
+	if cond.has("controls") and cond.has("max") and Query.count_objects(state, src, cond["controls"]) > int(cond["max"]):
+		return false
+	if cond.has("my_turn") and (state.active_player_id == pid) != bool(cond["my_turn"]):
+		return false
+	var me: PlayerState = state.players[pid] if pid >= 0 and pid < state.players.size() else null
+	if me != null:
+		if cond.has("life_min") and me.life < int(cond["life_min"]):
+			return false
+		if cond.has("life_max") and me.life > int(cond["life_max"]):
+			return false
+		if cond.has("attacked") and me.attacked_this_turn != bool(cond["attacked"]):
+			return false
+		if cond.has("permanent_left") and (me.permanents_left_this_turn > 0) != bool(cond["permanent_left"]):
+			return false
+		if cond.has("gained_life") and (me.life_gained_this_turn > 0) != bool(cond["gained_life"]):
+			return false
+	if cond.has("paid_has") or cond.has("paid_lacks"):
+		var paid: Array = src.marks.get("paid_types", []) if src != null else []
+		var hit := false
+		for tl in paid:
+			if str(tl).contains(str(cond.get("paid_has", cond.get("paid_lacks", "")))):
+				hit = true
+		if cond.has("paid_has") and not hit:
+			return false
+		if cond.has("paid_lacks") and (hit or paid.is_empty()):
+			return false
+	if cond.has("opp_lost_life"):
+		var lost := false
+		for op in state.players:
+			if op.player_id != pid and op.life_lost_this_turn > 0:
+				lost = true
+		if lost != bool(cond["opp_lost_life"]):
+			return false
+	if cond.has("creature_died") and (state.creatures_died_this_turn > 0) != bool(cond["creature_died"]):
+		return false
+	if cond.has("hand_min") or cond.has("hand_max"):
+		var hand := Query.count_objects(state, src, {"zone": "HAND"})
+		if cond.has("hand_min") and hand < int(cond["hand_min"]):
+			return false
+		if cond.has("hand_max") and hand > int(cond["hand_max"]):
+			return false
+	if cond.has("graveyard_types_min"):
+		var kinds := {}
+		var gy: Zone = state.zones.get_zone(EngineEnums.ZoneId.GRAVEYARD, pid)
+		if gy != null:
+			for oid in gy.object_ids:
+				var g: GameObject = state.objects.get(oid)
+				if g != null and g.definition is CardDefinition:
+					for t in ["Artifact", "Battle", "Creature", "Enchantment", "Instant", "Kindred", "Land", "Planeswalker", "Sorcery"]:
+						if (g.definition as CardDefinition).type_line.contains(t):
+							kinds[t] = true
+		if kinds.size() < int(cond["graveyard_types_min"]):
+			return false
+	if cond.has("power_total_min") or cond.has("power_any_min") or cond.has("distinct_powers_min"):
+		var total := 0
+		var best := 0
+		var seen := {}
+		var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+		if bf != null:
+			for oid2 in bf.object_ids:
+				var c: GameObject = state.objects.get(oid2)
+				if c == null or c.controller_id != pid or not (c.definition is CardDefinition) or not (c.definition as CardDefinition).is_creature():
+					continue
+				var pw := int((c.definition as CardDefinition).power) if str((c.definition as CardDefinition).power).is_valid_int() else 0
+				total += pw
+				best = maxi(best, pw)
+				seen[pw] = true
+		if cond.has("power_total_min") and total < int(cond["power_total_min"]):
+			return false
+		if cond.has("power_any_min") and best < int(cond["power_any_min"]):
+			return false
+		if cond.has("distinct_powers_min") and seen.size() < int(cond["distinct_powers_min"]):
+			return false
+	if cond.has("not") and cond["not"] is Dictionary and condition_met(state, src, cond["not"]):
+		return false
 	return true
 
 
