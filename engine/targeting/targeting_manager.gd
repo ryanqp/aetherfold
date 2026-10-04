@@ -104,6 +104,9 @@ func legal_ids(engine: RulesEngine, query: Dictionary, source_id: int = -1) -> A
 		for i in engine.state.players.size():
 			if opponents_only and i == src_ctrl:
 				continue
+			## "You ... have hexproof" (a player's own static): opponents' spells and abilities can't pick them.
+			if i != src_ctrl and _player_hexproof(engine, i):
+				continue
 			out.append(encode_player(i))
 		if kind == "PLAYER":
 			return out
@@ -229,3 +232,18 @@ func _protection_matches(keyword: String, source: GameObject) -> bool:
 		_:
 			return false
 	return (source.definition as CardDefinition).colors.has(letter)
+
+
+func _player_hexproof(engine: RulesEngine, pid: int) -> bool:
+	var bf: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return false
+	for oid in bf.object_ids:
+		var o: GameObject = engine.state.objects.get(oid)
+		if o == null or o.controller_id != pid or not (o.definition is CardDefinition):
+			continue
+		for a in (o.definition as CardDefinition).abilities:
+			var ab := a as Ability
+			if ab != null and ab.kind == &"STATIC" and ab.static_spec.has("player_hexproof"):
+				return true
+	return false

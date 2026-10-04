@@ -130,7 +130,7 @@ func on_event(engine: RulesEngine, e: GameEvent) -> void:
 					ctx["amount"] = int(p.get("amount", 0))
 					_fire(engine, "DAMAGED", hurt, hurt, ctx)
 		EngineEnums.EventType.DRAW:
-			_on_draw(engine, e.player_id)
+			_on_draw(engine, e.player_id, int(p.get("nth", 0)))
 		EngineEnums.EventType.LIFE_CHANGE:
 			_tally_life(engine, int(p.get("to_player", e.player_id)), int(p.get("amount", 0)), bool(p.get("gain", false)))
 			if bool(p.get("gain", false)):
@@ -294,9 +294,12 @@ func _tally_life(engine: RulesEngine, pid: int, amount: int, gain: bool) -> void
 
 
 ## "Whenever you / an opponent / a player draws a card": the drawer is the trigger's player.
-func _on_draw(engine: RulesEngine, drawer: int) -> void:
+func _on_draw(engine: RulesEngine, drawer: int, nth: int = 0) -> void:
 	for src in _battlefield(engine):
 		for ab in _triggered(engine, src, "DRAWS"):
+			## "Whenever you draw your second card each turn" (Thopter Fabricator).
+			if int(ab.trigger.get("nth", 0)) > 0 and int(ab.trigger.get("nth", 0)) != nth:
+				continue
 			var who := str(ab.trigger.get("who", "YOU"))
 			if who == "YOU" and drawer != src.controller_id:
 				continue
@@ -346,6 +349,9 @@ func _scope_ok(engine: RulesEngine, ab: Ability, watcher: GameObject, subject: G
 	## "When enchanted creature dies": the Aura watches what it is attached to.
 	if scope == "ENCHANTED":
 		return subject != null and (watcher.attached_to == subject.object_id or watcher.aura_host_left == subject.object_id)
+	## "Whenever equipped creature attacks" (Adaptive Omnitool): the Equipment watches what it is attached to.
+	if scope == "EQUIPPED":
+		return subject != null and watcher.attached_to == subject.object_id
 	if scope == "OTHER" and same:
 		return false
 	if scope != "OTHER" and scope != "ANY":
@@ -726,3 +732,17 @@ func on_ability_activated(engine: RulesEngine, source: GameObject, activator: in
 					hit = true
 			if hit:
 				_put_trigger(engine, src, ab, {player_id = activator, object_id = source.object_id})
+
+
+## State triggers ("When there are four or more page counters on ~, exile it" - Mazemind Tome): they trigger once each time the
+## state becomes true, and again only after it has stopped being true.
+func check_state(engine: RulesEngine) -> void:
+	for src in _battlefield(engine):
+		for ab in _triggered(engine, src, "STATE_COUNTERS"):
+			var key := "state_%s" % str(ab.ability_id)
+			var met := int(src.counters.get(str(ab.trigger.get("counter", "")), 0)) >= int(ab.trigger.get("min", 1))
+			if met and not bool(src.marks.get(key, false)):
+				src.marks[key] = true
+				_put_trigger(engine, src, ab, {player_id = src.controller_id})
+			elif not met:
+				src.marks.erase(key)

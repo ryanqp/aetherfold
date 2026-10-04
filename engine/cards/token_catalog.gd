@@ -84,6 +84,34 @@ func definition_for(token_id: String) -> CardDefinition:
 				"text": d.oracle_text,
 			}])
 			return d
+		"blood":
+			d.name = "Blood"
+			d.type_line = "Token Artifact — Blood"
+			d.oracle_text = "{1}, {T}, Discard a card, Sacrifice this artifact: Draw a card."
+			d.abilities = _abilities([{
+				"ability_id": "blood_draw",
+				"kind": "ACTIVATED",
+				"costs": [{"kind": "MANA", "mana": "{1}"}, {"kind": "TAP"}, {"kind": "DISCARD"}, {"kind": "SACRIFICE_SELF"}],
+				"targets": [],
+				"effects": [{"kind": "DRAW", "params": {"n": 1}}],
+				"restrictions": [],
+				"text": d.oracle_text,
+			}])
+			return d
+		"junk":
+			d.name = "Junk"
+			d.type_line = "Token Artifact — Junk"
+			d.oracle_text = "{T}, Sacrifice this artifact: Exile the top card of your library. You may play it this turn. Activate only as a sorcery."
+			d.abilities = _abilities([{
+				"ability_id": "junk_play",
+				"kind": "ACTIVATED",
+				"costs": [{"kind": "TAP"}, {"kind": "SACRIFICE_SELF"}],
+				"targets": [],
+				"effects": [{"kind": "EXILE_TOP", "params": {"n": 1, "may_play": "END_OF_TURN"}}],
+				"restrictions": ["SORCERY_SPEED"],
+				"text": d.oracle_text,
+			}])
+			return d
 		INCUBATOR:
 			d.name = "Incubator"
 			d.type_line = "Token Artifact — Incubator"

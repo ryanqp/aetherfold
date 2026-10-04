@@ -12,7 +12,7 @@ const EFFECT_PARAM_KEYS := {
 	"DISCARD_CHOSEN": ["target", "filter"],
 	"REVEAL_HAND": ["target"],
 	"MOVE_ZONE": ["target", "to"],
-	"ADD_MANA": ["mana"],
+	"ADD_MANA": ["mana", "per_counter"],
 	"TAP": ["target"],
 	"UNTAP": ["target"],
 	"DEAL_DAMAGE": ["n", "target", "who", "trigger_object", "from_trigger_object"],
@@ -51,6 +51,14 @@ const EFFECT_PARAM_KEYS := {
 	"GAIN_CONTROL": ["target", "duration"],
 	"PREVENT": ["to", "combat_only", "n"],
 	"PUT_BACK": ["n"],
+	"UNLESS_SAC": ["who", "query", "sac_target", "n"],
+	"DISCARD_ALT": ["n", "unless_type"],
+	"PUT_FROM_HAND": ["query", "optional", "tapped"],
+	"MOVE_ALL": ["query", "to"],
+	"EXILE_GRAVEYARD": ["who"],
+	"OPP_DRAW_OR_MILL": ["target"],
+	"EXTRA_LAND": ["n"],
+	"SET_LIFE": ["n"],
 	"DELAY": ["step", "whose", "action", "ref"],
 	"DELAYED_ACT": ["action", "object_id"],
 	"AMASS": ["n"],
@@ -175,7 +183,7 @@ const EFFECT_PARAM_KEYS := {
 ## Gates any effect may carry: only run if the spell was kicked / an opponent was dealt damage this turn.
 const GATE_KEYS := ["if_moved_subtype", "if_not_link", "if_kicked", "if_opp_damaged", "if_cast", "if_cast_from_hand", "if_link", "if_exiled_creature", "if_exiled_noncreature", "if_trigger_subtype", "if_gift", "if_defender_most_life", "if_cond"]
 const ABILITY_KINDS := ["SPELL", "ACTIVATED", "TRIGGERED", "STATIC", "REPLACEMENT", "MANA"]
-const COST_KINDS := ["MANA", "TAP", "UNTAP", "ADDITIONAL_MANA", "SACRIFICE_SELF", "SACRIFICE", "DISCARD", "REMOVE_COUNTER", "LOYALTY", "PAY_LIFE", "ADD_COUNTER"]
+const COST_KINDS := ["MANA", "TAP", "UNTAP", "ADDITIONAL_MANA", "SACRIFICE_SELF", "SACRIFICE", "RETURN_OWN", "TAP_PERMANENTS", "UNTAP_PERMANENTS", "DISCARD", "REMOVE_COUNTER", "LOYALTY", "PAY_LIFE", "ADD_COUNTER"]
 
 var errors: PackedStringArray = PackedStringArray()
 

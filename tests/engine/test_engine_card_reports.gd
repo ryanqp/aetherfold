@@ -529,3 +529,123 @@ func test_reanimate_puts_counters_only_on_an_angel() -> void:
 	assert_eq(str(ab.effects[0].kind), "RETURN_FROM_GRAVEYARD")
 	assert_eq(str(ab.effects[1].kind), "PUT_COUNTER")
 	assert_eq(str((ab.effects[1].params as Dictionary).get("if_moved_subtype")), "Angel")
+
+
+func test_unless_sacrifice_damage_when_nothing_cheap_to_give() -> void:
+	var cat := Fixtures.memory_catalog()
+	var m := cat as CatalogSource.Memory
+	m.add(_row("Test Slaughter God", "{3}{B}{R}", 5, "Legendary Enchantment Creature — God", "At the beginning of each opponent's upkeep, ~ deals 2 damage to that player unless they sacrifice a creature of their choice.", "7", "5"))
+	m.add(_row("Test Big Filler", "{4}", 4, "Creature — Test", "", "4", "4"))
+	var d := CardDatabase.new()
+	d.setup(cat)
+	var engine := Fixtures.empty_engine_1v1()
+	var abs: Array = d.definition_for("Test Slaughter God").abilities
+	assert_eq(str((abs[0] as Ability).effects[0].kind), "UNLESS_SAC", "Mogis is read")
+	Fixtures.spawn_named(engine, d, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Slaughter God")
+	Fixtures.spawn_named(engine, d, 1, EngineEnums.ZoneId.BATTLEFIELD, "Test Big Filler")
+	var life := engine.state.players[1].life
+	engine.state.active_player_id = 1
+	engine.triggers._on_step_begin(engine, EngineEnums.Step.UPKEEP, 1)
+	engine.resolve_top()
+	assert_eq(engine.state.players[1].life, life - 2, "a 4-mana creature is not worth giving up: they take 2")
+
+
+func _db8() -> CardDatabase:
+	var cat := Fixtures.memory_catalog()
+	var m := cat as CatalogSource.Memory
+	m.add(_row("Test Thirst", "{2}{U}", 3, "Instant", "Draw three cards. Then discard two cards unless you discard an artifact card."))
+	m.add(_row("Test Juggernaut", "{4}", 4, "Artifact Creature — Juggernaut", "~ attacks each combat if able.", "5", "3"))
+	m.add(_row("Test Monument", "{4}", 4, "Artifact", "Whenever you tap a permanent for {C}, add an additional {C}."))
+	m.add(_row("Test Disk", "{1}", 1, "Artifact", "{1}, {T}: Destroy all artifacts, creatures, and enchantments."))
+	m.add(_row("Test Sai", "{2}{U}", 3, "Legendary Creature — Human", "{1}{U}, Sacrifice two artifacts: Draw a card.", "2", "2"))
+	m.add(_row("Test Shimmer", "{4}{U}", 5, "Creature — Dragon", "Tap two untapped artifacts you control: Draw a card.", "4", "4"))
+	var d := CardDatabase.new()
+	d.setup(cat)
+	return d
+
+
+func test_new_cost_kinds_are_read() -> void:
+	var d := _db8()
+	var sai: Ability = null
+	for a in d.definition_for("Test Sai").abilities:
+		if (a as Ability).is_activated():
+			sai = a
+	assert_true(sai != null, "Sai's ability was read")
+	var kinds: Array = []
+	for c in sai.costs:
+		kinds.append("%s:%s" % [str((c as AbilityCost).kind), str((c as AbilityCost).mana)])
+	assert_true(kinds.has("SACRIFICE:a|2|artifacts"), "sacrifice two artifacts: %s" % str(kinds))
+	var shimmer: Ability = null
+	for a2 in d.definition_for("Test Shimmer").abilities:
+		if (a2 as Ability).is_activated():
+			shimmer = a2
+	assert_true(shimmer != null and str((shimmer.costs[0] as AbilityCost).kind) == "TAP_PERMANENTS", "tap two untapped artifacts is a cost")
+
+
+func test_forced_attacker_is_added_to_the_attack() -> void:
+	var d := _db8()
+	var engine := Fixtures.empty_engine_1v1()
+	var jugg := Fixtures.spawn_named(engine, d, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Juggernaut")
+	assert_true(engine._must_attack(jugg), "attacks each combat if able")
+
+
+func test_forsaken_monument_adds_an_extra_colorless() -> void:
+	var d := _db8()
+	var engine := Fixtures.empty_engine_1v1()
+	Fixtures.spawn_named(engine, d, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Monument")
+	assert_eq(engine._extra_colorless_for(0).size(), 1)
+
+
+func test_nevinyrral_destroys_artifacts_creatures_and_enchantments() -> void:
+	var d := _db8()
+	var disk: Ability = null
+	for a in d.definition_for("Test Disk").abilities:
+		if (a as Ability).is_activated():
+			disk = a
+	assert_true(disk != null)
+	var q: Dictionary = (disk.effects[0].params as Dictionary).get("query", {})
+	assert_eq((q.get("type_any", []) as Array).size(), 3)
+
+
+func _db9() -> CardDatabase:
+	var cat := Fixtures.memory_catalog()
+	var m := cat as CatalogSource.Memory
+	m.add(_row("Test Doubler", "{3}{W}", 4, "Enchantment", "If you would gain life, you gain twice that much life instead."))
+	m.add(_row("Test Healer", "{1}{W}", 2, "Creature — Cleric", "When this creature enters, you gain 2 life.", "1", "1"))
+	m.add(_row("Test Lifelord", "{2}{W}{W}", 4, "Creature — Avatar", "~'s power and toughness are each equal to your life total.", "*", "*"))
+	m.add(_row("Test Grower", "{1}{G}", 2, "Creature — Test", "As long as ~ has four or more +1/+1 counters on it, it has flying and vigilance.", "1", "1"))
+	m.add(_row("Test Biorhythm", "{4}{G}", 5, "Sorcery", "Count the number of cards in your library. Your life total becomes that number."))
+	var d := CardDatabase.new()
+	d.setup(cat)
+	return d
+
+
+func test_lifegain_doubler_and_life_total_power() -> void:
+	var d := _db9()
+	var engine := Fixtures.empty_engine_1v1()
+	Fixtures.spawn_named(engine, d, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Doubler")
+	var life := engine.state.players[0].life
+	Fixtures.spawn_named(engine, d, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Healer")
+	engine.process_zone_events()
+	engine.resolve_top()
+	assert_eq(engine.state.players[0].life, life + 4, "twice 2")
+	var lord := Fixtures.spawn_named(engine, d, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Lifelord")
+	assert_eq(engine.power_of(lord), life + 4, "power equals the life total")
+
+
+func test_creature_with_enough_counters_gains_flying() -> void:
+	var d := _db9()
+	var engine := Fixtures.empty_engine_1v1()
+	var g := Fixtures.spawn_named(engine, d, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Grower")
+	assert_false(engine.has_keyword(g, "Flying"))
+	g.counters["+1/+1"] = 4
+	assert_true(engine.has_keyword(g, "Flying"), "four counters: flying")
+
+
+func test_biorhythm_is_read() -> void:
+	var d := _db9()
+	var ab: Ability = null
+	for a in d.definition_for("Test Biorhythm").abilities:
+		if (a as Ability).kind == &"SPELL":
+			ab = a
+	assert_true(ab != null and str(ab.effects[0].kind) == "SET_LIFE")

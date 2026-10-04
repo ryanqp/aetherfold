@@ -84,6 +84,9 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 			return false
 	if bool(spec.get("basic_land", false)) and not type_line.begins_with("Basic Land"):
 		return false
+	## "one or more colors" (All Is Dust): not colorless.
+	if bool(spec.get("colored", false)) and (def == null or def.colors.is_empty()):
+		return false
 	if bool(spec.get("nontoken", false)) and obj.is_token:
 		return false
 	if bool(spec.get("token", false)) and not obj.is_token:

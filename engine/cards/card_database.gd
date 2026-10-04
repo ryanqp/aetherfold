@@ -96,6 +96,9 @@ func _handled_elsewhere(d: CardDefinition, line: String, etb: Dictionary) -> boo
 	if d.enters_tapped() and low_line.begins_with("~ enters"):
 		return true
 	## "~ can't block." / "~ can't attack." / "~ can't attack or block.": enforced from the card's own text (Engine._printed_cant).
+	## "~ attacks each combat if able." is enforced when attackers are declared (Engine._must_attack).
+	if low_line == "~ attacks each combat if able.":
+		return true
 	## Printed combat-damage prevention on the permanent itself (Engine._prints_combat_prevention).
 	if low_line == "prevent all combat damage that would be dealt to ~.":
 		return true

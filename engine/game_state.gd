@@ -58,6 +58,8 @@ var died_this_turn: int = 0
 var delayed: Array = []
 ## Damage prevention shields ("prevent the next 3 damage that would be dealt to any target this turn"): {to, player_id, object_id, combat_only, n (-1 = all)}.
 var prevention: Array = []
+## "You may play an additional land this turn": {turn, n} per player.
+var extra_land_once: Dictionary = {}
 ## Creatures put into a graveyard from the battlefield this turn (morbid).
 var creatures_died_this_turn: int = 0
 ## Delayed "return it when it dies or is exiled" for earthbent lands: object ids.

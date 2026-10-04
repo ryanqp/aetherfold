@@ -32,7 +32,11 @@ func can_pay(obj: GameObject, ability: Ability) -> bool:
 			return false
 		if cost.kind == &"UNTAP" and not obj.tapped:
 			return false
-		if cost.kind == &"SACRIFICE" and sacrifice_candidates(obj, str(cost.mana)).is_empty():
+		if cost.kind in [&"SACRIFICE", &"RETURN_OWN"] and sacrifice_candidates(obj, str(cost.mana)).size() < _spec_count(str(cost.mana)):
+			return false
+		if cost.kind == &"TAP_PERMANENTS" and _untapped_candidates(obj, str(cost.mana)).size() < _spec_count(str(cost.mana)):
+			return false
+		if cost.kind == &"UNTAP_PERMANENTS" and _tapped_candidates(obj, str(cost.mana)).size() < _spec_count(str(cost.mana)):
 			return false
 		if cost.kind == &"DISCARD" and _discard_pick(obj) == null:
 			return false
@@ -76,12 +80,22 @@ func pay(obj: GameObject, ability: Ability) -> bool:
 			if dc != null and st3 != null:
 				dc.discarded_turn = st3.turn_number
 				st3.zones.move(dc.object_id, EngineEnums.ZoneId.GRAVEYARD, dc.owner_id)
-		elif cost.kind == &"SACRIFICE":
+		elif cost.kind in [&"SACRIFICE", &"RETURN_OWN"]:
 			var pick := sacrifice_candidates(obj, str(cost.mana))
 			var st2 := _state()
-			if not pick.is_empty() and st2 != null:
-				var victim: GameObject = pick[0]
-				st2.zones.move(victim.object_id, EngineEnums.ZoneId.GRAVEYARD, victim.owner_id)
+			for k in mini(_spec_count(str(cost.mana)), pick.size()):
+				if st2 == null:
+					break
+				var victim: GameObject = pick[k]
+				st2.zones.move(victim.object_id, EngineEnums.ZoneId.HAND if cost.kind == &"RETURN_OWN" else EngineEnums.ZoneId.GRAVEYARD, victim.owner_id)
+		elif cost.kind == &"UNTAP_PERMANENTS":
+			var untap_list := _tapped_candidates(obj, str(cost.mana))
+			for k3 in mini(_spec_count(str(cost.mana)), untap_list.size()):
+				(untap_list[k3] as GameObject).tapped = false
+		elif cost.kind == &"TAP_PERMANENTS":
+			var tapped := _untapped_candidates(obj, str(cost.mana))
+			for k2 in mini(_spec_count(str(cost.mana)), tapped.size()):
+				(tapped[k2] as GameObject).tapped = true
 	return true
 
 
@@ -175,3 +189,27 @@ func _life_amount(obj: GameObject, spec: String) -> int:
 			for col in (c.definition as CardDefinition).color_identity:
 				colors[str(col)] = true
 	return colors.size()
+
+
+## "<a|another>|<N>|<what>" (or the older "<a|another>|<what>"): how many a cost needs.
+func _spec_count(spec: String) -> int:
+	var parts := spec.split("|")
+	return maxi(1, int(parts[1])) if parts.size() == 3 and (parts[1] as String).is_valid_int() else 1
+
+
+## "Tap two untapped artifacts you control": matching untapped permanents, cheapest first (the source may tap itself).
+func _untapped_candidates(obj: GameObject, spec: String) -> Array:
+	var out: Array = []
+	for c in sacrifice_candidates(obj, spec):
+		if not (c as GameObject).tapped:
+			out.append(c)
+	return out
+
+
+## "Untap a tapped creature you control": matching tapped permanents.
+func _tapped_candidates(obj: GameObject, spec: String) -> Array:
+	var out: Array = []
+	for c in sacrifice_candidates(obj, spec):
+		if (c as GameObject).tapped:
+			out.append(c)
+	return out

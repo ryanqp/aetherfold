@@ -341,7 +341,7 @@ func draw_card(player_id: int) -> GameObject:
 			return null
 	var moved: GameObject = state.zones.move(top_id, EngineEnums.ZoneId.HAND, player_id)
 	if moved != null:
-		state.log.append(EngineEnums.EventType.DRAW, player_id, {to_id = moved.object_id})
+		state.log.append(EngineEnums.EventType.DRAW, player_id, {to_id = moved.object_id, nth = state.players[player_id].draws_this_turn + 1})
 		kw.on_drawn(player_id, moved)
 	return moved
 
@@ -538,6 +538,8 @@ func finish_top_resolution() -> void:
 func process_zone_events() -> void:
 	if state == null or state.log == null:
 		return
+	if triggers != null:
+		triggers.check_state(self)
 	var guard := 0
 	while guard < 20:
 		guard += 1
@@ -673,8 +675,26 @@ func _submit_activate_mana(action: GameAction) -> SubmitResult:
 	var sacrificed := ab.has_sacrifice_cost()
 	for fx in ab.effects:
 		if fx is AbilityEffect and (fx as AbilityEffect).kind == &"ADD_MANA":
-			var produced := resolve_mana(action.player_id, ManaCost.parse(str((fx as AbilityEffect).params.get("mana", ""))))
+			var mana_text := str((fx as AbilityEffect).params.get("mana", ""))
+			## "Add X mana ..., where X is the number of soul counters on ~" (Seance Board).
+			var per_counter := str((fx as AbilityEffect).params.get("per_counter", ""))
+			if per_counter != "":
+				mana_text = mana_text.repeat(int(obj.counters.get(per_counter, 0)))
+			if mana_text == "":
+				continue
+			var produced := resolve_mana(action.player_id, ManaCost.parse(mana_text))
 			mana.add(action.player_id, produced)
+			## "Whenever you tap a land for mana, add one mana of any type that land produced" (Mirari's Wake-style doublers).
+			if obj.definition is CardDefinition and (obj.definition as CardDefinition).is_land() and _has_land_mana_doubler(action.player_id):
+				for sym in ["W", "U", "B", "R", "G", "C"]:
+					var have := produced.colorless if sym == "C" else int(produced.get(sym.to_lower()))
+					if have > 0:
+						mana.add(action.player_id, ManaCost.parse("{%s}" % sym))
+						break
+			## Forsaken Monument: "Whenever you tap a permanent for {C}, add an additional {C}."
+			if produced.colorless > 0:
+				for _x in _extra_colorless_for(action.player_id):
+					mana.add(action.player_id, ManaCost.parse("{C}"))
 		elif fx is AbilityEffect and (fx as AbilityEffect).kind == &"DEAL_DAMAGE":
 			## Pain lands: "~ deals 1 damage to you" happens as the mana is made.
 			var hurt := int((fx as AbilityEffect).params.get("n", 0))
@@ -1106,6 +1126,9 @@ func extra_land_drops(player_id: int) -> int:
 		var text := (o.definition as CardDefinition).oracle_text.to_lower()
 		if text.contains("you may play an additional land on each of your turns"):
 			n += 1
+	var once: Dictionary = state.extra_land_once.get(player_id, {})
+	if int(once.get("turn", -1)) == state.turn_number:
+		n += int(once.get("n", 0))
 	return n
 
 
@@ -1845,6 +1868,10 @@ func _submit_declare_attackers(action: GameAction) -> SubmitResult:
 		if not legal.has(int(raw)):
 			r.error = "illegal attacker"
 			return r
+	## "~ attacks each combat if able" (Darksteel Juggernaut, Graaz): the creature is added to the attackers.
+	for lid in legal:
+		if not ids.has(int(lid)) and _must_attack(state.objects.get(int(lid))):
+			ids.append(int(lid))
 	var requested_defender := int(action.extra.get("defending_player_id", -1))
 	if not _is_legal_defender(action.player_id, requested_defender):
 		requested_defender = _default_defender(action.player_id)
@@ -2090,6 +2117,9 @@ func _can_block(object_id: int, defender_id: int, attacker_id: int = -1) -> bool
 			return false
 	## "~ can't be blocked." (a whole sentence; "can't be blocked by ..." and "except" are conditional).
 	if adef != null and RegEx.create_from_string("(?i)can't be blocked\\.").search(adef.oracle_text) != null:
+		return false
+	## "Juggernauts you control can't be blocked by Walls" (Graaz): a static of another permanent.
+	if not _static_block_allows(attacker, obj):
 		return false
 	## "~ can't be blocked except by black creatures" / "can't be blocked by Walls" (read from the attacker's own text).
 	if adef != null and not _block_text_allows(adef, attacker, obj):
@@ -3251,3 +3281,80 @@ func _block_tax_for(attacker_id: int) -> int:
 		if ab != null and ab.kind == &"STATIC" and ab.static_spec.has("block_tax"):
 			total += int(ab.static_spec["block_tax"])
 	return total
+
+
+## Whether a creature must attack if able: its own line "~ attacks each combat if able", or a static of a permanent that gives it.
+func _must_attack(obj: GameObject) -> bool:
+	if obj == null or not (obj.definition is CardDefinition):
+		return false
+	var def := obj.definition as CardDefinition
+	var short := def.name.to_lower().split(",")[0]
+	for raw in def.oracle_text.to_lower().split("\n"):
+		var l := str(raw).strip_edges().trim_suffix(".")
+		if l == short + " attacks each combat if able" or l == "this creature attacks each combat if able" or l == "~ attacks each combat if able":
+			return true
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return false
+	for oid in bf.object_ids:
+		var src: GameObject = state.objects.get(oid)
+		if src == null or not (src.definition is CardDefinition):
+			continue
+		for a in (src.definition as CardDefinition).abilities:
+			var ab := a as Ability
+			if ab != null and ab.kind == &"STATIC" and ab.static_spec.has("must_attack") and Query._matches(obj, src, ab.static_spec.get("query", {})):
+				return true
+	return false
+
+
+## Statics that stop a group of attackers being blocked by a group of blockers (Graaz: Juggernauts can't be blocked by Walls).
+func _static_block_allows(attacker: GameObject, blocker: GameObject) -> bool:
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return true
+	for oid in bf.object_ids:
+		var src: GameObject = state.objects.get(oid)
+		if src == null or not (src.definition is CardDefinition):
+			continue
+		for a in (src.definition as CardDefinition).abilities:
+			var ab := a as Ability
+			if ab == null or ab.kind != &"STATIC" or not ab.static_spec.has("cant_be_blocked_by_group"):
+				continue
+			var spec: Dictionary = ab.static_spec["cant_be_blocked_by_group"]
+			if Query._matches(attacker, src, spec.get("query", {})) and Query._matches(blocker, src, spec.get("by", {})):
+				return false
+	return true
+
+
+## One entry per "add an additional {C}" static the player controls (Forsaken Monument).
+func _extra_colorless_for(pid: int) -> Array:
+	var out: Array = []
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return out
+	for oid in bf.object_ids:
+		var o: GameObject = state.objects.get(oid)
+		if o == null or o.controller_id != pid or not (o.definition is CardDefinition):
+			continue
+		for a in (o.definition as CardDefinition).abilities:
+			var ab := a as Ability
+			if ab != null and ab.kind == &"STATIC" and ab.static_spec.has("extra_colorless"):
+				for _n in int(ab.static_spec["extra_colorless"]):
+					out.append(1)
+	return out
+
+
+## Whether the player controls a "whenever you tap a land for mana, add one mana of any type that land produced" permanent.
+func _has_land_mana_doubler(pid: int) -> bool:
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return false
+	for oid in bf.object_ids:
+		var o: GameObject = state.objects.get(oid)
+		if o == null or o.controller_id != pid or not (o.definition is CardDefinition):
+			continue
+		for a in (o.definition as CardDefinition).abilities:
+			var ab := a as Ability
+			if ab != null and ab.kind == &"STATIC" and ab.static_spec.has("extra_land_mana"):
+				return true
+	return false

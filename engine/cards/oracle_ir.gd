@@ -345,6 +345,34 @@ func _read_line(def: CardDefinition, line: String) -> Array:
 				"restrictions": [{"spend_only": {"query": rq, "abilities": line.to_lower().contains("activate an abilit")}}],
 			}]
 
+	# Seance Board: "{T}: Add X mana of any one color, where X is the number of soul counters on ~. Spend this mana only to cast
+	# instant, sorcery, Demon, and Spirit spells."
+	m = _match("^\\{T\\}: add x mana of any one color, where x is the number of ([a-z]+) counters on ~\\. spend this mana only to cast (.+?) spells$", line)
+	if m != null:
+		var any_specs: Array = []
+		for part in m.get_string(2).to_lower().replace(", and ", ",").replace(" and ", ",").replace(" or ", ",").split(","):
+			var pw := str(part).strip_edges()
+			if pw in ["instant", "sorcery", "creature", "artifact", "enchantment", "land", "planeswalker"]:
+				any_specs.append({"type": pw})
+			elif pw != "":
+				any_specs.append({"subtype": _cap(pw)})
+		return [{
+			"kind": "MANA", "costs": [{"kind": "TAP"}], "targets": [],
+			"effects": [{"kind": "ADD_MANA", "params": {"mana": "{W|U|B|R|G}", "per_counter": m.get_string(1).to_lower()}}],
+			"restrictions": [{"spend_only": {"query": {"any": any_specs}, "abilities": false}}],
+		}]
+	# "Whenever you tap a land for mana, add one mana of any type that land produced."
+	if _match("^whenever you tap a land for mana, add one mana of any type that land produced$", line) != null:
+		return [{"kind": "STATIC", "costs": [], "targets": [], "effects": [], "restrictions": [], "static": {"scope": "NONE", "extra_land_mana": true}}]
+	# "You, planeswalkers you control, and other creatures you control have hexproof."
+	if _match("^you, planeswalkers you control, and other creatures you control have hexproof$", line) != null:
+		return [
+			{"kind": "STATIC", "costs": [], "targets": [], "effects": [], "restrictions": [], "static": {"scope": "NONE", "player_hexproof": true}},
+			{"kind": "STATIC", "costs": [], "targets": [], "effects": [], "restrictions": [], "static": {"scope": "OTHERS", "query": {"controller": "SOURCE_CONTROLLER", "type": "creature"}, "keywords": ["Hexproof"]}},
+		]
+	# Forsaken Monument: "Whenever you tap a permanent for {C}, add an additional {C}."
+	if _match("^whenever you tap a permanent for \\{c\\}, add an additional \\{c\\}$", line) != null:
+		return [{"kind": "STATIC", "costs": [], "targets": [], "effects": [], "restrictions": [], "static": {"scope": "NONE", "extra_colorless": 1}}]
 	# Path of Ancestry: the scry rider rides on the mana ability.
 	if _match("^\\{T\\}: add one mana of any color in your commander's color identity\\. when that mana is spent to cast a creature spell that shares a creature type with your commander, scry 1$", line) != null:
 		return [{
@@ -513,7 +541,7 @@ func _read_line(def: CardDefinition, line: String) -> Array:
 		}]
 
 	# Activated: "{1}, {T}: effect" or "Sacrifice ~: effect".
-	m = _match("^((?:\\{[^}]+\\}|waterbend \\{\\d+\\}|sacrifice ~|sacrifice (?:a|an|another) [a-z' -]+?|discard (?:a|an) card|remove (?:a|an|one) [a-z0-9+/-]+ counter from ~|pay life equal to the number of colors in your commanders' color identity|pay \\d+ life|put an? [a-z0-9+/-]+ counter on ~|, )+): (.+)$", line)
+	m = _match("^((?:\\{[^}]+\\}|waterbend \\{\\d+\\}|sacrifice ~|sacrifice (?:a|an|another|two|three|four|\\d+) [a-z' -]+?|tap (?:a|an|two|three|four|\\d+) untapped [a-z' -]+? you control|untap (?:a|an|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|\\d+) tapped [a-z' -]+? you control|return (?:a|an|another) [a-z' -]+? you control to its owner's hand|discard (?:a|an) card|remove (?:a|an|one) [a-z0-9+/-]+ counter from ~|pay life equal to the number of colors in your commanders' color identity|pay \\d+ life|put an? [a-z0-9+/-]+ counter on ~|, )+): (.+)$", line)
 	if m == null:
 		return []
 	var reader := OracleIr.new()
@@ -1040,6 +1068,23 @@ func _static_line(line: String) -> Dictionary:
 		if pe != null and (pe as Dictionary).has("query"):
 			per_spec["per"] = (pe as Dictionary)["query"]
 			return {"kind": "STATIC", "costs": [], "targets": [], "effects": [], "restrictions": [], "static": per_spec}
+	# Graaz: "Juggernauts you control attack each combat if able." / "... can't be blocked by Walls." / "Other creatures you control
+	# have base power and toughness 5/3 and are Juggernauts in addition to their other creature types."
+	m = _match("^([a-z' -]+?) you control attack each combat if able$", line)
+	if m != null:
+		var mq := _event_subject(m.get_string(1).to_lower() + " you control", false)
+		if not mq.is_empty():
+			return {"kind": "STATIC", "costs": [], "targets": [], "effects": [], "restrictions": [], "static": {"scope": "NONE", "must_attack": true, "query": mq}}
+	m = _match("^([a-z' -]+?) you control can't be blocked by ([a-z' -]+)$", line)
+	if m != null:
+		var bq := _event_subject(m.get_string(1).to_lower() + " you control", false)
+		var by_q := _event_subject(m.get_string(2).to_lower(), false)
+		if not bq.is_empty() and not by_q.is_empty():
+			return {"kind": "STATIC", "costs": [], "targets": [], "effects": [], "restrictions": [], "static": {"scope": "NONE", "cant_be_blocked_by_group": {"query": bq, "by": by_q}}}
+	m = _match("^other creatures you control have base power and toughness (\\d+)/(\\d+) and are ([a-z]+)s in addition to their other creature types$", line)
+	if m != null:
+		return {"kind": "STATIC", "costs": [], "targets": [], "effects": [], "restrictions": [], "static": {"scope": "OTHERS",
+			"query": {"controller": "SOURCE_CONTROLLER", "type": "creature"}, "base_pt": [int(m.get_string(1)), int(m.get_string(2))], "add_subtypes": [_cap(m.get_string(3))]}}
 	# Attack / block taxes (Archangel of Tithes, Propaganda).
 	m = _match("^as long as ~ is untapped, creatures can't attack you or planeswalkers you control unless their controller pays \\{(\\d)\\} for each of those creatures$", line)
 	if m != null:
@@ -1053,6 +1098,19 @@ func _static_line(line: String) -> Dictionary:
 	if m != null:
 		return {"kind": "STATIC", "costs": [], "targets": [], "effects": [], "restrictions": [],
 			"static": {"scope": "NONE", "block_tax": int(m.get_string(1))}}
+	# "If you would gain life, you gain twice that much life instead." / "~'s power and toughness are each equal to your life total."
+	if _match("^if you would gain life, you gain twice that much life instead$", line) != null:
+		return {"kind": "STATIC", "costs": [], "targets": [], "effects": [], "restrictions": [], "static": {"scope": "NONE", "life_gain_mult": 2}}
+	if _match("^~'s power and toughness are each equal to your life total$", line) != null:
+		return {"kind": "STATIC", "costs": [], "targets": [], "effects": [], "restrictions": [],
+			"static": {"scope": "SELF", "cda_pt": {"power": true, "toughness": true, "life": true, "query": {}}}}
+	# "As long as ~ has four or more +1/+1 counters on it, it has flying and vigilance."
+	m = _match("^as long as ~ has (two|three|four|five|six|seven|eight|nine|ten|\\d+) or more ([+/0-9a-z-]+) counters on it, (?:it|~) has ([a-z ,]+)$", line)
+	if m != null:
+		var ckws := _keywords(m.get_string(3))
+		if not ckws.is_empty():
+			return {"kind": "STATIC", "costs": [], "targets": [], "effects": [], "restrictions": [], "static": {"scope": "SELF", "keywords": ckws,
+				"condition": {"self_counters": {"name": m.get_string(2).to_lower(), "min": _num(m.get_string(1))}}}}
 	# "You can't lose the game and your opponents can't win the game."
 	if _match("^you can't lose the game and your opponents can't win the game$", line) != null:
 		return {"kind": "STATIC", "costs": [], "targets": [], "effects": [], "restrictions": [],
@@ -1221,6 +1279,13 @@ func _trigger_line(line: String) -> Dictionary:
 
 
 func _trigger_with(trig: Dictionary, effect_text: String) -> Dictionary:
+	## "At the beginning of your upkeep, if <condition>, <effect>": the intervening if is checked when the trigger would go on the stack.
+	var iff := _match("^if (.+?), (.+)$", effect_text)
+	if iff != null and not trig.has("condition"):
+		var icd := _condition(iff.get_string(1))
+		if not icd.is_empty():
+			trig["condition"] = icd
+			effect_text = iff.get_string(2)
 	var reader := OracleIr.new()
 	reader._self_it = str(trig.get("scope", "SELF")) == "SELF"
 	if not reader._read_effects(effect_text):
@@ -1325,6 +1390,23 @@ func _header(h: String) -> Dictionary:
 	m = _match("^you cast (?:an? )?(.+?) spell$", h)
 	if m != null:
 		return _cast_filter(m.get_string(1))
+	m = _match("^there are (two|three|four|five|six|seven|\\d+) or more ([a-z]+) counters on ~$", h)
+	if m != null:
+		return {"on": "STATE_COUNTERS", "counter": m.get_string(2).to_lower(), "min": _num(m.get_string(1))}
+	if _match("^equipped creature attacks$", h) != null:
+		return {"on": "ATTACKS", "scope": "EQUIPPED"}
+	m = _match("^you draw your (second|third|fourth) card each turn$", h)
+	if m != null:
+		return {"on": "DRAWS", "who": "YOU", "nth": {"second": 2, "third": 3, "fourth": 4}[m.get_string(1).to_lower()]}
+	m = _match("^(one or more )?(?:an? )?([a-z' -]+?) you control deals? combat damage to a player$", h)
+	if m != null:
+		var cd_subject := _event_subject(m.get_string(2).to_lower(), false)
+		if not cd_subject.is_empty():
+			cd_subject["controller"] = "SOURCE_CONTROLLER"
+			var cdt := {"on": "COMBAT_DAMAGE_TO_PLAYER", "scope": "ANY", "filter": cd_subject}
+			if m.get_string(1) != "":
+				cdt["once_per_turn"] = true
+			return cdt
 	if _match("^another permanent you control leaves the battlefield$", h) != null:
 		return {"on": "LEAVES", "scope": "OTHER", "filter": {"controller": "SOURCE_CONTROLLER"}}
 	m = _match("^you attack with (two|three|four|\\d+) or more creatures$", h)
@@ -1419,6 +1501,15 @@ func _noun_filter(noun: String) -> Dictionary:
 ## Whole-text effects that don't split into sentences: reveal-and-cast, exile-and-cast.
 func _whole(effect_text: String) -> bool:
 	var t := effect_text.strip_edges().trim_suffix(".")
+	## Combustible Gearhulk: the opponent may have you draw three cards; if not, you mill three and they take the damage.
+	if _match("^count the number of cards in your library\\. your life total becomes that number$", t) != null:
+		_effects.append({"kind": "SET_LIFE", "params": {"n": {"expr": "LIBRARY"}}})
+		return true
+	if _match("^target opponent may have you draw three cards\\. if the player doesn't, you mill three cards, then ~ deals damage to that player equal to the total mana value of those cards$", t) != null:
+		var gslot := _add_target("PLAYER", {"opponent": true})
+		if gslot >= 0:
+			_effects.append({"kind": "OPP_DRAW_OR_MILL", "params": {"target": gslot}})
+			return true
 	if _match("^reveal the top card of your library\\. if it's a creature card that shares a creature type with a creature you control, you may cast it without paying its mana cost\\. if you don't cast it, put it on the bottom of your library$", t) != null:
 		_effects.append({"kind": "REVEAL_TOP_CAST_FREE", "params": {}})
 		return true
@@ -1524,6 +1615,18 @@ func _read_effects(effect_text: String) -> bool:
 	while i < sentences.size():
 		var s2: String = sentences[i]
 		var nxt: String = sentences[i + 1] if i + 1 < sentences.size() else ""
+		## Star Athlete: "Choose up to one target nonland permanent. Its controller may sacrifice it. If they don't, ~ deals 5 damage
+		## to that player."
+		var sa := _match("^choose up to one target (.+)$", str(s2))
+		if sa != null and i + 2 < sentences.size():
+			var sa2 := _match("^its controller may sacrifice it$", nxt)
+			var sa3 := _match("^if they don't, ~ deals (\\d+) damage to that player$", str(sentences[i + 2]))
+			if sa2 != null and sa3 != null:
+				var sslot := _target("up to one target " + sa.get_string(1))
+				if sslot >= 0:
+					_effects.append({"kind": "UNLESS_SAC", "params": {"who": "CONTROLLER_OF_TARGET_%d" % sslot, "sac_target": sslot, "n": int(sa3.get_string(1))}})
+					i += 3
+					continue
 		## "Target opponent reveals their hand. You choose a nonland card from it. That player discards that card."
 		var rv := _match("^target (player|opponent) reveals their hand$", str(s2))
 		if rv != null:
@@ -1758,6 +1861,9 @@ func _clause(s: String) -> bool:
 		s = s.substr(8)
 	if _self_it and s.to_lower().begins_with("it "):
 		s = "~ " + s.substr(3)
+	## "exile it" / "sacrifice it" on a trigger of the permanent itself means ~ (Mazemind Tome).
+	if _self_it and s.to_lower() in ["exile it", "sacrifice it", "destroy it"]:
+		s = s.substr(0, s.length() - 2) + "~"
 	if _try(s):
 		return true
 	## A condition the specific readers don't know about ("... if you control three or more artifacts").
@@ -1831,6 +1937,19 @@ func _rewrite_amount(s: String) -> Array:
 	if m != null:
 		var e: Variant = _count_expr(m.get_string(2))
 		return [m.get_string(1), e] if e != null else []
+	m = _match("^(.+), where x is your life total$", s)
+	if m != null:
+		return [m.get_string(1), {"expr": "LIFE"}]
+	m = _match("^target player gains (\\d+) life for each (.+)$", s)
+	if m != null:
+		var tpe: Variant = _count_expr(m.get_string(2))
+		if tpe != null:
+			(tpe as Dictionary)["mult"] = int(m.get_string(1))
+			return ["target player gains x life", tpe]
+		return []
+	m = _match("^you gain (\\d+) life for each spell you've cast this turn$", s)
+	if m != null:
+		return ["you gain x life", {"expr": "SPELLS_THIS_TURN", "mult": int(m.get_string(1))}]
 	m = _match("^(.+), where x is your devotion to (white|blue|black|red|green)$", s)
 	if m != null:
 		return [m.get_string(1), {"expr": "DEVOTION", "color": COLOR_LETTERS[m.get_string(2).to_lower()]}]
@@ -1892,9 +2011,23 @@ func _costs(cost_text: String) -> Array:
 		if _match("^pay life equal to the number of colors in your commanders' color identity$", p) != null:
 			costs.append({"kind": "PAY_LIFE", "mana": "ID_COLORS"})
 			continue
-		var sm := _match("^sacrifice (a|an|another) ([a-z' -]+?)$", p)
+		var sm := _match("^sacrifice (a|an|another|two|three|four|\\d+) ([a-z' -]+?)$", p)
 		if sm != null:
-			costs.append({"kind": "SACRIFICE", "mana": "%s|%s" % ["another" if sm.get_string(1).to_lower() == "another" else "a", sm.get_string(2).to_lower()]})
+			var scount := _num(sm.get_string(1))
+			var sfirst := "another" if sm.get_string(1).to_lower() == "another" else "a"
+			costs.append({"kind": "SACRIFICE", "mana": ("%s|%d|%s" % [sfirst, scount, sm.get_string(2).to_lower()]) if scount > 1 else ("%s|%s" % [sfirst, sm.get_string(2).to_lower()])})
+			continue
+		var upm := _match("^untap (a|an|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|\\d+) tapped ([a-z' -]+?) you control$", p)
+		if upm != null:
+			costs.append({"kind": "UNTAP_PERMANENTS", "mana": "a|%d|%s" % [_num(upm.get_string(1)), upm.get_string(2).to_lower()]})
+			continue
+		var tpm := _match("^tap (a|an|two|three|four|\\d+) untapped ([a-z' -]+?) you control$", p)
+		if tpm != null:
+			costs.append({"kind": "TAP_PERMANENTS", "mana": "a|%d|%s" % [_num(tpm.get_string(1)), tpm.get_string(2).to_lower()]})
+			continue
+		var rom := _match("^return (a|an|another) ([a-z' -]+?) you control to its owner's hand$", p)
+		if rom != null:
+			costs.append({"kind": "RETURN_OWN", "mana": "%s|%s" % ["another" if rom.get_string(1).to_lower() == "another" else "a", rom.get_string(2).to_lower()]})
 			continue
 		## "Waterbend {N}" (CR 701.67): N generic, payable by tapping artifacts and creatures you control.
 		var wm := _match("^waterbend \\{(\\d+)\\}$", p.to_lower())
@@ -2390,6 +2523,49 @@ func _sentence(s: String) -> bool:
 			return false
 		_effects.append({"kind": "DEAL_DAMAGE", "params": {"n": {"expr": "EVENT_AMOUNT"}, "target": nd, "from_trigger_object": true}})
 		return true
+	if _match("^sacrifice ~$", s) != null:
+		_effects.append({"kind": "SACRIFICE", "params": {"self": true}})
+		return true
+	# "You may play an additional land this turn." / "Put that many +1/+1 counters on each creature you control."
+	if _match("^(?:you may )?play an additional land this turn$", s) != null:
+		_effects.append({"kind": "EXTRA_LAND", "params": {"n": 1}})
+		return true
+	if _match("^put that many \\+1/\\+1 counters on each creature you control$", s) != null:
+		_effects.append({"kind": "PUT_COUNTER", "params": {"name": "+1/+1", "n": {"expr": "EVENT_AMOUNT"}, "each": {"controller": "SOURCE_CONTROLLER", "type": "creature"}}})
+		return true
+	# "If you do, you gain 4 life." after a mandatory action ("exile it. If you do, ..."): it simply follows.
+	m = _match("^if you do, (.+)$", s)
+	if m != null and _pay_links == 0 and not _effects.is_empty():
+		return _clause(m.get_string(1))
+	# Thirst for Knowledge: "Discard two cards unless you discard an artifact card."
+	m = _match("^you discard (a|an|one|two|three|\\d+) cards? unless you discard an? ([a-z]+) card$", s)
+	if m != null:
+		_effects.append({"kind": "DISCARD_ALT", "params": {"n": _num(m.get_string(1)), "unless_type": m.get_string(2).to_lower()}})
+		return true
+	# Master Transmuter: "You may put an artifact card from your hand onto the battlefield."
+	m = _match("^put (?:a|an) ([a-z' -]+?) card from your hand onto the battlefield( tapped)?$", s)
+	if m != null:
+		var hq: Variant = _card_filter(m.get_string(1))
+		if hq == null:
+			return false
+		_effects.append({"kind": "PUT_FROM_HAND", "params": {"query": hq, "optional": true, "tapped": m.get_string(2) != ""}})
+		return true
+	# "~ deals 2 damage to that player unless they sacrifice a creature of their choice." (Mogis, God of Slaughter)
+	m = _match("^(?:~|it) deals (\\d+) damage to that player unless they sacrifice (?:a|an) ([a-z' -]+?)(?: of their choice)?$", s)
+	if m != null:
+		var usq := _group_query(m.get_string(2))
+		if usq.is_empty():
+			return false
+		_effects.append({"kind": "UNLESS_SAC", "params": {"who": "TRIGGER_PLAYER", "query": usq, "n": int(m.get_string(1))}})
+		return true
+	# Enchanter's Bane: "target enchantment deals damage equal to its mana value to its controller unless that player sacrifices it."
+	m = _match("^(target .+?) deals damage equal to its mana value to its controller unless that player sacrifices it$", s)
+	if m != null:
+		var ebs := _target(m.get_string(1))
+		if ebs < 0:
+			return false
+		_effects.append({"kind": "UNLESS_SAC", "params": {"who": "CONTROLLER_OF_TARGET_%d" % ebs, "sac_target": ebs, "n": {"expr": "TARGET_MV", "target": ebs}}})
+		return true
 	# "Target player draws two cards and loses 2 life." (Sign in Blood): one chosen player for both halves.
 	m = _match("^target player draws (a|an|one|two|three|four|five|\\d+) cards? and loses (\\d+) life$", s)
 	if m != null:
@@ -2701,6 +2877,24 @@ func _sentence(s: String) -> bool:
 			q["not_subtype"] = _cap(m.get_string(1))
 		_effects.append({"kind": "DESTROY_ALL", "params": {"query": q}})
 		return true
+	# "Return all attacking creatures to their owners' hands." / "Each player sacrifices all permanents they control that are
+	# one or more colors." / "Exile each opponent's graveyard." / "Destroy all artifacts, creatures, and enchantments."
+	if _match("^return all attacking creatures to (?:their owners' hands|their owner's hand)$", s) != null:
+		_effects.append({"kind": "MOVE_ALL", "params": {"query": {"type": "creature", "attacking": true}, "to": "HAND"}})
+		return true
+	if _match("^each player sacrifices all permanents they control that are one or more colors$", s) != null:
+		_effects.append({"kind": "MOVE_ALL", "params": {"query": {"colored": true}, "to": "GRAVEYARD"}})
+		return true
+	if _match("^exile each opponent's graveyard$", s) != null:
+		_effects.append({"kind": "EXILE_GRAVEYARD", "params": {"who": "EACH_OPPONENT"}})
+		return true
+	m = _match("^destroy all (artifacts|creatures|enchantments|lands|planeswalkers)(?:,? (artifacts|creatures|enchantments|lands|planeswalkers))*(?:,? and (artifacts|creatures|enchantments|lands|planeswalkers))$", s)
+	if m != null:
+		var dtypes: Array = []
+		for part in s.to_lower().trim_prefix("destroy all ").replace(", and ", ",").replace(" and ", ",").split(","):
+			dtypes.append(str(part).strip_edges().trim_suffix("s"))
+		_effects.append({"kind": "DESTROY_ALL", "params": {"query": {"type_any": dtypes}}})
+		return true
 	# "Destroy all tapped creatures." / "Destroy all artifacts and enchantments your opponents control."
 	m = _match("^destroy all ((?:[a-z]+ )*(?:creatures?|artifacts?|enchantments?|lands?|permanents?)(?: you control| your opponents control| an opponent controls)?(?: with mana value \\d+(?: or less| or greater)?)?)$", s)
 	if m != null:
@@ -2746,17 +2940,19 @@ func _sentence(s: String) -> bool:
 		return true
 
 	# Back from the graveyard.
-	m = _match("^return target (.+?) card from your graveyard to (your hand|the battlefield)(?: tapped)?$", s)
+	m = _match("^return (another )?target (.+?) card from your graveyard to (your hand|the battlefield)(?: tapped)?$", s)
 	if m != null:
 		var gq := {"zone": "GRAVEYARD", "controller": "SOURCE_CONTROLLER"}
-		var noun := m.get_string(1).to_lower()
+		if m.get_string(1) != "":
+			gq["other"] = true
+		var noun := m.get_string(2).to_lower()
 		if noun in ["creature", "artifact", "enchantment", "land"]:
 			gq["type"] = noun
 		elif noun != "permanent":
 			gq["subtype"] = _cap(noun)
 		var idx := _targets.size()
 		_targets.append({"id": idx, "kind": "CARD_IN_ZONE", "count": 1, "query": gq})
-		_effects.append({"kind": "RETURN_FROM_GRAVEYARD", "params": {"target": idx, "to": "HAND" if m.get_string(2) == "your hand" else "BATTLEFIELD"}})
+		_effects.append({"kind": "RETURN_FROM_GRAVEYARD", "params": {"target": idx, "to": "HAND" if m.get_string(3) == "your hand" else "BATTLEFIELD"}})
 		return true
 
 	# Draw a card for each other Dinosaur you control (Earthshaker Dreadmaw).
@@ -2779,16 +2975,16 @@ func _sentence(s: String) -> bool:
 	if m != null:
 		_effects.append({"kind": "GAIN_LIFE", "params": {"n": int(m.get_string(1))}})
 		return true
-	m = _match("^you gain life equal to that creature's (toughness|power)$", s)
+	m = _match("^you gain life equal to (?:that creature's|its) (toughness|power)$", s)
 	if m != null:
 		_effects.append({"kind": "GAIN_LIFE", "params": {"n": {"expr": "TRIGGER_TOUGHNESS" if m.get_string(1).to_lower() == "toughness" else "TRIGGER_POWER"}}})
 		return true
-	m = _match("^target player gains (\\d+) life$", s)
+	m = _match("^target player gains (\\d+|x) life$", s)
 	if m != null:
 		var pslot := _add_target("PLAYER", {})
 		if pslot < 0:
 			return false
-		_effects.append({"kind": "GAIN_LIFE", "params": {"n": int(m.get_string(1)), "target": pslot}})
+		_effects.append({"kind": "GAIN_LIFE", "params": {"n": _amt(m.get_string(1)), "target": pslot}})
 		return true
 	m = _match("^each opponent loses (\\d+) life$", s)
 	if m != null:
@@ -2831,7 +3027,7 @@ func _sentence(s: String) -> bool:
 		return true
 
 	# Tokens.
-	m = _match("^create (a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|twenty|\\d+) (tapped )?(treasure|food|clue) tokens?$", s)
+	m = _match("^create (a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|twenty|\\d+) (tapped )?(treasure|food|clue|junk|blood) tokens?$", s)
 	if m != null:
 		_effects.append({"kind": "CREATE_TOKEN", "params": {"token": m.get_string(3).to_lower(), "count": _num(m.get_string(1)), "tapped": m.get_string(2) != ""}})
 		return true
@@ -3600,6 +3796,8 @@ func _condition(text: String) -> Dictionary:
 		return {"opp_more_life": true}
 	if _match("^you control your commander$", t) != null:
 		return {"controls_commander": true}
+	if _match("^you control the artifact with the greatest mana value or tied for the greatest mana value$", t) != null:
+		return {"greatest_artifact": true}
 	if _match("^none of those creatures attacked you$", t) != null:
 		return {"no_attacker_at_me": true}
 	m = _match("^you have at least (\\w+) life more than your starting life total$", t)

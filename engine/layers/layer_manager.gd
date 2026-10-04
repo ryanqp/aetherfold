@@ -64,6 +64,8 @@ func snapshot(state: GameState, obj: GameObject) -> Dictionary:
 			if sp.has("cda_pt"):
 				var cda: Dictionary = sp["cda_pt"]
 				var cda_n := Query.count_objects(state, obj, cda.get("query", {}))
+				if bool(cda.get("life", false)) and obj.controller_id >= 0 and obj.controller_id < state.players.size():
+					cda_n = state.players[obj.controller_id].life
 				if bool(cda.get("power", false)):
 					printed_p = cda_n
 				if bool(cda.get("toughness", false)):
@@ -542,6 +544,27 @@ func _more_conditions(state: GameState, src: GameObject, pid: int, cond: Diction
 			if int(cs.defenders.get(aid, cs.defending_player_id)) == pid:
 				at_me = true
 		if at_me == bool(cond["no_attacker_at_me"]):
+			return false
+	## Padeem: "you control the artifact with the greatest mana value or tied for the greatest".
+	if cond.has("greatest_artifact") and me != null:
+		var best_mine := -1
+		var best_all := -1
+		var bfa: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+		if bfa != null:
+			for aoid in bfa.object_ids:
+				var ao: GameObject = state.objects.get(aoid)
+				if ao == null or not (ao.definition is CardDefinition) or not (ao.definition as CardDefinition).type_line.contains("Artifact"):
+					continue
+				var amv := (ao.definition as CardDefinition).cmc
+				best_all = maxi(best_all, amv)
+				if ao.controller_id == pid:
+					best_mine = maxi(best_mine, amv)
+		if (best_mine >= 0 and best_mine >= best_all) != bool(cond["greatest_artifact"]):
+			return false
+	## "As long as ~ has four or more +1/+1 counters on it": counters on the source itself.
+	if cond.has("self_counters") and src != null:
+		var sc: Dictionary = cond["self_counters"]
+		if int(src.counters.get(str(sc.get("name", "+1/+1")), 0)) < int(sc.get("min", 1)):
 			return false
 	if me != null and cond.has("gained_life_min") and me.life_gained_this_turn < int(cond["gained_life_min"]):
 		return false
