@@ -54,6 +54,10 @@ var day_night: String = ""
 var initiative_id: int = -1
 ## Permanents put into a graveyard from the battlefield this turn (gravestorm).
 var died_this_turn: int = 0
+## Delayed effects ("sacrifice it at the beginning of the next end step"): {step, whose, turn, step_index, controller, object_id, action}.
+var delayed: Array = []
+## Damage prevention shields ("prevent the next 3 damage that would be dealt to any target this turn"): {to, player_id, object_id, combat_only, n (-1 = all)}.
+var prevention: Array = []
 ## Creatures put into a graveyard from the battlefield this turn (morbid).
 var creatures_died_this_turn: int = 0
 ## Delayed "return it when it dies or is exiled" for earthbent lands: object ids.

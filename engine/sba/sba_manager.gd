@@ -47,7 +47,7 @@ func _check_commander_damage(st: GameState) -> void:
 	var need := st.rules.commander_damage_to_lose if st.rules else 21
 	for p in st.players:
 		for k in p.commander_damage_from.keys():
-			if int(p.commander_damage_from[k]) >= need:
+			if int(p.commander_damage_from[k]) >= need and not _cant_lose(st, p):
 				p.lost = true
 
 
@@ -111,7 +111,7 @@ func _check_creatures(engine: RulesEngine) -> void:
 
 func _check_life(st: GameState) -> void:
 	for p in st.players:
-		if p.life <= 0 or p.poison >= 10:
+		if (p.life <= 0 or p.poison >= 10) and not _cant_lose(st, p):
 			p.lost = true
 
 
@@ -229,3 +229,19 @@ func _check_sagas(engine: RulesEngine) -> void:
 				break
 		if not waiting:
 			st.zones.move(oid, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
+
+
+## "You can't lose the game and your opponents can't win the game." (Herald of Eternal Dawn, Platinum Angel).
+func _cant_lose(st: GameState, p: PlayerState) -> bool:
+	var bf: Zone = st.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return false
+	for oid in bf.object_ids:
+		var o: GameObject = st.objects.get(oid)
+		if o == null or o.controller_id != p.player_id or not (o.definition is CardDefinition):
+			continue
+		for a in (o.definition as CardDefinition).abilities:
+			var ab := a as Ability
+			if ab != null and ab.kind == &"STATIC" and ab.static_spec.has("cant_lose"):
+				return true
+	return false

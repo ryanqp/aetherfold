@@ -183,6 +183,12 @@ func _untap(st: GameState) -> void:
 
 ## CR 502.3: "doesn't untap during its controller's untap step" (unless that player is the monarch: Fall from Favor).
 func _held_tapped(st: GameState, layers: LayerManager, obj: GameObject) -> bool:
+	## "~ doesn't untap during your untap step." printed on the permanent (no condition on the line).
+	if obj.definition is CardDefinition:
+		for raw_line in (obj.definition as CardDefinition).oracle_text.to_lower().split("\n"):
+			var l := str(raw_line).strip_edges()
+			if l.contains("doesn't untap during your untap step") and not l.contains(" if ") and not l.contains("unless") and not l.begins_with("enchanted") and not l.begins_with("equipped"):
+				return true
 	for spec in layers.attached_specs(st, obj, "doesnt_untap"):
 		var sp: Dictionary = spec
 		if bool(sp.get("unless_monarch", false)) and st.monarch_id == obj.controller_id:
@@ -195,6 +201,9 @@ func _clear_may_play(st: GameState) -> void:
 	for id in st.objects.keys():
 		var obj: GameObject = st.objects[id]
 		if obj != null:
+			## "Until the end of your next turn" (Light Up the Stage) outlives this turn.
+			if int(obj.marks.get("keep_until", 0)) > st.turn_number:
+				continue
 			obj.may_play_controller = -1
 
 

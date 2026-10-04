@@ -56,6 +56,18 @@ func snapshot(state: GameState, obj: GameObject) -> Dictionary:
 					if not subtypes.has(str(st_name)):
 						subtypes.append(str(st_name))
 				type_line = _with_subtypes(type_line, subtypes)
+			## "~ is the chosen type in addition to its other types" (Metallic Mimic).
+			if bool(sp.get("add_chosen_subtype", false)) and obj.chosen_type != "" and not subtypes.has(obj.chosen_type):
+				subtypes.append(obj.chosen_type)
+				type_line = _with_subtypes(type_line, subtypes)
+			## Characteristic-defining power / toughness (CR 604.3): "~'s power and toughness are each equal to the number of lands you control".
+			if sp.has("cda_pt"):
+				var cda: Dictionary = sp["cda_pt"]
+				var cda_n := Query.count_objects(state, obj, cda.get("query", {}))
+				if bool(cda.get("power", false)):
+					printed_p = cda_n
+				if bool(cda.get("toughness", false)):
+					printed_t = cda_n
 			if sp.has("base_pt"):
 				printed_p = int((sp["base_pt"] as Array)[0])
 				printed_t = int((sp["base_pt"] as Array)[1])
@@ -281,7 +293,9 @@ func _static_mods(state: GameState, obj: GameObject) -> Dictionary:
 				continue
 			var mult := 1
 			## "+1/+1 for each artifact you control", "+X/+X where X is the greatest mana value among your commanders".
-			if spec.has("per"):
+			if spec.has("per_counter"):
+				mult = int(src.counters.get(str(spec["per_counter"]), 0))
+			elif spec.has("per"):
 				mult = Query.count_objects(state, src, spec["per"])
 			elif bool(spec.get("x_commander_mv", false)):
 				mult = _commander_max_mv(state, src.controller_id)
@@ -469,6 +483,68 @@ func _more_conditions(state: GameState, src: GameObject, pid: int, cond: Diction
 			return false
 		if cond.has("paid_lacks") and (hit or paid.is_empty()):
 			return false
+	## "An opponent has more life than you" / "controls more creatures (lands) than you".
+	if me != null and (cond.has("opp_more_life") or cond.has("opp_more_creatures") or cond.has("opp_more_lands")):
+		var bf2: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+		var mine_c := 0
+		var mine_l := 0
+		var opp_c := {}
+		var opp_l := {}
+		if bf2 != null:
+			for boid in bf2.object_ids:
+				var bo: GameObject = state.objects.get(boid)
+				if bo == null or not (bo.definition is CardDefinition):
+					continue
+				var btl := (bo.definition as CardDefinition).type_line
+				if btl.contains("Creature"):
+					if bo.controller_id == pid:
+						mine_c += 1
+					else:
+						opp_c[bo.controller_id] = int(opp_c.get(bo.controller_id, 0)) + 1
+				if btl.contains("Land"):
+					if bo.controller_id == pid:
+						mine_l += 1
+					else:
+						opp_l[bo.controller_id] = int(opp_l.get(bo.controller_id, 0)) + 1
+		var more_life := false
+		var more_c := false
+		var more_l := false
+		for op2 in state.players:
+			if op2.player_id == pid or op2.lost:
+				continue
+			more_life = more_life or op2.life > me.life
+			more_c = more_c or int(opp_c.get(op2.player_id, 0)) > mine_c
+			more_l = more_l or int(opp_l.get(op2.player_id, 0)) > mine_l
+		if cond.has("opp_more_life") and more_life != bool(cond["opp_more_life"]):
+			return false
+		if cond.has("opp_more_creatures") and more_c != bool(cond["opp_more_creatures"]):
+			return false
+		if cond.has("opp_more_lands") and more_l != bool(cond["opp_more_lands"]):
+			return false
+	## "You control your commander" (lieutenant, Angelic Field Marshal), "7 life more than your starting life total", turn count.
+	if cond.has("controls_commander") and me != null:
+		var has_cmd := false
+		for cid in me.commander_ids:
+			var cobj: GameObject = state.objects.get(int(cid))
+			if cobj != null and cobj.zone == EngineEnums.ZoneId.BATTLEFIELD and cobj.controller_id == pid:
+				has_cmd = true
+		if has_cmd != bool(cond["controls_commander"]):
+			return false
+	if me != null and cond.has("life_over_start") and me.life < (state.rules.starting_life if state.rules != null else 40) + int(cond["life_over_start"]):
+		return false
+	if me != null and cond.has("own_turns_min") and me.turns_taken < int(cond["own_turns_min"]):
+		return false
+	## "If none of those creatures attacked you" (Firemane Commando).
+	if cond.has("no_attacker_at_me") and state.combat is CombatState:
+		var cs := state.combat as CombatState
+		var at_me := false
+		for aid in cs.attacker_ids:
+			if int(cs.defenders.get(aid, cs.defending_player_id)) == pid:
+				at_me = true
+		if at_me == bool(cond["no_attacker_at_me"]):
+			return false
+	if me != null and cond.has("gained_life_min") and me.life_gained_this_turn < int(cond["gained_life_min"]):
+		return false
 	if cond.has("opp_lost_life"):
 		var lost := false
 		for op in state.players:
@@ -530,7 +606,7 @@ func loses_abilities(state: GameState, obj: GameObject) -> bool:
 
 
 ## Statics on the battlefield that change `obj`'s characteristics (not just +N/+N or keywords).
-const CHAR_KEYS := ["lose_abilities", "set_type_line", "set_subtypes", "add_subtypes", "base_pt", "imprint_pt", "char_keywords"]
+const CHAR_KEYS := ["add_chosen_subtype", "cda_pt", "lose_abilities", "set_type_line", "set_subtypes", "add_subtypes", "base_pt", "imprint_pt", "char_keywords"]
 
 
 func _char_specs(state: GameState, obj: GameObject) -> Array:

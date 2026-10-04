@@ -34,13 +34,17 @@ func can_pay(obj: GameObject, ability: Ability) -> bool:
 			return false
 		if cost.kind == &"SACRIFICE" and sacrifice_candidates(obj, str(cost.mana)).is_empty():
 			return false
+		if cost.kind == &"DISCARD" and _discard_pick(obj) == null:
+			return false
+		if cost.kind == &"REMOVE_COUNTER" and int(obj.counters.get(str(cost.mana), 0)) < 1:
+			return false
 		## CR 606.6: a loyalty cost can't remove more loyalty counters than the planeswalker has.
 		if cost.kind == &"LOYALTY" and int(obj.counters.get("loyalty", 0)) + int(cost.mana) < 0:
 			return false
 		## CR 119.4: a player can pay life only if their life total is at least that much.
 		if cost.kind == &"PAY_LIFE":
 			var st := _state()
-			if st == null or obj.controller_id < 0 or obj.controller_id >= st.players.size() or st.players[obj.controller_id].life < int(cost.mana):
+			if st == null or obj.controller_id < 0 or obj.controller_id >= st.players.size() or st.players[obj.controller_id].life < _life_amount(obj, str(cost.mana)):
 				return false
 	return true
 
@@ -59,10 +63,19 @@ func pay(obj: GameObject, ability: Ability) -> bool:
 		elif cost.kind == &"PAY_LIFE":
 			var st := _state()
 			if st != null:
-				st.players[obj.controller_id].life -= int(cost.mana)
-				st.log.append(EngineEnums.EventType.LIFE_CHANGE, obj.controller_id, {to_player = obj.controller_id, amount = int(cost.mana)})
+				var pay_n := _life_amount(obj, str(cost.mana))
+				st.players[obj.controller_id].life -= pay_n
+				st.log.append(EngineEnums.EventType.LIFE_CHANGE, obj.controller_id, {to_player = obj.controller_id, amount = pay_n})
 		elif cost.kind == &"ADD_COUNTER":
 			obj.counters[cost.mana] = int(obj.counters.get(cost.mana, 0)) + 1
+		elif cost.kind == &"REMOVE_COUNTER":
+			obj.counters[str(cost.mana)] = maxi(0, int(obj.counters.get(str(cost.mana), 0)) - 1)
+		elif cost.kind == &"DISCARD":
+			var dc := _discard_pick(obj)
+			var st3 := _state()
+			if dc != null and st3 != null:
+				dc.discarded_turn = st3.turn_number
+				st3.zones.move(dc.object_id, EngineEnums.ZoneId.GRAVEYARD, dc.owner_id)
 		elif cost.kind == &"SACRIFICE":
 			var pick := sacrifice_candidates(obj, str(cost.mana))
 			var st2 := _state()
@@ -97,6 +110,8 @@ func sacrifice_candidates(obj: GameObject, spec: String) -> Array:
 	var bf: Zone = st.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
 	if bf == null:
 		return out
+	## "black creature", "Zombie", "artifact or creature": the grammar's group query when it understands the phrase.
+	var gq := OracleIr.new()._group_query(" ".join(PackedStringArray(parts.slice(parts.size() - 1))))
 	for oid in bf.object_ids:
 		var o: GameObject = st.objects.get(oid)
 		if o == null or o.controller_id != obj.controller_id or not (o.definition is CardDefinition):
@@ -105,6 +120,10 @@ func sacrifice_candidates(obj: GameObject, spec: String) -> Array:
 			continue
 		var tl := (o.definition as CardDefinition).type_line
 		var hit := false
+		if not gq.is_empty() and not (parts[parts.size() - 1] as String).contains(" or "):
+			if Query._matches(o, obj, gq):
+				out.append(o)
+			continue
 		for w in words:
 			var word := str(w).strip_edges()
 			if word == "permanent" or tl.to_lower().contains(word) or Query._subtype_words(tl).has(word.capitalize()):
@@ -118,3 +137,41 @@ func sacrifice_candidates(obj: GameObject, spec: String) -> Array:
 		var cb := (b.definition as CardDefinition).cmc
 		return ca < cb)
 	return out
+
+
+## The card thrown away for a "Discard a card" cost: an extra land first, otherwise the cheapest card in hand.
+func _discard_pick(obj: GameObject) -> GameObject:
+	var st := _state()
+	if st == null or st.zones == null or obj == null:
+		return null
+	var hand: Zone = st.zones.get_zone(EngineEnums.ZoneId.HAND, obj.controller_id)
+	if hand == null:
+		return null
+	var best: GameObject = null
+	var best_v := 1000000
+	for oid in hand.object_ids:
+		var c: GameObject = st.objects.get(oid)
+		if c == null or not (c.definition is CardDefinition):
+			continue
+		var d := c.definition as CardDefinition
+		var v := (-1 if d.is_land() else 0) + d.cmc * 2
+		if v < best_v:
+			best_v = v
+			best = c
+	return best
+
+
+## Life paid for a PAY_LIFE cost: a number, or "ID_COLORS" = the number of colors in your commanders' color identity (War Room).
+func _life_amount(obj: GameObject, spec: String) -> int:
+	if spec != "ID_COLORS":
+		return int(spec)
+	var st := _state()
+	if st == null or obj.controller_id < 0 or obj.controller_id >= st.players.size():
+		return 0
+	var colors := {}
+	for cid in st.players[obj.controller_id].commander_ids:
+		var c: GameObject = st.objects.get(int(cid))
+		if c != null and c.definition is CardDefinition:
+			for col in (c.definition as CardDefinition).color_identity:
+				colors[str(col)] = true
+	return colors.size()

@@ -6,8 +6,11 @@ const COST_KEYS := ["kind", "mana", "from"]
 const EFFECT_KEYS := ["kind", "params"]
 const EFFECT_PARAM_KEYS := {
 	"DRAW": ["n", "if_link", "who"],
-	"CREATE_TOKEN": ["token", "count", "spec", "tapped", "for", "pt_x"],
+	"CREATE_TOKEN": ["token", "count", "spec", "tapped", "for", "pt_x", "copy_of"],
 	"COUNTER_SPELL": ["target"],
+	"COUNTER_UNLESS_PAY": ["target", "cost"],
+	"DISCARD_CHOSEN": ["target", "filter"],
+	"REVEAL_HAND": ["target"],
 	"MOVE_ZONE": ["target", "to"],
 	"ADD_MANA": ["mana"],
 	"TAP": ["target"],
@@ -22,7 +25,7 @@ const EFFECT_PARAM_KEYS := {
 	"EXILE_TOP": ["n", "who", "may_play", "link"],
 	"MAY": ["link", "prompt"],
 	"CHOOSE": ["choice", "link", "options", "optional", "prompt"],
-	"PUT_COUNTER": ["name", "n", "target", "self", "each", "trigger_object"],
+	"PUT_COUNTER": ["name", "n", "target", "self", "each", "trigger_object", "moved"],
 	"GAIN_LIFE": ["n", "target", "who"],
 	"DESTROY": ["target"],
 	"PUMP": ["target", "power", "toughness", "keywords", "duration", "self", "each", "trigger_object"],
@@ -41,9 +44,15 @@ const EFFECT_PARAM_KEYS := {
 	"MILL": ["n", "who", "target"],
 	"DISCARD": ["n", "who", "target"],
 	"SURVEIL": ["n"],
-	"SACRIFICE": ["n", "who", "type"],
+	"SACRIFICE": ["n", "who", "type", "query", "to", "self"],
 	"PROLIFERATE": [],
 	"EXPLORE": [],
+	"LOOK_TOP": ["n", "take", "rest"],
+	"GAIN_CONTROL": ["target", "duration"],
+	"PREVENT": ["to", "combat_only", "n"],
+	"PUT_BACK": ["n"],
+	"DELAY": ["step", "whose", "action", "ref"],
+	"DELAYED_ACT": ["action", "object_id"],
 	"AMASS": ["n"],
 	"BOLSTER": ["n"],
 	"POPULATE": [],
@@ -164,9 +173,9 @@ const EFFECT_PARAM_KEYS := {
 	"COUNTERS_X": [],
 }
 ## Gates any effect may carry: only run if the spell was kicked / an opponent was dealt damage this turn.
-const GATE_KEYS := ["if_kicked", "if_opp_damaged", "if_cast", "if_cast_from_hand", "if_link", "if_exiled_creature", "if_exiled_noncreature", "if_trigger_subtype", "if_gift", "if_defender_most_life", "if_cond"]
+const GATE_KEYS := ["if_moved_subtype", "if_not_link", "if_kicked", "if_opp_damaged", "if_cast", "if_cast_from_hand", "if_link", "if_exiled_creature", "if_exiled_noncreature", "if_trigger_subtype", "if_gift", "if_defender_most_life", "if_cond"]
 const ABILITY_KINDS := ["SPELL", "ACTIVATED", "TRIGGERED", "STATIC", "REPLACEMENT", "MANA"]
-const COST_KINDS := ["MANA", "TAP", "UNTAP", "ADDITIONAL_MANA", "SACRIFICE_SELF", "SACRIFICE", "LOYALTY", "PAY_LIFE", "ADD_COUNTER"]
+const COST_KINDS := ["MANA", "TAP", "UNTAP", "ADDITIONAL_MANA", "SACRIFICE_SELF", "SACRIFICE", "DISCARD", "REMOVE_COUNTER", "LOYALTY", "PAY_LIFE", "ADD_COUNTER"]
 
 var errors: PackedStringArray = PackedStringArray()
 

@@ -131,6 +131,11 @@ func from_spec(spec: Dictionary) -> CardDefinition:
 		d.oracle_text = ("%s\nToxic %d" % [d.oracle_text, int(spec.toxic)]).strip_edges()
 	if bool(spec.get("cant_block", false)):
 		d.oracle_text = (d.oracle_text + "\nThis token can't block.").strip_edges()
+	## Quoted rules ("... token with "When this creature dies, ..."): read like any permanent's text.
+	var rules: Array = spec.get("rules", [])
+	if not rules.is_empty():
+		d.oracle_text = (d.oracle_text + "\n" + "\n".join(PackedStringArray(rules))).strip_edges()
+		d.abilities = OracleIr.translate_permanent(d)
 	return d
 
 

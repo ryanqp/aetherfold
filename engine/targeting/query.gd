@@ -46,6 +46,9 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 	var type_need := str(spec.get("type", "")).strip_edges()
 	if type_need != "" and type_line.to_lower().find(type_need.to_lower()) == -1:
 		return false
+	for nt in spec.get("not_types", []):
+		if type_line.to_lower().find(str(nt).to_lower()) >= 0:
+			return false
 	var not_type := str(spec.get("not_type", "")).strip_edges()
 	if not_type != "" and type_line.to_lower().find(not_type.to_lower()) >= 0:
 		return false
@@ -106,6 +109,8 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 	var not_kw := str(spec.get("not_keyword", "")).strip_edges()
 	if not_kw != "" and _has_printed_keyword(def, not_kw):
 		return false
+	if spec.has("mv_min") and (def == null or def.cmc < int(spec["mv_min"])):
+		return false
 	if spec.has("mv_max") and (def == null or def.cmc > int(spec["mv_max"])):
 		return false
 	if spec.has("mv") and (def == null or def.cmc != int(spec["mv"])):
@@ -120,6 +125,10 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 	if not_color != "" and def != null and def.colors.has(not_color):
 		return false
 	var color_need := str(spec.get("color", "")).strip_edges()
+	if color_need == "$chosen":
+		color_need = source.chosen_color if source != null else ""
+		if color_need == "":
+			return false
 	if color_need != "" and (def == null or not def.colors.has(color_need)):
 		return false
 	return true

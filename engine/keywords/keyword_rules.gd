@@ -2104,12 +2104,15 @@ func note_player_damaged(pid: int, source: GameObject, combat: bool) -> void:
 func on_new_turn() -> void:
 	_day_night_turn()
 	engine.state.creatures_died_this_turn = 0
+	if engine.state.active_player_id >= 0 and engine.state.active_player_id < engine.state.players.size():
+		engine.state.players[engine.state.active_player_id].turns_taken += 1
 	for p in engine.state.players:
 		p.damaged_this_turn = false
 		p.combat_damagers_types = []
 		p.draws_this_turn = 0
 		p.nonland_entered_this_turn = 0
 		p.attacked_this_turn = false
+		engine.state.prevention = []
 		p.life_gained_this_turn = 0
 		p.life_lost_this_turn = 0
 		p.permanents_left_this_turn = 0

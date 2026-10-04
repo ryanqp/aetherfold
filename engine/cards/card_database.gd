@@ -95,6 +95,15 @@ func _handled_elsewhere(d: CardDefinition, line: String, etb: Dictionary) -> boo
 	var low_line := line.to_lower()
 	if d.enters_tapped() and low_line.begins_with("~ enters"):
 		return true
+	## "~ can't block." / "~ can't attack." / "~ can't attack or block.": enforced from the card's own text (Engine._printed_cant).
+	## Printed combat-damage prevention on the permanent itself (Engine._prints_combat_prevention).
+	if low_line == "prevent all combat damage that would be dealt to ~.":
+		return true
+	## The engine does not enforce a maximum hand size, so "no maximum hand size" already holds.
+	if low_line == "you have no maximum hand size.":
+		return true
+	if low_line in ["~ can't block.", "~ can't attack.", "~ can't attack or block.", "~ can't block or attack."]:
+		return true
 	if low_line.begins_with("~ enters with") and not low_line.contains(" if ") and not ZoneManager.enters_with_counters(d).is_empty():
 		return true
 	if low_line == "you may play an additional land on each of your turns." or low_line == "creatures your opponents control enter tapped.":
@@ -120,7 +129,9 @@ func line_status(d: CardDefinition) -> Array:
 	var etb := EtbRules.parse(d)
 	var covered: Array = []
 	for a in d.abilities:
-		covered.append(str((a as Ability).text).strip_edges())
+		## An ability that carries a "Not coded yet" note is only partly read: it doesn't count as covered.
+		if not _has_note(a as Ability):
+			covered.append(str((a as Ability).text).strip_edges())
 	var text := OracleIr.normalize(d)
 	var is_spell := d.is_instant() or d.is_sorcery()
 	var lines: Array = []
@@ -136,12 +147,40 @@ func line_status(d: CardDefinition) -> Array:
 			continue
 		var ok := false
 		var clean := line.trim_suffix(".")
-		if is_spell:
-			ok = OracleIr.new()._read_effects(line)
+		if (line.ends_with("—") and line.to_lower().contains("choose ")) or (is_spell and line.to_lower().begins_with("choose ") and i + 1 < lines.size() and str(lines[i + 1]).begins_with("•")):
+			## A "Choose one —" line and its bullets: read together as one modal ability.
+			if is_spell:
+				ok = not OracleIr.new()._read_modal(d, text).is_empty()
+			else:
+				var bullets: Array = []
+				var j := i + 1
+				while j < lines.size() and str(lines[j]).begins_with("•"):
+					bullets.append(str(lines[j]).substr(1).strip_edges())
+					j += 1
+				ok = not OracleIr.new()._modal_permanent_line(d, line, bullets).is_empty()
+		elif is_spell:
+			var rd := OracleIr.new()
+			## "~ costs {2} less to cast if it targets a Dinosaur you control." is read as a cost discount (OracleIr._read).
+			var target_discount := OracleIr._match("^~ costs \\{(\\d+)\\} less to cast if it targets an? ([a-z]+) you control$", clean) != null
+			ok = target_discount or not rd._self_discount(clean).is_empty() or rd._read_effects(line)
 		else:
 			ok = not (OracleIr._read_whole_or_by_sentence(d, clean) as Array).is_empty()
 		out.append({"line": line, "read": ok})
 	return out
+
+
+func _has_note(ab: Ability) -> bool:
+	for fx in ab.effects:
+		var e := fx as AbilityEffect
+		if e == null:
+			continue
+		if str(e.kind) == "NOTE_UNREAD":
+			return true
+		for mode in e.params.get("modes", []):
+			for mfx in (mode as Dictionary).get("effects", []):
+				if str((mfx as Dictionary).get("kind", "")) == "NOTE_UNREAD":
+					return true
+	return false
 
 
 func _keyword_line(line: String) -> bool:

@@ -100,8 +100,10 @@ func _on_enter(gs: GameState, obj: GameObject) -> void:
 		obj.counters["time"] = int(def.kw().impending.n)
 	if not def.is_land() and obj.controller_id >= 0 and obj.controller_id < gs.players.size():
 		gs.players[obj.controller_id].nonland_entered_this_turn += 1
+	_enters_with_extra(gs, obj)
 	for c in enters_with_counters(def):
-		obj.counters[str(c.name)] = int(obj.counters.get(str(c.name), 0)) + int(c.n)
+		var add_n: int = obj.x_paid if bool(c.get("x", false)) else int(c.n)
+		obj.counters[str(c.name)] = int(obj.counters.get(str(c.name), 0)) + add_n
 
 
 func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip_replacement: bool = false) -> GameObject:
@@ -373,11 +375,39 @@ func _note_left_battlefield(gs: GameState, old: GameObject, dest_zone: int) -> v
 ## Oracle text (unconditional lines only: "if ..." forms are left to the card).
 static func enters_with_counters(def: CardDefinition) -> Array:
 	var out: Array = []
-	var re := RegEx.create_from_string("(?i)^(?:~|this [a-z]+) enters with (a|an|one|two|three|four|five|six|seven|eight|nine|ten|\\d+) (-1/-1|[a-z]+) counters? on (?:it|him|her|them)\\.?$")
+	var re := RegEx.create_from_string("(?i)^(?:~|this [a-z]+) enters with (a|an|one|two|three|four|five|six|seven|eight|nine|ten|x|\\d+) (-1/-1|[a-z]+) counters? on (?:it|him|her|them)\\.?$")
 	for raw in OracleIr.normalize(def).split("\n"):
 		var m := re.search(str(raw).strip_edges())
 		if m == null:
 			continue
 		## "+1/+1" counters are already read as an ability by OracleIr.
-		out.append({"name": m.get_string(2).to_lower(), "n": OracleIr._num(m.get_string(1))})
+		out.append({"name": m.get_string(2).to_lower(), "n": OracleIr._num(m.get_string(1)), "x": m.get_string(1).to_lower() == "x"})
 	return out
+
+
+## "Each other Angel you control enters with an additional +1/+1 counter on it for each Angel you already control" (Giada),
+## "Each Dragon you control enters with an additional +1/+1 counter" (Dragonstorm Globe), Metallic Mimic: statics of the
+## permanents already on the battlefield that give what enters extra counters.
+func _enters_with_extra(gs: GameState, entering: GameObject) -> void:
+	var bf: Zone = get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return
+	for sid in bf.object_ids:
+		var src: GameObject = gs.objects.get(sid)
+		if src == null or not (src.definition is CardDefinition):
+			continue
+		for a in (src.definition as CardDefinition).abilities:
+			var ab := a as Ability
+			if ab == null or ab.kind != &"STATIC" or not ab.static_spec.has("enters_extra"):
+				continue
+			var spec: Dictionary = ab.static_spec["enters_extra"]
+			var q: Dictionary = spec.get("query", {})
+			if not Query._matches(entering, src, q):
+				continue
+			var n := int(spec.get("n", 1))
+			if spec.has("per"):
+				var already := Query.count_objects(gs, src, spec["per"])
+				if Query._matches(entering, src, spec["per"]):
+					already -= 1
+				n *= maxi(0, already)
+			entering.counters["+1/+1"] = int(entering.counters.get("+1/+1", 0)) + n

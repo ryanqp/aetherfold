@@ -179,7 +179,7 @@ func legal_actions(player_id: int) -> Array:
 			continue
 		for oid in z.object_ids:
 			var obj: GameObject = state.objects.get(oid)
-			if obj == null or _is_land(obj):
+			if obj == null or _is_land(obj) or _cast_forbidden(obj):
 				continue
 			if obj.zone == EngineEnums.ZoneId.EXILE and not can_play_from_exile(player_id, obj):
 				## Foretold, plotted, warped and airbent cards are cast from exile in their own mode.
@@ -436,7 +436,9 @@ func cost_reduction(player_id: int, spell: GameObject) -> int:
 			var spec: Dictionary = ab.static_spec["cost_reduction"]
 			var f: Variant = spec.get("filter", {})
 			if f is Dictionary and Query._matches(spell, src, f):
-				total += int(spec.get("amount", 1))
+				## "... cost {1} less for each +1/+1 counter on ~" (Herald of War).
+				var per_counter := str(spec.get("per_counter", ""))
+				total += int(spec.get("amount", 1)) * (int(src.counters.get(per_counter, 0)) if per_counter != "" else 1)
 	return total
 
 
@@ -465,6 +467,15 @@ func _own_discount(player_id: int, spell: GameObject) -> int:
 	if not (spell.definition is CardDefinition):
 		return 0
 	var total := 0
+	for a0 in (spell.definition as CardDefinition).abilities:
+		## "~ costs {3} less to cast if you've gained 3 or more life this turn" / "... for each creature you control".
+		var ab0 := a0 as Ability
+		if ab0 != null and ab0.kind == &"STATIC" and ab0.static_spec.has("cost_reduction_self"):
+			var cs: Dictionary = ab0.static_spec["cost_reduction_self"]
+			if cs.has("per"):
+				total += int(cs.get("amount", 1)) * Query.count_objects(state, spell, cs["per"])
+			elif layers.condition_met(state, spell, cs.get("condition", {})):
+				total += int(cs.get("amount", 1))
 	for a in (spell.definition as CardDefinition).abilities:
 		var ab := a as Ability
 		if ab == null or ab.kind != &"STATIC" or not ab.static_spec.has("cost_reduction_if_target"):
@@ -694,6 +705,9 @@ func _submit_cast_spell(action: GameAction) -> SubmitResult:
 	var obj: GameObject = state.objects.get(action.object_id)
 	if obj == null or obj.controller_id != action.player_id:
 		r.error = "illegal spell"
+		return r
+	if _cast_forbidden(obj):
+		r.error = "can't cast it now"
 		return r
 	var cast_mode := str(action.extra.get("mode", ""))
 	var from_exile := obj.zone == EngineEnums.ZoneId.EXILE and (can_play_from_exile(action.player_id, obj) or (cast_mode in KeywordRules.EXILE_MODES and obj.owner_id == action.player_id))
@@ -1546,6 +1560,9 @@ func damage_object(source: GameObject, target: GameObject, amount: int) -> void:
 ## Damage to a creature: marked damage, or -1/-1 counters when the source has infect (CR 702.90b) or wither (CR 702.80a).
 func _mark_damage(source: GameObject, target: GameObject, amount: int) -> void:
 	amount = _prevent_all_but_one(target, amount)
+	amount = apply_prevention(target, -1, amount)
+	if amount <= 0:
+		return
 	## CR 120.3c: damage to a planeswalker removes that many loyalty counters from it.
 	if is_planeswalker_now(target) and not _is_creature_now(target):
 		target.counters["loyalty"] = maxi(0, int(target.counters.get("loyalty", 0)) - amount)
@@ -1554,6 +1571,47 @@ func _mark_damage(source: GameObject, target: GameObject, amount: int) -> void:
 		target.counters["-1/-1"] = int(target.counters.get("-1/-1", 0)) + amount
 	else:
 		target.damage_marked += amount
+
+
+## Damage prevention shields (CR 615): what is left of `amount` after the shields that cover this target. Shields end with the turn.
+func apply_prevention(target_obj: GameObject, target_player: int, amount: int) -> int:
+	## "Prevent all combat damage that would be dealt to ~" printed on the permanent (Seraph of the Sword).
+	if amount > 0 and target_obj != null and state.step == EngineEnums.Step.COMBAT_DAMAGE and _prints_combat_prevention(target_obj):
+		return 0
+	if amount <= 0 or state.prevention.is_empty():
+		return amount
+	var combat := state.step == EngineEnums.Step.COMBAT_DAMAGE
+	for sh in state.prevention:
+		var d: Dictionary = sh
+		if bool(d.get("combat_only", false)) and not combat:
+			continue
+		var covers := false
+		match str(d.get("to", "ANY")):
+			"ANY":
+				covers = true
+			"PLAYER":
+				covers = target_obj == null and target_player == int(d.get("player_id", -2))
+			"OBJECT":
+				covers = target_obj != null and target_obj.object_id == int(d.get("object_id", -2))
+			"YOUR_STUFF":
+				covers = (target_obj == null and target_player == int(d.get("player_id", -2))) or (target_obj != null and target_obj.controller_id == int(d.get("player_id", -2)))
+		if not covers:
+			continue
+		var n := int(d.get("n", -1))
+		if n < 0:
+			amount = 0
+		else:
+			var used := mini(n, amount)
+			d["n"] = n - used
+			amount -= used
+		if amount <= 0:
+			break
+	var left: Array = []
+	for sh2 in state.prevention:
+		if int((sh2 as Dictionary).get("n", -1)) != 0:
+			left.append(sh2)
+	state.prevention = left
+	return maxi(0, amount)
 
 
 ## Temple Altisaur (CR 615): "If a source would deal damage to another Dinosaur you control, prevent all but 1 of that damage."
@@ -1726,6 +1784,7 @@ func _combat_damage_to_object(source: GameObject, target: GameObject, amount: in
 func _combat_damage_to_player(source: GameObject, player_id: int, amount: int) -> void:
 	if player_id < 0 or player_id >= state.players.size():
 		return
+	amount = apply_prevention(null, player_id, amount)
 	## Infect (CR 702.90b): damage to a player is poison counters instead of life loss. Toxic N (CR 702.164)
 	## adds N poison counters on top of normal damage.
 	if has_keyword(source, "Infect"):
@@ -1757,7 +1816,7 @@ func _apply_lifelink(source: GameObject, amount: int) -> void:
 	if amount <= 0 or not has_keyword(source, "Lifelink"):
 		return
 	var pid := source.controller_id
-	if pid < 0 or pid >= state.players.size():
+	if pid < 0 or pid >= state.players.size() or executor.life_gain_blocked(self, pid):
 		return
 	state.players[pid].life += amount
 	state.log.append(EngineEnums.EventType.LIFE_CHANGE, pid, {
@@ -1800,6 +1859,7 @@ func _submit_declare_attackers(action: GameAction) -> SubmitResult:
 				r.error = "illegal defender"
 				return r
 			assigned[oid] = chosen
+	ids = _pay_attack_tax(action.player_id, ids, requested_defender, assigned, use_map)
 	if not (state.combat is CombatState):
 		state.combat = CombatState.new()
 	var cs := state.combat as CombatState
@@ -1852,6 +1912,7 @@ func _submit_declare_blockers(action: GameAction) -> SubmitResult:
 		r.error = "blockers must be a dictionary"
 		return r
 	var next_blocks: Dictionary = cs.blockers.duplicate()
+	var block_paid := 0
 	var used := {}
 	for existing in next_blocks.values():
 		if existing is Array:
@@ -1888,6 +1949,20 @@ func _submit_declare_blockers(action: GameAction) -> SubmitResult:
 				return r
 			used[bid] = true
 			ordered.append(bid)
+		## "Creatures can't block unless their controller pays {1} for each of those creatures" (Archangel of Tithes while attacking).
+		var btax := _block_tax_for(attacker_id)
+		if btax > 0:
+			var kept_b: Array = []
+			for bid2 in ordered:
+				if can_afford(action.player_id, ManaCost.parse("{%d}" % (block_paid + btax))):
+					block_paid += btax
+					kept_b.append(bid2)
+				else:
+					used.erase(int(bid2))
+			ordered = kept_b
+			if ordered.is_empty():
+				next_blocks.erase(attacker_id)
+				continue
 		next_blocks[attacker_id] = ordered
 	if (raw as Dictionary).is_empty() and not _player_is_defender(cs, action.player_id):
 		r.error = "not the defending player"
@@ -1898,6 +1973,9 @@ func _submit_declare_blockers(action: GameAction) -> SubmitResult:
 		if group is Array and (group as Array).size() == 1 and has_keyword(state.objects.get(int(key)), "Menace"):
 			r.error = "menace needs two blockers"
 			return r
+	if block_paid > 0:
+		pay_now(action.player_id, ManaCost.parse("{%d}" % block_paid))
+		state.log.append(EngineEnums.EventType.NOTE, action.player_id, {"text": "Paid {%d} to block." % block_paid})
 	cs.blockers = next_blocks
 	cs.blocks_declared = true
 	var any_block := false
@@ -1977,6 +2055,8 @@ func _can_block(object_id: int, defender_id: int, attacker_id: int = -1) -> bool
 		var otext := (obj.definition as CardDefinition).oracle_text.to_lower()
 		if otext.contains("this token can't block") or otext.contains("this creature can't block") or otext.contains("\n~ can't block") or otext.begins_with("~ can't block"):
 			return false
+		if _printed_cant(obj, "block"):
+			return false
 	var attacker: GameObject = state.objects.get(attacker_id) if attacker_id >= 0 else null
 	if attacker == null:
 		return true
@@ -2010,6 +2090,9 @@ func _can_block(object_id: int, defender_id: int, attacker_id: int = -1) -> bool
 			return false
 	## "~ can't be blocked." (a whole sentence; "can't be blocked by ..." and "except" are conditional).
 	if adef != null and RegEx.create_from_string("(?i)can't be blocked\\.").search(adef.oracle_text) != null:
+		return false
+	## "~ can't be blocked except by black creatures" / "can't be blocked by Walls" (read from the attacker's own text).
+	if adef != null and not _block_text_allows(adef, attacker, obj):
 		return false
 	## Skulk (CR 702.118): can't be blocked by creatures with greater power.
 	if has_keyword(attacker, "Skulk") and power_of(obj) > power_of(attacker):
@@ -2569,12 +2652,52 @@ func _legal_attacker_ids(player_id: int) -> Array:
 			continue
 		if obj.summoned_this_turn and not _has_haste(obj):
 			continue
-		if has_keyword(obj, "Defender"):
+		if has_keyword(obj, "Defender") or _printed_cant(obj, "attack"):
 			continue
 		if layers != null and layers.combat_restricted(state, obj):
 			continue
 		out.append(obj.object_id)
 	return out
+
+
+## "can't be blocked except by <group>" allows only that group; "can't be blocked by <group>" forbids it. A group the
+## reader can't turn into a query is ignored.
+func _block_text_allows(adef: CardDefinition, attacker: GameObject, blocker: GameObject) -> bool:
+	var text := adef.oracle_text.to_lower()
+	var except_m := RegEx.create_from_string("can't be blocked except by ([^.,]+)").search(text)
+	if except_m != null:
+		var q := OracleIr.new()._event_subject(except_m.get_string(1), false)
+		if not q.is_empty() and not Query._matches(blocker, attacker, q):
+			return false
+	var by_m := RegEx.create_from_string("can't be blocked by ([^.,]+)").search(text)
+	if by_m != null:
+		var q2 := OracleIr.new()._event_subject(by_m.get_string(1), false)
+		if not q2.is_empty() and Query._matches(blocker, attacker, q2):
+			return false
+	return true
+
+
+## "You can't cast ~ unless an opponent lost life this turn" (Rakdos, Lord of Riots).
+func _cast_forbidden(obj: GameObject) -> bool:
+	if not (obj.definition is CardDefinition):
+		return false
+	for a in (obj.definition as CardDefinition).abilities:
+		var ab := a as Ability
+		if ab != null and ab.kind == &"STATIC" and ab.static_spec.has("cast_condition") and not layers.condition_met(state, obj, ab.static_spec["cast_condition"]):
+			return true
+	return false
+
+
+## "~ can't attack." / "~ can't attack or block." as a line of the card's own text (and the same for blocking).
+func _printed_cant(obj: GameObject, what: String) -> bool:
+	if not (obj.definition is CardDefinition) or (layers != null and layers.loses_abilities(state, obj)):
+		return false
+	var t := (obj.definition as CardDefinition).oracle_text.to_lower().replace((obj.definition as CardDefinition).name.to_lower(), "~").replace("this creature", "~")
+	for line in t.split("\n"):
+		var l := str(line).strip_edges().trim_suffix(".")
+		if l == "~ can't %s" % what or l == "~ can't attack or block" or l == "~ can't block or attack":
+			return true
+	return false
 
 
 func _submit_activate_ability(action: GameAction) -> SubmitResult:
@@ -2740,6 +2863,13 @@ func _activation_reason(obj: GameObject, ab: Ability) -> String:
 	## Max speed (CR 702.178): only while its controller's speed is 4.
 	if ab.restrictions.has("MAX_SPEED") and state.players[obj.controller_id].speed < 4:
 		return "NOT_MAX_SPEED"
+	if ab.restrictions.has("MY_TURN") and actor != state.active_player_id:
+		return "NOT_YOUR_TURN"
+	if ab.restrictions.has("ONCE_EACH_TURN") and int(obj.marks.get("act_turn_" + str(ab.ability_id), -1)) == state.turn_number:
+		return "ALREADY_ACTIVATED"
+	for cr in ab.restrictions:
+		if cr is Dictionary and (cr as Dictionary).has("cond") and not layers.condition_met(state, obj, (cr as Dictionary)["cond"]):
+			return "CONDITION_NOT_MET"
 	if ab.restrictions.has("CITYS_BLESSING") and Query.count_objects(state, obj, {"controller": "SOURCE_CONTROLLER"}) < 10:
 		return "NO_CITYS_BLESSING"
 	for rr in ab.restrictions:
@@ -2826,6 +2956,8 @@ func _put_activated_on_stack() -> SubmitResult:
 		obj.loyalty_turn = state.turn_number
 	if ab.restrictions.has("BOAST"):
 		obj.marks["boast_turn"] = state.turn_number
+	if ab.restrictions.has("ONCE_EACH_TURN"):
+		obj.marks["act_turn_" + str(ab.ability_id)] = state.turn_number
 	if ab.restrictions.has("EXHAUST"):
 		obj.marks["exhausted_" + str(ab.ability_id)] = true
 	var entry := StackEntry.new()
@@ -2848,6 +2980,8 @@ func _put_activated_on_stack() -> SubmitResult:
 		stack_id = entry.stack_id,
 	})
 	kw.check_ward(entry)
+	if triggers != null:
+		triggers.on_ability_activated(self, obj, player_id)
 	if ab.has_sacrifice_cost():
 		state.zones.move(obj.object_id, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
 	_cast_source = 0
@@ -3054,3 +3188,66 @@ func _resolution_condition(obj: GameObject, ab: Ability) -> Dictionary:
 			result = layers.has_subtype(state, obj, sub)
 		return {text = "%s is a %s" % [source_name, sub], result = result}
 	return {text = "—", result = true}
+
+
+## "Prevent all combat damage that would be dealt to ~" is one of the permanent's own lines (Seraph of the Sword).
+func _prints_combat_prevention(obj: GameObject) -> bool:
+	if not (obj.definition is CardDefinition):
+		return false
+	var def := obj.definition as CardDefinition
+	var short := def.name.to_lower().split(",")[0]
+	var t := def.oracle_text.to_lower()
+	return t.contains("prevent all combat damage that would be dealt to " + short) or t.contains("prevent all combat damage that would be dealt to this creature")
+
+
+## Attack costs (CR 508.1h): "creatures can't attack you unless their controller pays {1} for each of them" (Archangel of Tithes
+## while untapped, Propaganda). Attackers the player can't afford stay home; the rest are paid for as they are declared.
+func _pay_attack_tax(pid: int, ids: Array, requested_defender: int, assigned: Dictionary, use_map: bool) -> Array:
+	var kept: Array = []
+	var total := 0
+	for raw in ids:
+		var oid := int(raw)
+		var defender := int(assigned[oid]) if use_map and assigned.has(oid) else requested_defender
+		var t := _attack_tax_for(defender)
+		if t > 0:
+			if not can_afford(pid, ManaCost.parse("{%d}" % (total + t))):
+				continue
+			total += t
+		kept.append(raw)
+	if total > 0:
+		pay_now(pid, ManaCost.parse("{%d}" % total))
+		state.log.append(EngineEnums.EventType.NOTE, pid, {"text": "Paid {%d} to attack." % total})
+	return kept
+
+
+## The generic mana each creature attacking `defender` costs (permanents they control with an attack tax).
+func _attack_tax_for(defender: int) -> int:
+	var total := 0
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null or defender < 0:
+		return 0
+	for oid in bf.object_ids:
+		var o: GameObject = state.objects.get(oid)
+		if o == null or o.controller_id != defender or not (o.definition is CardDefinition):
+			continue
+		for a in (o.definition as CardDefinition).abilities:
+			var ab := a as Ability
+			if ab == null or ab.kind != &"STATIC" or not ab.static_spec.has("attack_tax"):
+				continue
+			if str(ab.static_spec.get("while", "")) == "UNTAPPED" and o.tapped:
+				continue
+			total += int(ab.static_spec["attack_tax"])
+	return total
+
+
+## The generic mana each creature blocking `attacker_id` costs (the attacker's own "can't block unless" static).
+func _block_tax_for(attacker_id: int) -> int:
+	var o: GameObject = state.objects.get(attacker_id)
+	if o == null or not (o.definition is CardDefinition):
+		return 0
+	var total := 0
+	for a in (o.definition as CardDefinition).abilities:
+		var ab := a as Ability
+		if ab != null and ab.kind == &"STATIC" and ab.static_spec.has("block_tax"):
+			total += int(ab.static_spec["block_tax"])
+	return total

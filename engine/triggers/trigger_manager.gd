@@ -170,6 +170,8 @@ func _on_zone_change(engine: RulesEngine, p: Dictionary) -> void:
 		if to_z == EngineEnums.ZoneId.GRAVEYARD:
 			_fire(engine, "DIES", ghost, self_obj, ctx)
 			_enchanted_died(engine, ghost.object_id, ctx)
+		## "Whenever another permanent you control leaves the battlefield" (Angelic Sleuth): any destination.
+		_fire(engine, "LEAVES", ghost, self_obj, ctx)
 
 
 func _on_attack(engine: RulesEngine, e: GameEvent) -> void:
@@ -182,12 +184,25 @@ func _on_attack(engine: RulesEngine, e: GameEvent) -> void:
 			_fire(engine, "ATTACKS", atk, atk, actx)
 	if attackers.is_empty():
 		return
+	## "Whenever another player attacks with two or more creatures" (Firemane Commando): the attacker is the trigger's player.
+	for opp_src in _battlefield(engine):
+		if opp_src.controller_id == e.player_id:
+			continue
+		for opp_ab in _triggered(engine, opp_src, "OPP_ATTACKS"):
+			if attackers.size() >= int(opp_ab.trigger.get("attackers_min", 1)):
+				_put_trigger(engine, opp_src, opp_ab, {player_id = e.player_id})
 	for src in _battlefield(engine):
 		if src.controller_id != e.player_id:
 			continue
 		for ab in _triggered(engine, src, "ATTACKS"):
-			if str(ab.trigger.get("scope", "SELF")) == "YOU":
+			if str(ab.trigger.get("scope", "SELF")) == "YOU" and attackers.size() >= int(ab.trigger.get("attackers_min", 1)):
 				_put_trigger(engine, src, ab, {player_id = e.player_id})
+		## Exalted granted by an effect (Merchant of Truth: "Clues you control have exalted"): the same +1/+1.
+		if attackers.size() == 1 and _triggered(engine, src, "ATTACKS_ALONE").is_empty() and engine.has_keyword(src, "Exalted"):
+			var ex_fx := AbilityEffect.new()
+			ex_fx.kind = &"PUMP"
+			ex_fx.params = {"trigger_object": true, "power": 1, "toughness": 1, "duration": "END_OF_TURN"}
+			engine.put_synthetic(src, e.player_id, [ex_fx], {player_id = e.player_id, object_id = int(attackers[0])})
 		## Exalted (CR 702.83): "whenever a creature you control attacks alone".
 		if attackers.size() == 1:
 			for ab2 in _triggered(engine, src, "ATTACKS_ALONE"):
@@ -236,12 +251,15 @@ func _on_step_begin(engine: RulesEngine, step: int, active: int) -> void:
 	match step:
 		EngineEnums.Step.UPKEEP:
 			step_name = "UPKEEP"
+		EngineEnums.Step.DRAW:
+			step_name = "DRAW"
 		EngineEnums.Step.BEGIN_COMBAT:
 			step_name = "BEGIN_COMBAT"
 		EngineEnums.Step.END:
 			step_name = "END"
 		_:
 			return
+	_fire_delayed(engine, step_name, active)
 	## CR 724.3: the monarch draws a card at the beginning of their end step.
 	if step_name == "END" and engine.state.monarch_id == active:
 		engine.draw_card(active)
@@ -264,7 +282,15 @@ func _tally_life(engine: RulesEngine, pid: int, amount: int, gain: bool) -> void
 	if gain:
 		engine.state.players[pid].life_gained_this_turn += amount
 	else:
+		var first := engine.state.players[pid].life_lost_this_turn == 0 and engine.state.active_player_id == pid
 		engine.state.players[pid].life_lost_this_turn += amount
+		## "Whenever an opponent loses life for the first time during each of their turns" (Valgavoth).
+		if first:
+			for src in _battlefield(engine):
+				if src.controller_id == pid:
+					continue
+				for ab in _triggered(engine, src, "OPP_LOSES_LIFE_FIRST"):
+					_put_trigger(engine, src, ab, {player_id = pid})
 
 
 ## "Whenever you / an opponent / a player draws a card": the drawer is the trigger's player.
@@ -286,6 +312,9 @@ func _on_life_gained(engine: RulesEngine, player_id: int, amount: int) -> void:
 		if src.controller_id != player_id:
 			continue
 		for ab in _triggered(engine, src, "LIFE_GAINED"):
+			## "Whenever you gain life for the first time each turn" (Vanguard Seraph).
+			if bool(ab.trigger.get("first_each_turn", false)) and engine.state.players[player_id].life_gained_this_turn != amount:
+				continue
 			_put_trigger(engine, src, ab, {player_id = player_id, amount = amount})
 
 
@@ -385,6 +414,14 @@ func _put_trigger(engine: RulesEngine, source: GameObject, ab: Ability, ctx: Dic
 			return
 	if not _intervening_if(engine, source, ab.trigger):
 		return
+	## "..., if it had counters on it, ...": what it had as it left (last known information).
+	if bool(ab.trigger.get("if_had_counters", false)):
+		var had_any := false
+		for cn in (ctx.get("counters", {}) as Dictionary).values():
+			if int(cn) > 0:
+				had_any = true
+		if not had_any:
+			return
 	var entry := StackEntry.new()
 	entry.stack_id = engine.state.next_stack_id
 	entry.kind = StackEntry.Kind.TRIGGERED
@@ -650,3 +687,42 @@ func _fire_unblocked(engine: RulesEngine) -> void:
 func fire_object_event(engine: RulesEngine, on: String, obj: GameObject, ctx: Dictionary) -> void:
 	for ab in _triggered(engine, obj, on):
 		_put_trigger(engine, obj, ab, ctx)
+
+
+## Delayed effects whose step has come: "at the beginning of the next end step, sacrifice it". One that was made earlier in
+## this same step waits for the next one; "your" steps wait for the controller's turn.
+func _fire_delayed(engine: RulesEngine, step_name: String, active: int) -> void:
+	var st := engine.state
+	var keep: Array = []
+	for raw in st.delayed:
+		var d: Dictionary = raw
+		var due := str(d.get("step", "")) == step_name \
+			and (int(d.get("turn", 0)) < st.turn_number or int(d.get("step_index", 0)) < int(st.step)) \
+			and (str(d.get("whose", "ANY")) != "YOURS" or active == int(d.get("controller", -1)))
+		if not due:
+			keep.append(d)
+			continue
+		var fx := AbilityEffect.new()
+		fx.kind = &"DELAYED_ACT"
+		fx.params = {"action": str(d.get("action", "")), "object_id": int(d.get("object_id", 0))}
+		engine.put_synthetic(null, int(d.get("controller", active)), [fx], {}, int(d.get("object_id", 0)))
+	st.delayed = keep
+
+
+## "Whenever an opponent activates an ability of an artifact, creature, or land" (Harsh Mentor): a non-mana ability was put
+## on the stack by `activator`. The trigger's `types` (if any) limit which permanents count.
+func on_ability_activated(engine: RulesEngine, source: GameObject, activator: int) -> void:
+	if source == null or not (source.definition is CardDefinition):
+		return
+	var tl := (source.definition as CardDefinition).type_line.to_lower()
+	for src in _battlefield(engine):
+		if src.controller_id == activator:
+			continue
+		for ab in _triggered(engine, src, "OPP_ACTIVATES"):
+			var types: Array = ab.trigger.get("types", [])
+			var hit := types.is_empty()
+			for t in types:
+				if tl.contains(str(t)):
+					hit = true
+			if hit:
+				_put_trigger(engine, src, ab, {player_id = activator, object_id = source.object_id})
