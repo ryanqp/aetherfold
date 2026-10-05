@@ -154,6 +154,13 @@ func _start_tba(eng: RulesEngine, st: GameState) -> void:
 		EngineEnums.Step.COMBAT_DAMAGE:
 			eng.apply_combat_damage()
 		EngineEnums.Step.CLEANUP:
+			## CR 514.1: discard down to the maximum hand size (the player picks which cards).
+			var over := eng.hand_size(st.active_player_id) - eng.max_hand_size(st.active_player_id)
+			if over > 0:
+				var dfx := AbilityEffect.new()
+				dfx.kind = &"DISCARD_TO_HAND_SIZE"
+				dfx.params = {}
+				eng.put_synthetic(null, st.active_player_id, [dfx], {})
 			_clear_may_play(st)
 			_clear_damage(st)
 			if eng.layers != null:
@@ -222,7 +229,11 @@ func _has_attackers(st: GameState) -> bool:
 
 
 func _receives_priority(step: int) -> bool:
-	return step != EngineEnums.Step.UNTAP and step != EngineEnums.Step.CLEANUP
+	if step == EngineEnums.Step.CLEANUP:
+		## Only while something is on the stack (the discard down to the maximum hand size).
+		var eng := _eng()
+		return eng != null and eng.state.stack is MagicStack and not (eng.state.stack as MagicStack).is_empty()
+	return step != EngineEnums.Step.UNTAP
 
 
 func _next_step(step: int) -> int:

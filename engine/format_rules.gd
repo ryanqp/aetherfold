@@ -7,6 +7,8 @@ extends Resource
 @export var player_count: int = 4
 @export var starting_life: int = 40
 @export var starting_hand: int = 7
+## Cleanup step (CR 514.1): the active player discards down to this many cards unless a permanent says otherwise.
+@export var max_hand_size: int = 7
 @export var first_player_skips_draw: bool = false
 @export var commander_enabled: bool = true
 @export var commander_damage_to_lose: int = 21

@@ -3,6 +3,7 @@ extends Control
 const USE_ENGINE := true
 const BUILD := 55
 const Mats := preload("res://engine/session/playmat_catalog.gd")
+const AiBlocks := preload("res://engine/session/ai_blocks.gd")
 const SuperPlaymatScript := preload("res://scripts/playmat/super_playmat.gd")
 const DEBUG_MATCH := true
 const MatchStateScript := preload("res://scripts/match_state.gd")
@@ -100,6 +101,8 @@ var play_btn: Button
 var ability_box: VBoxContainer
 var pass_btn: Button
 var attack_btn: Button
+var all_attack_btn: Button
+var all_defend_btn: Button
 var _flash_t := 0.0
 var _was_tapped: Dictionary = {}
 ## Blocks you are lining up while the opponent attacks: attacker id -> Array of your creature ids.
@@ -252,6 +255,13 @@ func apply_net_action(kind: String, payload: Dictionary, player_id: int) -> void
 		session.last_error = ""
 		session.answer_prompt(player_id, str(payload.get("kind", "")), null if bool(payload.get("cancel", false)) else payload.get("value", null))
 		_notice_if_failed(player_id)
+		_refresh()
+		return
+	if kind == "defend_all":
+		if session.blocks_seat == player_id:
+			session.last_error = ""
+			session.as_seat(player_id, func() -> void: session.declare_blocks(AiBlocks.choose(session.engine, player_id)))
+			_notice_if_failed(player_id)
 		_refresh()
 		return
 	if kind == "blocks":
@@ -435,6 +445,12 @@ func _build_header() -> Control:
 	attack_btn = _header_button("Attack", Color(0.58, 0.16, 0.12), Color(0.98, 0.94, 0.88), _on_attack, 100)
 	attack_btn.tooltip_text = "Attack: double-click the creatures to send, then press this (or right-click one and choose Attack). Space passes priority. Enter ends the turn."
 	row.add_child(attack_btn)
+	all_attack_btn = _header_button("All attack", Color(0.45, 0.13, 0.10), Color(0.98, 0.94, 0.88), _on_all_attack, 96)
+	all_attack_btn.tooltip_text = "Send every creature that can attack, in one click."
+	row.add_child(all_attack_btn)
+	all_defend_btn = _header_button("All defend", Color(0.15, 0.30, 0.45), Color(0.92, 0.96, 1.0), _on_all_defend, 96)
+	all_defend_btn.tooltip_text = "Block as well as you can: good blocks first, gang blocks on big attackers, chump blocks only to stay alive."
+	row.add_child(all_defend_btn)
 	next_turn_btn = _header_button("End turn", BRONZE, INK, _on_end_turn, 104)
 	next_turn_btn.tooltip_text = "Skip the rest of your turn. The rival plays, then it is your turn again."
 	row.add_child(next_turn_btn)
@@ -2290,6 +2306,10 @@ func _paint_match_buttons() -> void:
 	if not USE_ENGINE or session == null or session.view == null:
 		return
 	var v = session.view
+	if all_defend_btn:
+		all_defend_btn.disabled = not _in_blocking_mode()
+	if all_attack_btn:
+		all_attack_btn.disabled = _in_blocking_mode() or not (bool(v.can_attack) or _in_attack_mode()) or not session.can_play()
 	if _in_blocking_mode():
 		if attack_btn:
 			attack_btn.disabled = false
@@ -2372,6 +2392,66 @@ func _on_attack() -> void:
 		_set_status(r.error)
 		return
 	_set_status(str(session.view.prompt))
+
+
+## "All attack": every creature that can attack goes, without picking them one by one.
+func _on_all_attack() -> void:
+	if _mp_wait():
+		return
+	if _is_guest():
+		var gv = _board()
+		if gv == null or not bool(gv.can_attack):
+			_set_status("None of your creatures can attack right now.")
+			return
+		_pending_attackers.clear()
+		_guest_attack = false
+		if _client_net("attack"):
+			_set_status("Attacking with everything that can…")
+		return
+	if not USE_ENGINE or session == null or session.view == null or _in_blocking_mode():
+		return
+	if not _in_attack_mode():
+		if not session.can_play():
+			_set_status("Keep or Mulligan first.")
+			return
+		_pending_attackers.clear()
+		var r: SubmitResult = session.begin_attack()
+		_refresh()
+		if not r.ok:
+			_set_status(r.error)
+			return
+	_pending_attackers.clear()
+	for c in session.view.you.get("creatures", []):
+		if bool((c as Dictionary).get("ready_to_attack", false)):
+			_pending_attackers.append(str((c as Dictionary).get("id", "")))
+	if _pending_attackers.is_empty():
+		_set_status("No creature can attack right now.")
+		_refresh()
+		return
+	_confirm_attack()
+
+
+## "All defend": the engine's blocking plan for you: good blocks first, gang blocks on big attackers, chump blocks only to survive.
+func _on_all_defend() -> void:
+	if _mp_wait() or not _in_blocking_mode():
+		return
+	if _is_guest():
+		_pending_blocks.clear()
+		_block_pick = ""
+		if _client_net("defend_all"):
+			_set_status("Blocking as well as you can…")
+		return
+	if session == null or session.engine == null:
+		return
+	var plan: Dictionary = AiBlocks.choose(session.engine, session.you_seat)
+	_pending_blocks.clear()
+	_block_pick = ""
+	for aid in plan.keys():
+		var ids: Array = []
+		for bid in plan[aid]:
+			ids.append(str(bid))
+		_pending_blocks[str(aid)] = ids
+	_confirm_blocks()
 
 
 ## The green button: step to the next part of the turn.

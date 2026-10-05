@@ -70,7 +70,7 @@ static func effects_hostile(effects: Array) -> bool:
 			continue
 		if f.kind == &"GAIN_LIFE" or f.kind == &"UNTAP" or f.kind == &"PUT_COUNTER" or f.kind == &"ATTACH" or f.kind == &"RETURN_FROM_GRAVEYARD":
 			return false
-		if f.kind == &"PUMP" and int(f.params.get("power", 0)) >= 0 and int(f.params.get("toughness", 0)) >= 0:
+		if f.kind == &"PUMP" and _plain_int(f.params.get("power", 0)) >= 0 and _plain_int(f.params.get("toughness", 0)) >= 0:
 			return false
 		if f.kind == &"AURA_ATTACH" and bool(f.params.get("helpful", false)):
 			return false
@@ -247,3 +247,8 @@ func _player_hexproof(engine: RulesEngine, pid: int) -> bool:
 			if ab != null and ab.kind == &"STATIC" and ab.static_spec.has("player_hexproof"):
 				return true
 	return false
+
+
+## A PUMP's power / toughness is a number, or a computed amount (a dictionary, e.g. "+X/+X where X is ..."): a computed amount counts as 0.
+static func _plain_int(v: Variant) -> int:
+	return int(v) if typeof(v) == TYPE_INT or typeof(v) == TYPE_FLOAT else 0

@@ -319,6 +319,21 @@ func library_size(player_id: int) -> int:
 	return 0 if lib == null else lib.size()
 
 
+## The most cards a player keeps at the end of their turn: 7, or no limit with "You have no maximum hand size" on a permanent they control.
+func max_hand_size(player_id: int) -> int:
+	var base := state.rules.max_hand_size if state.rules != null else 7
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return base
+	for oid in bf.object_ids:
+		var o: GameObject = state.objects.get(oid)
+		if o == null or o.controller_id != player_id or not (o.definition is CardDefinition) or o.face_down or o.phased_out:
+			continue
+		if (o.definition as CardDefinition).oracle_text.to_lower().contains("you have no maximum hand size"):
+			return 1000000
+	return base
+
+
 func hand_size(player_id: int) -> int:
 	var hand: Zone = state.zones.get_zone(EngineEnums.ZoneId.HAND, player_id)
 	return 0 if hand == null else hand.size()

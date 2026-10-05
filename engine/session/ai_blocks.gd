@@ -56,6 +56,15 @@ static func choose(engine: RulesEngine, defender_id: int) -> Dictionary:
 			_assign(out, used, atk, [best])
 			incoming -= _prevented(engine, atk, [best])
 
+	# 1b. Gang blocks: two blockers that together kill a big attacker while it can only kill one of them.
+	for atk in attackers:
+		if out.has(atk.object_id):
+			continue
+		var pair := _gang_block(engine, atk, defender_id, used)
+		if pair.size() == 2:
+			_assign(out, used, atk, pair)
+			incoming -= _prevented(engine, atk, pair)
+
 	# 2. Trades.
 	for atk in attackers:
 		if out.has(atk.object_id) or engine.has_keyword(atk, "Menace"):
@@ -192,3 +201,43 @@ static func choose_attackers(engine: RulesEngine, player_id: int, defender_id: i
 	if blockers.is_empty() and total >= int(engine.state.players[defender_id].life):
 		return legal.duplicate()
 	return out
+
+
+## Two untapped blockers that together kill `atk`, where the attacker's damage can't kill both and what it can kill is worth less
+## than the attacker. [] when no such pair exists. Pairs the weakest combination first.
+static func _gang_block(engine: RulesEngine, atk: GameObject, defender_id: int, used: Dictionary) -> Array:
+	var pool: Array = []
+	for blk in _untapped_creatures(engine, defender_id):
+		if not used.has(blk.object_id) and engine.can_block_attacker(blk.object_id, atk.object_id):
+			pool.append(blk)
+	if pool.size() < 2:
+		return []
+	var atk_value := engine.power_of(atk) + engine.toughness_of(atk)
+	var atk_power := engine.power_of(atk)
+	var best: Array = []
+	var best_cost := 1000000
+	for i in pool.size():
+		for j in range(i + 1, pool.size()):
+			var a: GameObject = pool[i]
+			var b: GameObject = pool[j]
+			var dmg := engine.power_of(a) + engine.power_of(b)
+			var deathtouch := engine.has_keyword(a, "Deathtouch") or engine.has_keyword(b, "Deathtouch")
+			var kills_it := deathtouch or dmg >= engine.toughness_of(atk) - atk.damage_marked
+			if not kills_it or engine.has_keyword(atk, "Indestructible"):
+				continue
+			var ta := maxi(1, engine.toughness_of(a) - a.damage_marked)
+			var tb := maxi(1, engine.toughness_of(b) - b.damage_marked)
+			## The attacker can kill both only with enough power (deathtouch kills each with 1 damage).
+			var kills_both := (engine.has_keyword(atk, "Deathtouch") and atk_power >= 2) or atk_power >= ta + tb
+			if kills_both:
+				continue
+			var lost := 0
+			if atk_power >= ta or engine.has_keyword(atk, "Deathtouch"):
+				lost = mini(engine.power_of(a) + engine.toughness_of(a), engine.power_of(b) + engine.toughness_of(b))
+			if lost >= atk_value:
+				continue
+			var cost := engine.power_of(a) + engine.toughness_of(a) + engine.power_of(b) + engine.toughness_of(b)
+			if cost < best_cost:
+				best_cost = cost
+				best = [a, b]
+	return best

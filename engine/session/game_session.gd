@@ -1396,13 +1396,13 @@ func ai_take_turn(player_id: int) -> void:
 			submit(cancel)
 			continue
 		var legal: Array = engine.legal_actions(player_id)
-		var land: GameAction = null
-		var spell: GameAction = null
+		var lands: Array = []
+		var spells: Array = []
 		var attack: GameAction = null
 		for act in legal:
 			var ga := act as GameAction
 			if ga.kind == GameAction.Kind.PLAY_LAND:
-				land = ga
+				lands.append(ga)
 			elif ga.kind == GameAction.Kind.CAST_SPELL:
 				if skip_cast.has(ga.object_id):
 					continue
@@ -1411,14 +1411,14 @@ func ai_take_turn(player_id: int) -> void:
 				var stack_empty := engine.state.stack == null or (engine.state.stack as MagicStack).is_empty()
 				if ai_should_skip_cast(def, stack_empty, _ai_has_creature_target(player_id)):
 					continue
-				if spell == null:
-					spell = ga
+				spells.append(ga)
 			elif ga.kind == GameAction.Kind.DECLARE_ATTACKERS and not declared_attack:
 				attack = ga
-		if land != null:
-			submit(land)
+		if not lands.is_empty():
+			submit(_ai_best_land(player_id, lands))
 			continue
-		if spell != null:
+		if not spells.is_empty():
+			var spell := _ai_best_spell(player_id, spells)
 			var cr := cast_auto(player_id, spell.object_id)
 			if not cr.ok:
 				skip_cast[spell.object_id] = true
@@ -1524,3 +1524,57 @@ func declare_blocks(blocks: Dictionary) -> SubmitResult:
 	rebuild_view()
 	return r
 
+
+
+## The bot's land: one that makes the colors its commander needs, untapped before tapped.
+func _ai_best_land(player_id: int, acts: Array) -> GameAction:
+	var identity: Array = engine.commander_identity(player_id)
+	var best: GameAction = acts[0]
+	var best_score := -1
+	for raw in acts:
+		var ga := raw as GameAction
+		var obj: GameObject = engine.state.objects.get(ga.object_id)
+		var def: CardDefinition = obj.definition as CardDefinition if obj != null and obj.definition is CardDefinition else null
+		if def == null:
+			continue
+		var score := 1
+		var text := (def.type_line + " " + def.oracle_text).to_lower()
+		for pair in [["W", "plains", "{w}"], ["U", "island", "{u}"], ["B", "swamp", "{b}"], ["R", "mountain", "{r}"], ["G", "forest", "{g}"]]:
+			if identity.has(pair[0]) and (text.contains(str(pair[1])) or text.contains(str(pair[2]))):
+				score += 10
+		if text.contains("enters tapped") or text.contains("enters the battlefield tapped"):
+			score -= 3
+		if score > best_score:
+			best_score = score
+			best = ga
+	return best
+
+
+## The bot's spell: the commander as early as it can be cast, ramp early, then the most expensive thing it can afford (removal
+## when the rival has something worth removing).
+func _ai_best_spell(player_id: int, acts: Array) -> GameAction:
+	var best: GameAction = acts[0]
+	var best_score := -1
+	var foe_has_creature := _ai_has_creature_target(player_id)
+	var early := engine.state.turn_number <= 8
+	for raw in acts:
+		var ga := raw as GameAction
+		var obj: GameObject = engine.state.objects.get(ga.object_id)
+		var def: CardDefinition = obj.definition as CardDefinition if obj != null and obj.definition is CardDefinition else null
+		if def == null:
+			continue
+		var score := 10 + def.cmc * 10
+		var text := def.oracle_text.to_lower()
+		if obj.zone == EngineEnums.ZoneId.COMMAND or obj.is_commander:
+			score = 10000
+		else:
+			if def.is_creature():
+				score += 5
+			if early and (text.contains("search your library for a basic land") or (def.type_line.contains("Artifact") and text.contains("{t}: add"))):
+				score += 60
+			if foe_has_creature and (text.contains("destroy target") or text.contains("exile target") or text.contains("deals") and text.contains("damage to target")):
+				score += 15
+		if score > best_score:
+			best_score = score
+			best = ga
+	return best

@@ -649,3 +649,45 @@ func test_biorhythm_is_read() -> void:
 		if (a as Ability).kind == &"SPELL":
 			ab = a
 	assert_true(ab != null and str(ab.effects[0].kind) == "SET_LIFE")
+
+
+func test_cleanup_discards_down_to_seven_unless_no_maximum() -> void:
+	var cat := Fixtures.memory_catalog()
+	var m := cat as CatalogSource.Memory
+	m.add(_row("Test Filler", "{1}", 1, "Creature — Test", "", "1", "1"))
+	m.add(_row("Test Vessel", "{3}", 3, "Artifact", "{T}: Add one mana of any color.\nYou have no maximum hand size."))
+	var d := CardDatabase.new()
+	d.setup(cat)
+	var engine := Fixtures.empty_engine_1v1()
+	for _i in 9:
+		Fixtures.spawn_named(engine, d, 0, EngineEnums.ZoneId.HAND, "Test Filler")
+	assert_eq(engine.max_hand_size(0), 7)
+	engine.state.active_player_id = 0
+	engine.state.step = EngineEnums.Step.CLEANUP
+	engine.turn._start_tba(engine, engine.state)
+	assert_eq((engine.state.stack as MagicStack).size(), 1, "the discard is waiting")
+	engine.resolve_top()
+	assert_eq(engine.hand_size(0), 7, "two cards discarded")
+	Fixtures.spawn_named(engine, d, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Vessel")
+	assert_true(engine.max_hand_size(0) > 100, "no maximum hand size")
+
+
+func test_gang_block_kills_a_big_attacker_losing_only_one_blocker() -> void:
+	var cat := Fixtures.memory_catalog()
+	var m := cat as CatalogSource.Memory
+	m.add(_row("Test Giant", "{5}", 5, "Creature — Giant", "", "5", "5"))
+	m.add(_row("Test Bear", "{1}{G}", 2, "Creature — Bear", "", "3", "3"))
+	var d := CardDatabase.new()
+	d.setup(cat)
+	var engine := Fixtures.empty_engine_1v1()
+	var giant := Fixtures.spawn_named(engine, d, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Giant")
+	Fixtures.spawn_named(engine, d, 1, EngineEnums.ZoneId.BATTLEFIELD, "Test Bear")
+	Fixtures.spawn_named(engine, d, 1, EngineEnums.ZoneId.BATTLEFIELD, "Test Bear")
+	giant.summoned_this_turn = false
+	var cs := CombatState.new()
+	cs.attacker_ids = [giant.object_id]
+	cs.defenders = {giant.object_id: 1}
+	cs.defending_player_id = 1
+	engine.state.combat = cs
+	var plan: Dictionary = preload("res://engine/session/ai_blocks.gd").choose(engine, 1)
+	assert_eq((plan.get(giant.object_id, []) as Array).size(), 2, "two bears double-block the giant")

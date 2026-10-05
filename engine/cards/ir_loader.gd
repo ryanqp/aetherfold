@@ -59,6 +59,7 @@ const EFFECT_PARAM_KEYS := {
 	"OPP_DRAW_OR_MILL": ["target"],
 	"EXTRA_LAND": ["n"],
 	"SET_LIFE": ["n"],
+	"DISCARD_TO_HAND_SIZE": [],
 	"DELAY": ["step", "whose", "action", "ref"],
 	"DELAYED_ACT": ["action", "object_id"],
 	"AMASS": ["n"],

@@ -239,6 +239,8 @@ func _apply(engine: RulesEngine, entry: StackEntry, source: GameObject, fx: Abil
 			_look_top(engine, entry, source, fx)
 		"DELAY":
 			_delay(engine, entry, source, fx)
+		"DISCARD_TO_HAND_SIZE":
+			_discard_to_hand_size(engine, entry)
 		"EXTRA_LAND":
 			_extra_land(engine, entry, fx)
 		"SET_LIFE":
@@ -2272,3 +2274,16 @@ func _extra_land(engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> v
 	var prev: Dictionary = engine.state.extra_land_once.get(entry.controller_id, {})
 	var have := int(prev.get("n", 0)) if int(prev.get("turn", -1)) == engine.state.turn_number else 0
 	engine.state.extra_land_once[entry.controller_id] = {"turn": engine.state.turn_number, "n": have + int(fx.params.get("n", 1))}
+
+
+## Cleanup step (CR 514.1): the active player discards until they have no more than their maximum hand size. A person chooses
+## each card; the rival discards its cheapest (extra lands first).
+func _discard_to_hand_size(engine: RulesEngine, entry: StackEntry) -> void:
+	var pid := entry.controller_id
+	var over := engine.hand_size(pid) - engine.max_hand_size(pid)
+	if over <= 0:
+		return
+	var plain := AbilityEffect.new()
+	plain.kind = &"DISCARD"
+	plain.params = {"n": over, "who": "CONTROLLER"}
+	_discard(engine, entry, plain)
