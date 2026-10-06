@@ -61,8 +61,20 @@ func _matches_spell_cast(ab: Ability, source: GameObject, caster_id: int, spell_
 	var ctrl := str(f.get("controller", "ANY"))
 	if ctrl == "SOURCE_CONTROLLER" and source.controller_id != caster_id:
 		return false
+	## Heroic: "Whenever you cast a spell that targets ~": the spell on top of the stack has this permanent among its targets.
+	if bool(f.get("targets_self", false)):
+		var top_entry: StackEntry = ((_eng_ref.state.stack as MagicStack).top() if _eng_ref != null else null)
+		if top_entry == null or not top_entry.targets.has(source.object_id):
+			return false
+	## "... from anywhere other than your hand" (Vega, Aerial Extortionist).
+	if bool(f.get("not_from_hand", false)) and spell_obj.cast_from == EngineEnums.ZoneId.HAND:
+		return false
 	if ctrl == "OPPONENT" and source.controller_id == caster_id:
 		return false
+	## "Whenever you cast your second spell each turn": the nth spell of any kind (spells_this_turn already includes this one).
+	if f.has("nth") and (not (f.get("types", []) is Array) or (f.get("types", []) as Array).is_empty()):
+		if caster_id < 0 or caster_id >= _eng_ref.state.players.size() or _eng_ref.state.players[caster_id].spells_this_turn.size() != int(f["nth"]):
+			return false
 	var types: Variant = f.get("types", [])
 	if types is Array and not (types as Array).is_empty():
 		var ok := false
@@ -72,6 +84,7 @@ func _matches_spell_cast(ab: Ability, source: GameObject, caster_id: int, spell_
 				break
 		if not ok:
 			return false
+		## (handled below for "your second spell each turn")
 		## "Your first noncreature spell each turn": this is the nth spell of those types the caster cast this turn.
 		if f.has("nth"):
 			var seen := 0
@@ -182,6 +195,8 @@ func _on_attack(engine: RulesEngine, e: GameEvent) -> void:
 			var actx := _ctx_for(engine, atk)
 			actx["defender"] = engine.defender_of(atk.object_id)
 			_fire(engine, "ATTACKS", atk, atk, actx)
+			if attackers.size() == 1:
+				_fire(engine, "SELF_ATTACKS_ALONE", atk, atk, actx)
 	if attackers.is_empty():
 		return
 	## "Whenever another player attacks with two or more creatures" (Firemane Commando): the attacker is the trigger's player.
@@ -246,9 +261,10 @@ func _on_step_begin(engine: RulesEngine, step: int, active: int) -> void:
 		for src0 in _battlefield(engine):
 			if src0.controller_id == active and (src0.definition as CardDefinition).type_line.contains("Saga") and not src0.face_down:
 				add_lore(engine, src0, 1)
-		return
 	var step_name := ""
 	match step:
+		EngineEnums.Step.PRECOMBAT_MAIN:
+			step_name = "MAIN1"
 		EngineEnums.Step.UPKEEP:
 			step_name = "UPKEEP"
 		EngineEnums.Step.DRAW:
@@ -389,6 +405,11 @@ func _battlefield(engine: RulesEngine) -> Array:
 
 func _triggered(engine: RulesEngine, src: GameObject, on: String) -> Array:
 	var out: Array = []
+	## Quick reject: with no continuous effects around (which could grant abilities), a card without a printed ability for this event
+	## has nothing to find. Building its full ability list for every event and every permanent is what made late turns slow.
+	if engine.layers != null and engine.state.effects.is_empty() and src != null and src.definition is CardDefinition \
+			and not engine.layers.trigger_ons(src.definition as CardDefinition).has(on):
+		return out
 	for a in _abilities_of(engine, src):
 		var ab := a as Ability
 		if ab != null and ab.kind == &"TRIGGERED" and not ab.unparsed and str(ab.trigger.get("on", "")) == on:
@@ -737,10 +758,25 @@ func on_ability_activated(engine: RulesEngine, source: GameObject, activator: in
 ## State triggers ("When there are four or more page counters on ~, exile it" - Mazemind Tome): they trigger once each time the
 ## state becomes true, and again only after it has stopped being true.
 func check_state(engine: RulesEngine) -> void:
+	check_state_no_type(engine)
 	for src in _battlefield(engine):
 		for ab in _triggered(engine, src, "STATE_COUNTERS"):
 			var key := "state_%s" % str(ab.ability_id)
 			var met := int(src.counters.get(str(ab.trigger.get("counter", "")), 0)) >= int(ab.trigger.get("min", 1))
+			if met and not bool(src.marks.get(key, false)):
+				src.marks[key] = true
+				_put_trigger(engine, src, ab, {player_id = src.controller_id})
+			elif not met:
+				src.marks.erase(key)
+
+
+## "When you control no Islands, sacrifice ~." (CR 603.8): a state trigger on the controller's permanents.
+func check_state_no_type(engine: RulesEngine) -> void:
+	for src in _battlefield(engine):
+		for ab in _triggered(engine, src, "STATE_NO_TYPE"):
+			var key := "state_%s" % str(ab.ability_id)
+			var want := str(ab.trigger.get("subtype", ""))
+			var met := Query.count_objects(engine.state, src, {"controller": "SOURCE_CONTROLLER", "subtype": want}) == 0
 			if met and not bool(src.marks.get(key, false)):
 				src.marks[key] = true
 				_put_trigger(engine, src, ab, {player_id = src.controller_id})

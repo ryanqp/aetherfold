@@ -8,6 +8,11 @@ var next_object_id: int = 1
 var next_stack_id: int = 1
 var next_timestamp: int = 1
 var turn_number: int = 1
+## Set by "End the turn" (Time Stop): the engine jumps to the cleanup step as soon as the spell has finished resolving.
+var end_turn_requested: bool = false
+## Extra turns (CR 500.7), next one first: [{pid, lose}]; "lose" ends that player's game at the end step of that turn.
+var extra_turns: Array = []
+var lose_at_end_turn: int = -1
 ## CR 724: the player who is the monarch (draws at their end step), -1 for none.
 var monarch_id: int = -1
 var active_player_id: int = 0

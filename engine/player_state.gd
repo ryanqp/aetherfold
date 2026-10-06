@@ -11,6 +11,8 @@ var commander_damage_from: Dictionary = {}
 var lost: bool = false
 ## CR 704.5c: ten or more poison counters lose the game (infect, toxic).
 var poison: int = 0
+## Energy counters (CR 107.14): gained by "you get {E}", paid as a cost.
+var energy: int = 0
 var mulligan_count: int = 0
 ## Damage dealt to this player this turn (bloodthirst, prowl).
 var damaged_this_turn: bool = false

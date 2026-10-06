@@ -40,8 +40,13 @@ func can_pay(obj: GameObject, ability: Ability) -> bool:
 			return false
 		if cost.kind == &"DISCARD" and _discard_pick(obj) == null:
 			return false
-		if cost.kind == &"REMOVE_COUNTER" and int(obj.counters.get(str(cost.mana), 0)) < 1:
+		if cost.kind == &"REMOVE_COUNTER" and int(obj.counters.get(_counter_spec(str(cost.mana))[0], 0)) < int(_counter_spec(str(cost.mana))[1]):
 			return false
+		## Energy (CR 107.14): pay {E} only if you have that much.
+		if cost.kind == &"PAY_ENERGY":
+			var est := _state()
+			if est == null or obj.controller_id < 0 or obj.controller_id >= est.players.size() or est.players[obj.controller_id].energy < int(cost.mana):
+				return false
 		## CR 606.6: a loyalty cost can't remove more loyalty counters than the planeswalker has.
 		if cost.kind == &"LOYALTY" and int(obj.counters.get("loyalty", 0)) + int(cost.mana) < 0:
 			return false
@@ -73,7 +78,12 @@ func pay(obj: GameObject, ability: Ability) -> bool:
 		elif cost.kind == &"ADD_COUNTER":
 			obj.counters[cost.mana] = int(obj.counters.get(cost.mana, 0)) + 1
 		elif cost.kind == &"REMOVE_COUNTER":
-			obj.counters[str(cost.mana)] = maxi(0, int(obj.counters.get(str(cost.mana), 0)) - 1)
+			var rspec := _counter_spec(str(cost.mana))
+			obj.counters[rspec[0]] = maxi(0, int(obj.counters.get(rspec[0], 0)) - int(rspec[1]))
+		elif cost.kind == &"PAY_ENERGY":
+			var est2 := _state()
+			if est2 != null:
+				est2.players[obj.controller_id].energy -= int(cost.mana)
 		elif cost.kind == &"DISCARD":
 			var dc := _discard_pick(obj)
 			var st3 := _state()
@@ -213,3 +223,9 @@ func _tapped_candidates(obj: GameObject, spec: String) -> Array:
 		if (c as GameObject).tapped:
 			out.append(c)
 	return out
+
+
+## A REMOVE_COUNTER cost's text: "spore" (one counter) or "spore|3" (three): [name, count].
+static func _counter_spec(text: String) -> Array:
+	var parts := text.split("|")
+	return [parts[0], int(parts[1]) if parts.size() > 1 else 1]

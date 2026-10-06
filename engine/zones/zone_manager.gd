@@ -114,6 +114,9 @@ func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip
 	## Finality counter (CR 122.1g): a permanent with one that would go to a graveyard from the battlefield is exiled instead.
 	if dest_zone == EngineEnums.ZoneId.GRAVEYARD and old.zone == EngineEnums.ZoneId.BATTLEFIELD and int(old.counters.get("finality", 0)) > 0:
 		dest_zone = EngineEnums.ZoneId.EXILE
+	## "If that creature would die this turn, exile it instead." (Fiery Intervention, Magma Jet-style riders)
+	if dest_zone == EngineEnums.ZoneId.GRAVEYARD and old.zone == EngineEnums.ZoneId.BATTLEFIELD and int(old.marks.get("exile_if_dies_turn", -1)) == gs.turn_number:
+		dest_zone = EngineEnums.ZoneId.EXILE
 	## Unearth (CR 702.84a) and disturb / warp-style "exile it instead": leaving for anywhere but exile, it's exiled.
 	if old.zone == EngineEnums.ZoneId.BATTLEFIELD and dest_zone != EngineEnums.ZoneId.EXILE and (old.unearthed or bool(old.marks.get("exile if it would leave", false))):
 		dest_zone = EngineEnums.ZoneId.EXILE
@@ -300,7 +303,11 @@ func _etb_tapped(definition, controller: int) -> bool:
 		gs.players[controller].life -= int(rule.get("n", 0))
 		gs.log.append(EngineEnums.EventType.LIFE_CHANGE, controller, {to_player = controller, amount = int(rule.get("n", 0))})
 		return false
-	var tapped := EtbRules.tapped_on_entry(rule, hand, mine, life)
+	var live_opponents := 0
+	for pl in gs.players:
+		if pl.player_id != controller and not pl.lost:
+			live_opponents += 1
+	var tapped := EtbRules.tapped_on_entry(rule, hand, mine, life, live_opponents)
 	if str(rule.get("kind")) == "PAY_LIFE" and not tapped:
 		gs.players[controller].life -= int(rule.get("n", 0))
 		gs.log.append(EngineEnums.EventType.LIFE_CHANGE, controller, {to_player = controller, amount = int(rule.get("n", 0))})
@@ -375,12 +382,14 @@ func _note_left_battlefield(gs: GameState, old: GameObject, dest_zone: int) -> v
 ## Oracle text (unconditional lines only: "if ..." forms are left to the card).
 static func enters_with_counters(def: CardDefinition) -> Array:
 	var out: Array = []
-	var re := RegEx.create_from_string("(?i)^(?:~|this [a-z]+) enters with (a|an|one|two|three|four|five|six|seven|eight|nine|ten|x|\\d+) (-1/-1|[a-z]+) counters? on (?:it|him|her|them)\\.?$")
+	var re := RegEx.create_from_string("(?i)^(?:~|this [a-z]+) enters with (a|an|one|two|three|four|five|six|seven|eight|nine|ten|x|\\d+) (-1/-1|\\+1/\\+1|[a-z]+) counters? on (?:it|him|her|them)\\.?$")
 	for raw in OracleIr.normalize(def).split("\n"):
 		var m := re.search(str(raw).strip_edges())
 		if m == null:
 			continue
-		## "+1/+1" counters are already read as an ability by OracleIr.
+		## A fixed number of "+1/+1" counters is already read as an ability by OracleIr; only "X +1/+1 counters" is done here.
+		if m.get_string(2) == "+1/+1" and m.get_string(1).to_lower() != "x":
+			continue
 		out.append({"name": m.get_string(2).to_lower(), "n": OracleIr._num(m.get_string(1)), "x": m.get_string(1).to_lower() == "x"})
 	return out
 

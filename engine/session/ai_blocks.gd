@@ -96,6 +96,15 @@ static func choose(engine: RulesEngine, defender_id: int) -> Dictionary:
 		if picks.size() == need:
 			_assign(out, used, atk, picks)
 			incoming -= _prevented(engine, atk, picks)
+
+	# 4. "~ must be blocked if able": a free creature has to block it, or the declaration is rejected.
+	for atk in attackers:
+		if out.has(atk.object_id) or not engine._printed_line(atk, "must be blocked if able"):
+			continue
+		for blk in _weakest_first(engine, _untapped_creatures(engine, defender_id)):
+			if not used.has(blk.object_id) and engine.can_block_attacker(blk.object_id, atk.object_id):
+				_assign(out, used, atk, [blk])
+				break
 	return out
 
 
@@ -206,6 +215,8 @@ static func choose_attackers(engine: RulesEngine, player_id: int, defender_id: i
 ## Two untapped blockers that together kill `atk`, where the attacker's damage can't kill both and what it can kill is worth less
 ## than the attacker. [] when no such pair exists. Pairs the weakest combination first.
 static func _gang_block(engine: RulesEngine, atk: GameObject, defender_id: int, used: Dictionary) -> Array:
+	if engine.single_blocker_only(atk):
+		return []
 	var pool: Array = []
 	for blk in _untapped_creatures(engine, defender_id):
 		if not used.has(blk.object_id) and engine.can_block_attacker(blk.object_id, atk.object_id):

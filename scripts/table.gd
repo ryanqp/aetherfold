@@ -396,6 +396,7 @@ func _build() -> void:
 	_build_menu()
 	_build_gameover()
 	_build_quit_confirm()
+	_build_bug_report_dialog()
 	_build_draw_preview()
 	_build_mulligan_overlay()
 	_build_coin_overlay()
@@ -462,6 +463,9 @@ func _build_header() -> Control:
 	audio_button.tooltip_text = "Master, music and effects volume"
 	row.add_child(audio_button)
 	row.add_child(_header_button("Dice", BRONZE, INK, _on_dice, 72))
+	var bug_header := _header_button("Bug", BRONZE, INK, _on_report_bug, 56)
+	bug_header.tooltip_text = "Report a bug (F8): saves the last 3 turns of this match and what you tell it."
+	row.add_child(bug_header)
 	row.add_child(_header_divider())
 	## Menus
 	row.add_child(_header_button("Menu", BRONZE, INK, _on_menu, 76))
@@ -1093,6 +1097,12 @@ func _build_menu() -> void:
 	import_b.text = "Import Deck"
 	import_b.custom_minimum_size = Vector2(140, 32)
 	import_b.pressed.connect(_on_open_import)
+	var bug_b := Button.new()
+	bug_b.text = "Report bug"
+	bug_b.custom_minimum_size = Vector2(130, 32)
+	bug_b.pressed.connect(func() -> void:
+		_hide_menu()
+		_on_report_bug())
 	var close := Button.new()
 	close.text = "Close"
 	close.custom_minimum_size = Vector2(120, 32)
@@ -1101,6 +1111,7 @@ func _build_menu() -> void:
 	menu_solo_nodes.append(restart)
 	actions.add_child(import_b)
 	menu_solo_nodes.append(import_b)
+	actions.add_child(bug_b)
 	actions.add_child(close)
 	col.add_child(actions)
 	## Look of the table, kept in the player profile. Works in online matches too (it only changes your screen).
@@ -1890,11 +1901,12 @@ func _refresh() -> void:
 	if _hint_hold <= 0.0:
 		_paint_hint()
 	if deck_btn:
-		_deck_count.text = "%d" % int(b.you["library"])
+		var top_card: Dictionary = b.you.get("library_top", {})
+		_deck_count.text = "%d" % int(b.you["library"]) if top_card.is_empty() else "%d\n▲ %s" % [int(b.you["library"]), str(top_card.get("name", "?"))]
 		if _waiting_for_draw():
 			deck_btn.tooltip_text = "Your draw step: click to draw a card."
 		else:
-			deck_btn.tooltip_text = "Library: %d cards." % int(b.you["library"])
+			deck_btn.tooltip_text = "Library: %d cards." % int(b.you["library"]) + ("" if top_card.is_empty() else "\nTop card: %s" % str(top_card.get("name", "?")))
 	var selected: Dictionary = b.find_card(b.selected_id)
 	if selected.is_empty() and not b.you["hand"].is_empty():
 		_set_selected(str(b.you["hand"].back()["id"]))
@@ -2766,6 +2778,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif key.keycode == KEY_ENTER or key.keycode == KEY_KP_ENTER:
 		_on_end_turn()
+		get_viewport().set_input_as_handled()
+	elif key.keycode == KEY_F8:
+		_on_report_bug()
 		get_viewport().set_input_as_handled()
 	elif key.keycode == KEY_F3:
 		_show_debug = not _show_debug
@@ -3693,6 +3708,84 @@ func _on_mulligan_hand() -> void:
 	session.take_mulligan(0)
 	_refresh()
 	_set_status("Mulligan %d. New 7 from the shuffled library." % session.engine.state.players[0].mulligan_count)
+
+
+var bug_dialog: ConfirmationDialog
+var bug_happened: TextEdit
+var bug_didnt: TextEdit
+var bug_saved_dialog: AcceptDialog
+var _bug_last_path: String = ""
+var _bug_last_text: String = ""
+
+
+## "Report a bug": two text boxes (what happened, what didn't), saved with the last 3 turns of the match (see BugReport).
+func _build_bug_report_dialog() -> void:
+	bug_dialog = ConfirmationDialog.new()
+	bug_dialog.title = "Report a bug"
+	bug_dialog.ok_button_text = "Save report"
+	bug_dialog.min_size = Vector2i(640, 560)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 6)
+	var info := Label.new()
+	info.text = "Saves the last 3 turns of this match (play-by-play, engine events, both boards, the stack and the cards the engine can't read yet) together with what you write here."
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.custom_minimum_size = Vector2(600, 0)
+	col.add_child(info)
+	var l1 := Label.new()
+	l1.text = "What happened?"
+	col.add_child(l1)
+	bug_happened = TextEdit.new()
+	bug_happened.placeholder_text = "e.g. I activated the ability and the creature got no bonus."
+	bug_happened.custom_minimum_size = Vector2(600, 130)
+	bug_happened.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	col.add_child(bug_happened)
+	var l2 := Label.new()
+	l2.text = "What didn't happen (what should have)?"
+	col.add_child(l2)
+	bug_didnt = TextEdit.new()
+	bug_didnt.placeholder_text = "e.g. It should have got +2/+0 until end of turn."
+	bug_didnt.custom_minimum_size = Vector2(600, 130)
+	bug_didnt.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	col.add_child(bug_didnt)
+	bug_dialog.add_child(col)
+	bug_dialog.confirmed.connect(_on_bug_report_save)
+	add_child(bug_dialog)
+	bug_saved_dialog = AcceptDialog.new()
+	bug_saved_dialog.title = "Bug report saved"
+	bug_saved_dialog.add_button("Open folder", false, "open_folder")
+	bug_saved_dialog.add_button("Copy report", false, "copy")
+	bug_saved_dialog.custom_action.connect(_on_bug_saved_action)
+	add_child(bug_saved_dialog)
+
+
+func _on_report_bug() -> void:
+	if bug_dialog == null:
+		return
+	bug_happened.text = ""
+	bug_didnt.text = ""
+	bug_dialog.popup_centered()
+	bug_happened.grab_focus()
+
+
+func _on_bug_report_save() -> void:
+	var report := BugReport.build(session, bug_happened.text, bug_didnt.text, "BF-%d" % BUILD)
+	var path := BugReport.save(report)
+	_bug_last_text = BugReport.to_text(report)
+	if path == "":
+		_set_status("Could not save the bug report.")
+		return
+	_bug_last_path = ProjectSettings.globalize_path(path)
+	bug_saved_dialog.dialog_text = "Saved:\n%s\n\nIt holds the last 3 turns, both boards, the stack and what you wrote. Send this file along to get the problem fixed." % _bug_last_path
+	bug_saved_dialog.popup_centered()
+	_set_status("Bug report saved.")
+
+
+func _on_bug_saved_action(action: StringName) -> void:
+	if action == &"open_folder":
+		OS.shell_open(_bug_last_path.get_base_dir())
+	elif action == &"copy":
+		DisplayServer.clipboard_set(_bug_last_text)
+		_set_status("Bug report copied to the clipboard.")
 
 
 func _build_quit_confirm() -> void:

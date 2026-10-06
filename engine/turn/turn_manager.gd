@@ -110,12 +110,37 @@ func _finish_step_and_enter_next() -> void:
 			return
 
 
+## "End the turn" (CR 723, Time Stop): everything else leaves the stack and the game goes straight to the cleanup step.
+func end_the_turn() -> void:
+	var eng := _eng()
+	if eng == null:
+		return
+	var st := eng.state
+	st.passed_since_action.clear()
+	st.step = EngineEnums.Step.CLEANUP
+	_sync_phase(st)
+	st.log.append(EngineEnums.EventType.STEP_BEGIN, st.active_player_id, {step = st.step, phase = st.phase, turn = st.turn_number})
+	_start_tba(eng, st)
+	if _receives_priority(st.step):
+		eng.priority.give(st, st.active_player_id)
+	else:
+		_finish_step_and_enter_next()
+
+
 func _rotate_turn(st: GameState) -> void:
 	var n := st.players.size()
 	if n <= 0:
 		return
-	st.active_player_id = (st.active_player_id + 1) % n
+	var next_pid := (st.active_player_id + 1) % n
+	var lose_this_turn := false
+	if not st.extra_turns.is_empty():
+		var et: Dictionary = st.extra_turns.pop_front()
+		next_pid = int(et.get("pid", next_pid))
+		lose_this_turn = bool(et.get("lose", false))
+	st.active_player_id = next_pid
 	st.turn_number += 1
+	if lose_this_turn:
+		st.lose_at_end_turn = st.turn_number
 	st.draw_pending = false
 	for i in n:
 		st.land_played[i] = false
@@ -146,6 +171,9 @@ func _start_tba(eng: RulesEngine, st: GameState) -> void:
 			_untap(st)
 		EngineEnums.Step.DRAW:
 			var skip := st.turn_number == 1 and st.rules.first_player_skips_draw
+			## "Skip your draw step." (Necropotence, Yawgmoth's Bargain) on a permanent its player controls.
+			if not skip and _has_skip_draw(st, st.active_player_id):
+				skip = true
 			if not skip:
 				if eng.manual_draw_seats.has(st.active_player_id):
 					st.draw_pending = true
@@ -171,8 +199,24 @@ func _start_tba(eng: RulesEngine, st: GameState) -> void:
 				cs.blockers.clear()
 				cs.defenders.clear()
 				cs.blocks_declared = false
+		EngineEnums.Step.END:
+			## "At the beginning of that turn's end step, you lose the game" (Last Chance).
+			if st.lose_at_end_turn == st.turn_number:
+				st.players[st.active_player_id].lost = true
 		_:
 			pass
+
+
+func _has_skip_draw(st: GameState, player_id: int) -> bool:
+	var bf: Zone = st.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return false
+	for oid in bf.object_ids:
+		var obj: GameObject = st.objects.get(oid)
+		if obj != null and obj.controller_id == player_id and obj.definition is CardDefinition \
+				and (obj.definition as CardDefinition).oracle_text.to_lower().contains("skip your draw step."):
+			return true
+	return false
 
 
 func _untap(st: GameState) -> void:
@@ -180,12 +224,27 @@ func _untap(st: GameState) -> void:
 	if bf == null:
 		return
 	var eng := _eng()
+	var optional: Array = []
 	for oid in bf.object_ids:
 		var obj: GameObject = st.objects.get(oid)
 		if obj != null and obj.controller_id == st.active_player_id:
 			if eng != null and eng.layers != null and _held_tapped(st, eng.layers, obj):
 				continue
+			## "Doesn't untap during its controller's next untap step" (frozen): this is that step.
+			if obj.marks.has("frozen"):
+				obj.marks.erase("frozen")
+				continue
+			## "You may choose not to untap ~ during your untap step.": the player is asked once the step has begun.
+			if obj.tapped and obj.definition is CardDefinition \
+					and (obj.definition as CardDefinition).oracle_text.to_lower().contains("you may choose not to untap"):
+				optional.append(obj)
+				continue
 			obj.tapped = false
+	for o in optional:
+		var fx := AbilityEffect.new()
+		fx.kind = &"UNTAP_CHOICE"
+		fx.params = {"object_id": (o as GameObject).object_id}
+		eng.put_synthetic(o as GameObject, st.active_player_id, [fx], {})
 
 
 ## CR 502.3: "doesn't untap during its controller's untap step" (unless that player is the monarch: Fall from Favor).
@@ -229,11 +288,11 @@ func _has_attackers(st: GameState) -> bool:
 
 
 func _receives_priority(step: int) -> bool:
-	if step == EngineEnums.Step.CLEANUP:
-		## Only while something is on the stack (the discard down to the maximum hand size).
+	if step == EngineEnums.Step.CLEANUP or step == EngineEnums.Step.UNTAP:
+		## Only while something is on the stack (the discard down to the maximum hand size; "you may choose not to untap").
 		var eng := _eng()
 		return eng != null and eng.state.stack is MagicStack and not (eng.state.stack as MagicStack).is_empty()
-	return step != EngineEnums.Step.UNTAP
+	return true
 
 
 func _next_step(step: int) -> int:

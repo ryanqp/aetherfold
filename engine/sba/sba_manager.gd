@@ -6,6 +6,7 @@ func check(engine: RulesEngine) -> bool:
 	_check_creatures(engine)
 	_check_planeswalkers(engine)
 	_check_auras(engine)
+	_check_aura_control(engine)
 	_check_sagas(engine)
 	if engine.kw != null:
 		engine.kw.update_speed()
@@ -245,3 +246,34 @@ func _cant_lose(st: GameState, p: PlayerState) -> bool:
 			if ab != null and ab.kind == &"STATIC" and ab.static_spec.has("cant_lose"):
 				return true
 	return false
+
+
+## Control Magic and friends ("You control enchanted creature."): the Aura's controller controls what it enchants for as long as it
+## stays attached; when it goes, the permanent returns to its owner (CR 303.4e / 613.1b).
+func _check_aura_control(engine: RulesEngine) -> void:
+	var st := engine.state
+	var bf: Zone = st.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return
+	var holders := {}
+	for oid in bf.object_ids:
+		var aura: GameObject = st.objects.get(oid)
+		if aura == null or aura.attached_to == 0 or not (aura.definition is CardDefinition):
+			continue
+		if not (aura.definition as CardDefinition).oracle_text.to_lower().contains("you control enchanted "):
+			continue
+		var host: GameObject = st.objects.get(aura.attached_to)
+		if host != null and host.zone == EngineEnums.ZoneId.BATTLEFIELD:
+			holders[host.object_id] = aura.controller_id
+	for oid in bf.object_ids:
+		var h: GameObject = st.objects.get(oid)
+		if h == null:
+			continue
+		if holders.has(h.object_id):
+			if h.controller_id != int(holders[h.object_id]):
+				h.controller_id = int(holders[h.object_id])
+				h.summoned_this_turn = true
+			h.marks["stolen_by_aura"] = true
+		elif bool(h.marks.get("stolen_by_aura", false)):
+			h.controller_id = h.owner_id
+			h.marks.erase("stolen_by_aura")

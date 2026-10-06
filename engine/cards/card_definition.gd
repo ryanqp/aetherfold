@@ -18,6 +18,9 @@ var keywords: PackedStringArray = PackedStringArray()
 var unimplemented_keywords: PackedStringArray = PackedStringArray()
 var commander_legal: bool = true
 var abilities: Array = []
+## Filled by LayerManager the first time the card is looked at: its static abilities sorted by what they change, so each
+## characteristics lookup does not rescan every ability of every permanent. Never serialised.
+var layer_cache: Dictionary = {}
 ## The other face of a double-faced card (transform, disturb, daybound, craft, MDFC back), or null.
 var back_face: CardDefinition = null
 ## A split card's second half or an adventure / aftermath half, castable on its own; null if none.

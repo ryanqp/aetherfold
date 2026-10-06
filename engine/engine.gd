@@ -487,6 +487,15 @@ func _own_discount(player_id: int, spell: GameObject) -> int:
 		var ab0 := a0 as Ability
 		if ab0 != null and ab0.kind == &"STATIC" and ab0.static_spec.has("cost_reduction_self"):
 			var cs: Dictionary = ab0.static_spec["cost_reduction_self"]
+			## Ghalta, Primal Hunger: "costs {X} less to cast, where X is the total power of creatures you control."
+			if bool(cs.get("total_power", false)):
+				var bf_tp: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+				if bf_tp != null:
+					for tp_id in bf_tp.object_ids:
+						var tp_o: GameObject = state.objects.get(tp_id)
+						if tp_o != null and tp_o.controller_id == player_id and _is_creature_now(tp_o):
+							total += maxi(0, power_of(tp_o))
+				continue
 			if cs.has("per"):
 				total += int(cs.get("amount", 1)) * Query.count_objects(state, spell, cs["per"])
 			elif layers.condition_met(state, spell, cs.get("condition", {})):
@@ -538,6 +547,11 @@ func finish_top_resolution() -> void:
 		return
 	var done: bool = (state.stack as MagicStack).resolve_top(self)
 	if not done:
+		return
+	if state.end_turn_requested:
+		state.end_turn_requested = false
+		process_zone_events()
+		turn.end_the_turn()
 		return
 	process_zone_events()
 	var sba_pending: bool = sba != null and sba.check(self)
@@ -1613,6 +1627,9 @@ func _mark_damage(source: GameObject, target: GameObject, amount: int) -> void:
 
 ## Damage prevention shields (CR 615): what is left of `amount` after the shields that cover this target. Shields end with the turn.
 func apply_prevention(target_obj: GameObject, target_player: int, amount: int) -> int:
+	## "Damage can't be prevented." (Leyline of Punishment, Everlasting Torment): no shield applies.
+	if amount > 0 and _battlefield_text_has("damage can't be prevented"):
+		return amount
 	## "Prevent all combat damage that would be dealt to ~" printed on the permanent (Seraph of the Sword).
 	if amount > 0 and target_obj != null and state.step == EngineEnums.Step.COMBAT_DAMAGE and _prints_combat_prevention(target_obj):
 		return 0
@@ -1715,9 +1732,9 @@ func designations(obj: GameObject) -> Array:
 	if obj.bestowed:
 		out.append("bestowed")
 	if not obj.merged.is_empty():
-		out.append("mutated ×%d" % (obj.merged.size() + 1))
+		out.append("mutated Ã%d" % (obj.merged.size() + 1))
 	if obj.regen_shields > 0:
-		out.append("regenerate ×%d" % obj.regen_shields)
+		out.append("regenerate Ã%d" % obj.regen_shields)
 	if int(obj.marks.get("saddled_turn", -1)) == state.turn_number:
 		out.append("saddled")
 	if obj.attacked_turn == state.turn_number and int(obj.marks.get("boast_turn", -1)) != state.turn_number:
@@ -1727,7 +1744,7 @@ func designations(obj: GameObject) -> Array:
 				break
 	for d in obj.marks.keys():
 		## Only yes/no marks are shown; per-turn bookkeeping and per-ability flags stay hidden.
-		if obj.marks[d] is bool and obj.marks[d] and not str(d).begins_with("exhausted_"):
+		if obj.marks[d] is bool and obj.marks[d] and not str(d).begins_with("exhausted_") and str(d) != "stolen_by_aura":
 			out.append(str(d))
 	return out
 
@@ -1736,7 +1753,7 @@ func is_planeswalker_now(obj: GameObject) -> bool:
 	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
 		return false
 	if layers != null:
-		return str(layers.snapshot(state, obj).get("type_line", "")).contains("Planeswalker")
+		return str(layers.snapshot(state, obj, "type").get("type_line", "")).contains("Planeswalker")
 	return obj.definition is CardDefinition and (obj.definition as CardDefinition).type_line.contains("Planeswalker")
 
 
@@ -1768,6 +1785,10 @@ func protection_colors(obj: GameObject) -> Array:
 func protected_from(obj: GameObject, source: GameObject) -> bool:
 	if obj == null or source == null or not (source.definition is CardDefinition):
 		return false
+	## "Protection from artifacts" / "creatures" / "enchantments" (a card type, CR 702.16): damage, enchanting, blocking and targeting.
+	for t in protection_types(obj):
+		if (source.definition as CardDefinition).type_line.to_lower().split("—")[0].contains(str(t)):
+			return true
 	var prot := protection_colors(obj)
 	if prot.is_empty():
 		return false
@@ -1887,6 +1908,10 @@ func _submit_declare_attackers(action: GameAction) -> SubmitResult:
 	for lid in legal:
 		if not ids.has(int(lid)) and _must_attack(state.objects.get(int(lid))):
 			ids.append(int(lid))
+	## "~ can't attack or block alone" (CR 508.1c): it needs another attacker.
+	if ids.size() == 1 and _printed_alone_rule(state.objects.get(int(ids[0])), true):
+		r.error = "can't attack alone"
+		return r
 	var requested_defender := int(action.extra.get("defending_player_id", -1))
 	if not _is_legal_defender(action.player_id, requested_defender):
 		requested_defender = _default_defender(action.player_id)
@@ -1959,7 +1984,7 @@ func _submit_declare_blockers(action: GameAction) -> SubmitResult:
 	for existing in next_blocks.values():
 		if existing is Array:
 			for bid in existing:
-				used[int(bid)] = true
+				used[int(bid)] = int(used.get(int(bid), 0)) + 1
 	for key in (raw as Dictionary).keys():
 		var attacker_id := int(key)
 		if not cs.attacker_ids.has(attacker_id):
@@ -1983,13 +2008,14 @@ func _submit_declare_blockers(action: GameAction) -> SubmitResult:
 		var ordered: Array = []
 		for raw_bid in bids:
 			var bid := int(raw_bid)
-			if used.has(bid):
+			## "~ can block an additional creature each combat" / "any number of creatures": a blocker may be used more than once.
+			if int(used.get(bid, 0)) >= 1 + _extra_blocks(state.objects.get(bid)):
 				r.error = "blocker already assigned"
 				return r
 			if not _can_block(bid, action.player_id, attacker_id):
 				r.error = "illegal blocker"
 				return r
-			used[bid] = true
+			used[bid] = int(used.get(bid, 0)) + 1
 			ordered.append(bid)
 		## "Creatures can't block unless their controller pays {1} for each of those creatures" (Archangel of Tithes while attacking).
 		var btax := _block_tax_for(attacker_id)
@@ -2015,6 +2041,32 @@ func _submit_declare_blockers(action: GameAction) -> SubmitResult:
 		if group is Array and (group as Array).size() == 1 and has_keyword(state.objects.get(int(key)), "Menace"):
 			r.error = "menace needs two blockers"
 			return r
+		if group is Array and (group as Array).size() > 1 and single_blocker_only(state.objects.get(int(key))):
+			r.error = "can't be blocked by more than one creature"
+			return r
+	## "~ can't attack or block alone": a lone blocker must not be it.
+	var blocking_total := 0
+	var lone_blocker := 0
+	var blocking_ids := {}
+	for bkey in next_blocks.keys():
+		var bgroup: Variant = next_blocks[bkey]
+		if bgroup is Array:
+			for bb in (bgroup as Array):
+				blocking_total += 1
+				lone_blocker = int(bb)
+				blocking_ids[int(bb)] = true
+	if blocking_total == 1 and _printed_alone_rule(state.objects.get(lone_blocker), false):
+		r.error = "can't block alone"
+		return r
+	## "~ must be blocked if able": some free creature of the defender has to block it.
+	for must_id in cs.attacker_ids:
+		var must_obj: GameObject = state.objects.get(int(must_id))
+		if must_obj == null or not _printed_line(must_obj, "must be blocked if able") or (next_blocks.get(int(must_id), []) as Array).size() > 0:
+			continue
+		for free_id in _creature_ids_of(action.player_id):
+			if not blocking_ids.has(int(free_id)) and _can_block(int(free_id), action.player_id, int(must_id)):
+				r.error = "%s must be blocked if able" % (must_obj.definition as CardDefinition).name
+				return r
 	if block_paid > 0:
 		pay_now(action.player_id, ManaCost.parse("{%d}" % block_paid))
 		state.log.append(EngineEnums.EventType.NOTE, action.player_id, {"text": "Paid {%d} to block." % block_paid})
@@ -2033,6 +2085,26 @@ func _submit_declare_blockers(action: GameAction) -> SubmitResult:
 		state.log.append(EngineEnums.EventType.BLOCK, action.player_id, {blocker_id = 0, attacker_id = 0})
 	r.ok = true
 	return r
+
+
+## "~ can't be blocked by more than one creature." (printed) or Challenger Troll's "Each creature you control with power 4 or
+## greater can't be blocked by more than one creature."
+func single_blocker_only(attacker: GameObject) -> bool:
+	if attacker == null or not (attacker.definition is CardDefinition):
+		return false
+	if (attacker.definition as CardDefinition).oracle_text.to_lower().contains("can't be blocked by more than one creature") \
+			and not (attacker.definition as CardDefinition).oracle_text.to_lower().contains("creature you control with power"):
+		return true
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return false
+	for oid in bf.object_ids:
+		var src: GameObject = state.objects.get(oid)
+		if src == null or src.controller_id != attacker.controller_id or not (src.definition is CardDefinition):
+			continue
+		if (src.definition as CardDefinition).oracle_text.to_lower().contains("each creature you control with power 4 or greater can't be blocked by more than one creature") and power_of(attacker) >= 4:
+			return true
+	return false
 
 
 ## The player an attacker is attacking, or -1.
@@ -2092,6 +2164,9 @@ func _can_block(object_id: int, defender_id: int, attacker_id: int = -1) -> bool
 		return false
 	if layers != null and layers.combat_restricted(state, obj):
 		return false
+	## "Target creature can't block this turn" grants the pseudo-keyword "Can't block".
+	if has_keyword(obj, "Can't block"):
+		return false
 	## "This token can't block." / "This creature can't block." on the card itself.
 	if obj.definition is CardDefinition and not (layers != null and layers.loses_abilities(state, obj)):
 		var otext := (obj.definition as CardDefinition).oracle_text.to_lower()
@@ -2123,6 +2198,14 @@ func _can_block(object_id: int, defender_id: int, attacker_id: int = -1) -> bool
 					shares = true
 			if not shares:
 				return false
+	## "~ can block only creatures with flying." (Cloud Sprite): printed on the blocker.
+	if bdef != null and not has_keyword(attacker, "Flying") and bdef.oracle_text.to_lower().contains("can block only creatures with flying"):
+		return false
+	## "~ can't be blocked by creatures with power 2 or less." printed on the attacker.
+	if adef != null:
+		var pw_rule := RegEx.create_from_string("(?i)can't be blocked by creatures with power (\\d+) or (less|greater)").search(adef.oracle_text)
+		if pw_rule != null and (power_of(obj) <= int(pw_rule.get_string(1)) if pw_rule.get_string(2).to_lower() == "less" else power_of(obj) >= int(pw_rule.get_string(1))):
+			return false
 	## "Target creature can't be blocked this turn" (Rogue's Passage) grants Unblockable (CR 509.1b).
 	if has_keyword(attacker, "Unblockable"):
 		return false
@@ -2254,6 +2337,9 @@ func _produced_mana(object_id: int, ability_id: StringName, resolve: bool = true
 			if mana_text.contains("{OPP}"):
 				var opp := opponent_land_colors(obj.controller_id)
 				mana_text = "{%s}" % "|".join(PackedStringArray(opp)) if not opp.is_empty() else ""
+			if mana_text.contains("{OWN}"):
+				var own_cols := own_land_colors(obj.controller_id)
+				mana_text = "{%s}" % "|".join(PackedStringArray(own_cols)) if not own_cols.is_empty() else ""
 			if mana_text.contains("|CHOSEN}"):
 				mana_text = mana_text.replace("|CHOSEN}", ("|%s}" % obj.chosen_color) if obj.chosen_color != "" else "}")
 			if mana_text.contains("{CHOSEN}"):
@@ -2320,12 +2406,21 @@ func _monarch_land_bonus(player_id: int, tapped: GameObject) -> void:
 
 ## The colors a land an opponent controls could produce ("Exotic Orchard"): W U B R G letters, no repeats.
 func opponent_land_colors(player_id: int) -> Array:
+	return _land_colors(player_id, false)
+
+
+## The colors a land you control could produce (Reflecting Pool).
+func own_land_colors(player_id: int) -> Array:
+	return _land_colors(player_id, true)
+
+
+func _land_colors(player_id: int, own: bool) -> Array:
 	var found := {}
 	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
 	if bf != null:
 		for oid in bf.object_ids:
 			var o: GameObject = state.objects.get(oid)
-			if o == null or o.controller_id == player_id or not (o.definition is CardDefinition):
+			if o == null or (o.controller_id == player_id) != own or not (o.definition is CardDefinition):
 				continue
 			var def := o.definition as CardDefinition
 			if not def.is_land():
@@ -2334,7 +2429,7 @@ func opponent_land_colors(player_id: int) -> Array:
 				for fx in (a as Ability).effects:
 					if fx is AbilityEffect and (fx as AbilityEffect).kind == &"ADD_MANA":
 						var t := str((fx as AbilityEffect).params.get("mana", ""))
-						if t.contains("OPP"):
+						if t.contains("OPP") or t.contains("OWN"):
 							continue
 						if o.chosen_color != "":
 							t = t.replace("{CHOSEN}", "{%s}" % o.chosen_color).replace("|CHOSEN}", "|%s}" % o.chosen_color)
@@ -2363,6 +2458,8 @@ func _mana_text_makes_mana(obj: GameObject, ab: Ability) -> bool:
 	for fx in ab.effects:
 		if fx is AbilityEffect and (fx as AbilityEffect).kind == &"ADD_MANA" and str((fx as AbilityEffect).params.get("mana", "")).contains("OPP"):
 			return not opponent_land_colors(obj.controller_id).is_empty()
+		if fx is AbilityEffect and (fx as AbilityEffect).kind == &"ADD_MANA" and str((fx as AbilityEffect).params.get("mana", "")).contains("OWN"):
+			return not own_land_colors(obj.controller_id).is_empty()
 	return true
 
 
@@ -2699,10 +2796,29 @@ func _legal_attacker_ids(player_id: int) -> Array:
 			continue
 		if has_keyword(obj, "Defender") or _printed_cant(obj, "attack"):
 			continue
-		if layers != null and layers.combat_restricted(state, obj):
+		if layers != null and layers.combat_restricted(state, obj, true):
+			continue
+		if not _attack_allowed_vs_defenders(obj):
 			continue
 		out.append(obj.object_id)
 	return out
+
+
+## "~ can't attack unless defending player controls an Island." (CR 508.1c): some opponent must control a permanent of that type.
+func _attack_allowed_vs_defenders(obj: GameObject) -> bool:
+	var def := obj.definition as CardDefinition
+	if not def.oracle_text.contains("unless defending player controls"):
+		return true
+	var m := RegEx.create_from_string("(?i)can't attack unless defending player controls an? ([a-z]+)").search(def.oracle_text)
+	if m == null:
+		return true
+	var need := m.get_string(1).substr(0, 1).to_upper() + m.get_string(1).substr(1).to_lower()
+	for p in state.players:
+		if p.player_id == obj.controller_id or p.lost:
+			continue
+		if Query.count_objects(state, obj, {"controller_id": p.player_id, "subtype": need}) > 0:
+			return true
+	return false
 
 
 ## "can't be blocked except by <group>" allows only that group; "can't be blocked by <group>" forbids it. A group the
@@ -2726,6 +2842,10 @@ func _block_text_allows(adef: CardDefinition, attacker: GameObject, blocker: Gam
 func _cast_forbidden(obj: GameObject) -> bool:
 	if not (obj.definition is CardDefinition):
 		return false
+	## "Each player can't cast more than one spell each turn." (Rule of Law, Eidolon of Rhetoric): one already cast this turn.
+	if obj.controller_id >= 0 and obj.controller_id < state.players.size() and state.players[obj.controller_id].spells_this_turn.size() >= 1 \
+			and _battlefield_text_has("can't cast more than one spell each turn"):
+		return true
 	for a in (obj.definition as CardDefinition).abilities:
 		var ab := a as Ability
 		if ab != null and ab.kind == &"STATIC" and ab.static_spec.has("cast_condition") and not layers.condition_met(state, obj, ab.static_spec["cast_condition"]):
@@ -2850,7 +2970,7 @@ func _is_creature_now(obj: GameObject) -> bool:
 	if obj == null:
 		return false
 	if layers != null:
-		return str(layers.snapshot(state, obj).get("type_line", "")).contains("Creature")
+		return str(layers.snapshot(state, obj, "type").get("type_line", "")).contains("Creature")
 	return obj.definition is CardDefinition and (obj.definition as CardDefinition).is_creature()
 
 
@@ -3146,7 +3266,7 @@ func activation_report(object_id: int) -> Dictionary:
 				cost = _cost_text(ab),
 				requires_tap = ab.uses_tap_symbol_cost(),
 				mana_available = pool == null or pool.can_pay(mana_cost),
-				condition = str(cond.get("text", "—")),
+				condition = str(cond.get("text", "â")),
 				condition_result = bool(cond.get("result", true)),
 				can_activate = reason == "LEGAL",
 				reason = reason,
@@ -3176,7 +3296,7 @@ func activation_report(object_id: int) -> Dictionary:
 		lines.append("Mana Available:")
 		lines.append("TRUE" if bool(info.get("mana_available", false)) else "FALSE")
 		lines.append("Condition:")
-		lines.append(str(info.get("condition", "—")))
+		lines.append(str(info.get("condition", "â")))
 		lines.append("Condition Result:")
 		lines.append("TRUE" if bool(info.get("condition_result", false)) else "FALSE")
 		lines.append("Can Activate:")
@@ -3232,7 +3352,7 @@ func _resolution_condition(obj: GameObject, ab: Ability) -> Dictionary:
 		if layers != null and obj != null:
 			result = layers.has_subtype(state, obj, sub)
 		return {text = "%s is a %s" % [source_name, sub], result = result}
-	return {text = "—", result = true}
+	return {text = "â", result = true}
 
 
 ## "Prevent all combat damage that would be dealt to ~" is one of the permanent's own lines (Seraph of the Sword).
@@ -3302,6 +3422,9 @@ func _block_tax_for(attacker_id: int) -> int:
 func _must_attack(obj: GameObject) -> bool:
 	if obj == null or not (obj.definition is CardDefinition):
 		return false
+	## "Target creature attacks this turn if able" grants the pseudo-keyword "Must attack".
+	if has_keyword(obj, "Must attack"):
+		return true
 	var def := obj.definition as CardDefinition
 	var short := def.name.to_lower().split(",")[0]
 	for raw in def.oracle_text.to_lower().split("\n"):
@@ -3373,3 +3496,74 @@ func _has_land_mana_doubler(pid: int) -> bool:
 			if ab != null and ab.kind == &"STATIC" and ab.static_spec.has("extra_land_mana"):
 				return true
 	return false
+
+
+## Card types the permanent has protection from, printed on it ("Protection from artifacts"): singular, lower case.
+func protection_types(obj: GameObject) -> Array:
+	var out: Array = []
+	if obj == null or not (obj.definition is CardDefinition) or obj.face_down:
+		return out
+	if layers != null and layers.loses_abilities(state, obj):
+		return out
+	for raw in (obj.definition as CardDefinition).oracle_text.split("\n"):
+		var low := str(raw).to_lower().strip_edges().split("(")[0].strip_edges()
+		var i := low.find("protection from ")
+		if i < 0 or (i > 0 and not low.substr(0, i).strip_edges().ends_with(",")):
+			continue
+		for part in low.substr(i + 16).replace(", and ", ",").replace(" and ", ",").replace(", ", ",").split(","):
+			var w := str(part).strip_edges()
+			for t in ["artifact", "creature", "enchantment", "land", "planeswalker", "instant", "sorcery"]:
+				if w == t or w == t + "s":
+					out.append(t)
+	return out
+
+
+## A line printed on the permanent (lower case, name as "~"), e.g. "~ must be blocked if able."
+func _printed_line(obj: GameObject, fragment: String) -> bool:
+	if obj == null or not (obj.definition is CardDefinition) or (layers != null and layers.loses_abilities(state, obj)):
+		return false
+	var def := obj.definition as CardDefinition
+	var t := def.oracle_text.to_lower().replace(def.name.to_lower(), "~").replace("this creature", "~")
+	return t.contains(fragment)
+
+
+## "~ can't attack or block alone." / "~ can't attack alone." / "~ can't block alone."
+func _printed_alone_rule(obj: GameObject, attacking: bool) -> bool:
+	if attacking:
+		return _printed_line(obj, "can't attack or block alone") or _printed_line(obj, "can't attack alone")
+	return _printed_line(obj, "can't attack or block alone") or _printed_line(obj, "can't block alone")
+
+
+## Object ids of the untapped creatures a player controls.
+func _creature_ids_of(player_id: int) -> Array:
+	var out: Array = []
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return out
+	for oid in bf.object_ids:
+		var o: GameObject = state.objects.get(oid)
+		if o != null and o.controller_id == player_id and not o.tapped and _is_creature_now(o):
+			out.append(int(oid))
+	return out
+
+
+## A permanent anywhere on the battlefield whose printed text contains `fragment` ("damage can't be prevented").
+func _battlefield_text_has(fragment: String) -> bool:
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return false
+	for oid in bf.object_ids:
+		var o: GameObject = state.objects.get(oid)
+		if o != null and o.definition is CardDefinition and (o.definition as CardDefinition).oracle_text.to_lower().contains(fragment):
+			return true
+	return false
+
+
+## How many more attackers than one this creature can block: 1 for "can block an additional creature each combat",
+## effectively unlimited for "can block any number of creatures".
+func _extra_blocks(obj: GameObject) -> int:
+	if _printed_line(obj, "can block any number of creatures"):
+		return 99
+	if _printed_line(obj, "can block an additional creature each combat"):
+		return 1
+	return 0

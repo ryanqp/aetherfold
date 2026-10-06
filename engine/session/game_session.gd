@@ -263,7 +263,9 @@ func submit(action: GameAction) -> SubmitResult:
 		bad.error = "no engine"
 		last_error = bad.error
 		return bad
+	var t1 := Time.get_ticks_usec()
 	var r: SubmitResult = engine.submit(action)
+	_perf_add("engine.submit", t1)
 	last_error = r.error if not r.ok else ""
 	rebuild_view()
 	return r
@@ -288,15 +290,38 @@ func as_seat(seat: int, fn: Callable) -> void:
 
 
 ## A person decides for this seat: you, and in an online match (skip_ai) the other player too.
+## Set by tools/sim_games.gd: both seats are played by the bot (nobody answers prompts on screen).
+var all_bots: bool = false
+
+
 func _is_human(pid: int) -> bool:
-	return pid == you_seat or skip_ai
+	return (pid == you_seat and not all_bots) or skip_ai
+
+
+## Time spent (microseconds) and call counts per hot spot, for tools/sim_games.gd and the bug report: {name: [usec, calls]}.
+static var perf: Dictionary = {}
+
+
+static func _perf_add(name: String, started_usec: int) -> void:
+	var row: Array = perf.get(name, [0, 0])
+	row[0] = int(row[0]) + (Time.get_ticks_usec() - started_usec)
+	row[1] = int(row[1]) + 1
+	perf[name] = row
 
 
 func rebuild_view() -> void:
+	if _bulk > 0:
+		_view_dirty = true
+		return
+	_view_dirty = false
+	var t0 := Time.get_ticks_usec()
 	pending_draw_anim = draw_waiting()
 	if not _swapped:
+		var th := Time.get_ticks_usec()
 		history.pump(engine, you_seat, match_start == MatchStart.MAIN_GAME)
+		_perf_add("history.pump", th)
 	view = TableView.from_engine(engine, self)
+	_perf_add("rebuild_view", t0)
 
 
 ## True while it is your turn and you still have to click your library for the turn's card.
@@ -392,6 +417,7 @@ func _mark_kept(player_id: int) -> void:
 	kept[player_id] = true
 	if bool(kept.get(0, false)) and bool(kept.get(1, false)):
 		match_start = MatchStart.MAIN_GAME
+		_opening_hand_to_battlefield()
 		dbg("GAME_READY. Hand %d, library %d" % [engine.hand_size(0), engine.library_size(0)])
 		## The rival won the flip: it plays its first turn before you get yours.
 		if first_player != you_seat and not skip_ai and engine.state.active_player_id == first_player:
@@ -744,7 +770,7 @@ func _choose_target_auto(player_id: int) -> SubmitResult:
 		if best == null:
 			return null
 		## You choose your own targets; with a single legal one there is nothing to choose.
-		if player_id == you_seat and cand_ids.size() > 1:
+		if player_id == you_seat and not all_bots and cand_ids.size() > 1:
 			_open_target_prompt(cand_ids, slot, slot_hostile)
 			var wait := SubmitResult.new()
 			wait.ok = true
@@ -1329,6 +1355,14 @@ func _resolve_choice_if_needed() -> bool:
 
 
 func pass_until_active(player_id: int, max_steps: int = 80) -> void:
+	_bulk += 1
+	_pass_until_active_inner(player_id, max_steps)
+	_bulk -= 1
+	if _bulk == 0 and _view_dirty:
+		rebuild_view()
+
+
+func _pass_until_active_inner(player_id: int, max_steps: int) -> void:
 	var n := 0
 	while n < max_steps and engine != null and not engine.is_over():
 		n += 1
@@ -1367,10 +1401,25 @@ static func ai_should_skip_cast(def: CardDefinition, stack_empty: bool, battlefi
 	return false
 
 
+## Rebuilds of the table view are skipped while a bot turn or a pass loop runs and done once when it ends: a rebuild costs up to a
+## quarter of a second late in a game, and a turn used to make about sixty of them.
+var _bulk: int = 0
+var _view_dirty: bool = false
+
+
 func ai_take_turn(player_id: int) -> void:
+	_bulk += 1
+	_ai_take_turn_inner(player_id)
+	_bulk -= 1
+	if _bulk == 0 and _view_dirty:
+		rebuild_view()
+
+
+func _ai_take_turn_inner(player_id: int) -> void:
 	var n := 0
 	var skip_cast: Dictionary = {}
 	var declared_attack := false
+	var used_abilities := {}
 	while n < 48 and engine != null and not engine.is_over() and engine.state.active_player_id == player_id:
 		n += 1
 		if engine.state.draw_pending:
@@ -1395,7 +1444,9 @@ func ai_take_turn(player_id: int) -> void:
 			cancel.player_id = pid
 			submit(cancel)
 			continue
+		var t2 := Time.get_ticks_usec()
 		var legal: Array = engine.legal_actions(player_id)
+		_perf_add("bot legal_actions", t2)
 		var lands: Array = []
 		var spells: Array = []
 		var attack: GameAction = null
@@ -1423,6 +1474,12 @@ func ai_take_turn(player_id: int) -> void:
 			if not cr.ok:
 				skip_cast[spell.object_id] = true
 			continue
+		## Main phase, empty stack, nothing left to cast: equip, level up, make tokens and the like.
+		if (engine.state.phase == EngineEnums.Phase.MAIN_1 or engine.state.phase == EngineEnums.Phase.MAIN_2) and (engine.state.stack == null or (engine.state.stack as MagicStack).is_empty()):
+			var act_pick := _ai_pick_activation(player_id, legal, used_abilities)
+			if act_pick != null:
+				_ai_activate(player_id, act_pick, used_abilities)
+				continue
 		if attack != null:
 			var foe := 1 if player_id == 0 else 0
 			attack.extra = {attackers = AiBlocks.choose_attackers(engine, player_id, foe)}
@@ -1578,3 +1635,96 @@ func _ai_best_spell(player_id: int, acts: Array) -> GameAction:
 			best_score = score
 			best = ga
 	return best
+
+
+## "If ~ is in your opening hand, you may begin the game with it on the battlefield." (Leylines, Chancellors, Gemstone Caverns):
+## a free "yes", so it simply happens when the hands are kept.
+func _opening_hand_to_battlefield() -> void:
+	for pid in engine.state.players.size():
+		var hand: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, pid)
+		if hand == null:
+			continue
+		for oid in hand.object_ids.duplicate():
+			var o: GameObject = engine.state.objects.get(oid)
+			if o == null or not (o.definition is CardDefinition):
+				continue
+			if not (o.definition as CardDefinition).oracle_text.to_lower().contains("in your opening hand, you may begin the game with it on the battlefield"):
+				continue
+			engine.state.zones.move(int(oid), EngineEnums.ZoneId.BATTLEFIELD, pid)
+			history.add_note("%s begins the game with %s on the battlefield." % [str(engine.state.players[pid].name), (o.definition as CardDefinition).name], "info")
+	engine.process_zone_events()
+
+
+## Abilities the bot will activate by itself: they only help it (draw, tokens, counters, equip ...), never lose a card or a loop.
+const AI_SAFE_EFFECTS := ["DRAW", "CREATE_TOKEN", "SCRY", "SURVEIL", "GAIN_LIFE", "PUT_COUNTER", "ATTACH", "LOOK_TOP", "EXPLORE",
+	"AMASS", "PROLIFERATE", "INCUBATE", "ADAPT", "BOLSTER", "FABRICATE", "CONNIVE", "MANIFEST", "POPULATE", "GET_ENERGY", "REORDER_TOP"]
+const AI_BAD_COSTS := ["SACRIFICE_SELF", "SACRIFICE", "DISCARD", "PAY_LIFE", "REMOVE_COUNTER", "RETURN_OWN", "TAP_PERMANENTS",
+	"UNTAP_PERMANENTS", "PAY_ENERGY", "ADD_COUNTER"]
+
+
+## The next activated ability (equip, level up, a token maker ...) the bot should use this main phase, or null. Each ability is used
+## once a turn (`used` remembers), which also keeps the bot from looping.
+func _ai_pick_activation(player_id: int, legal: Array, used: Dictionary) -> GameAction:
+	var best: GameAction = null
+	var best_rank := -1
+	for act in legal:
+		var ga := act as GameAction
+		if ga == null or ga.kind != GameAction.Kind.ACTIVATE_ABILITY:
+			continue
+		var key := "%d:%s" % [ga.object_id, str(ga.ability_id)]
+		if used.has(key):
+			continue
+		var obj: GameObject = engine.state.objects.get(ga.object_id)
+		if obj == null or obj.controller_id != player_id:
+			continue
+		var ab: Ability = engine._ability_on(obj, ga.ability_id)
+		if ab == null or ab.is_mana() or ab.effects.is_empty():
+			continue
+		var ok := true
+		var rank := 1
+		for c in ab.costs:
+			var kind := str((c as AbilityCost).kind)
+			if kind in AI_BAD_COSTS:
+				ok = false
+			elif kind == "LOYALTY":
+				if int((c as AbilityCost).mana) < 0:
+					ok = false
+				rank = 3
+			elif kind == "MANA" and "X" in str((c as AbilityCost).mana):
+				ok = false
+		for fx in ab.effects:
+			var fk := str((fx as AbilityEffect).kind)
+			if not fk in AI_SAFE_EFFECTS:
+				ok = false
+			## Counters go on its own side (a PUT_COUNTER on a target is picked automatically); an opposing -1/-1 isn't helped by this list.
+			if fk == "PUT_COUNTER" and str((fx as AbilityEffect).params.get("name", "")) == "-1/-1":
+				ok = false
+			if fk == "ATTACH":
+				rank = 4
+			if fk == "DRAW" or fk == "CREATE_TOKEN":
+				rank = maxi(rank, 2)
+		if ok and rank > best_rank:
+			best_rank = rank
+			best = ga
+	return best
+
+
+func _ai_activate(player_id: int, ga: GameAction, used: Dictionary) -> void:
+	used["%d:%s" % [ga.object_id, str(ga.ability_id)]] = true
+	ga.extra["auto_pay"] = true
+	var r := submit(ga)
+	if not r.ok:
+		return
+	if engine.state.mode == EngineEnums.EngineMode.CASTING:
+		if _choose_target_auto(player_id) == null:
+			var cancel_t := GameAction.new()
+			cancel_t.kind = GameAction.Kind.CANCEL_CAST
+			cancel_t.player_id = player_id
+			submit(cancel_t)
+			return
+	if engine.state.mode == EngineEnums.EngineMode.PAYING_COSTS or engine.state.mode == EngineEnums.EngineMode.CASTING:
+		if _awaiting_id() == player_id:
+			var cancel := GameAction.new()
+			cancel.kind = GameAction.Kind.CANCEL_CAST
+			cancel.player_id = player_id
+			submit(cancel)

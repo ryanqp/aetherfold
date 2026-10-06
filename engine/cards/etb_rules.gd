@@ -35,6 +35,14 @@ static func parse(def: CardDefinition) -> Dictionary:
 	m = _m("~ enters(?: the battlefield)? tapped unless you control (\\w+) or (fewer|more) other lands", text)
 	if m != null and NUMBERS.has(m.get_string(1)):
 		return {"kind": "MAX_OTHER" if m.get_string(2) == "fewer" else "MIN_OTHER", "n": int(NUMBERS[m.get_string(1)])}
+	## "~ enters tapped unless you control three or more other Swamps." (Witch's Cottage)
+	m = _m("~ enters(?: the battlefield)? tapped unless you control (\\w+) or more other ([a-z]+?)s(?:\\.|$)", text)
+	if m != null and NUMBERS.has(m.get_string(1)) and m.get_string(2) != "land":
+		return {"kind": "MIN_OTHER_TYPE", "n": int(NUMBERS[m.get_string(1)]), "type": m.get_string(2).substr(0, 1).to_upper() + m.get_string(2).substr(1)}
+	## "~ enters tapped unless you have two or more opponents." (Bountiful Promenade, Luxurious Locale ...)
+	m = _m("~ enters(?: the battlefield)? tapped unless you have (\\w+) or more opponents", text)
+	if m != null and NUMBERS.has(m.get_string(1)):
+		return {"kind": "MIN_OPPONENTS", "n": int(NUMBERS[m.get_string(1)])}
 	m = _m("~ enters(?: the battlefield)? tapped unless you control an? (.+?)(?:\\.|$)", text)
 	if m != null:
 		return {"kind": "CONTROL", "types": _types(m.get_string(1))}
@@ -43,8 +51,17 @@ static func parse(def: CardDefinition) -> Dictionary:
 
 ## Whether `def` enters tapped for `controller`, given the board as it is just before it arrives.
 ## `hand` and `battlefield` are arrays of GameObject; `life` is the controller's life.
-static func tapped_on_entry(rule: Dictionary, hand: Array, battlefield: Array, life: int) -> bool:
+static func tapped_on_entry(rule: Dictionary, hand: Array, battlefield: Array, life: int, opponents: int = 1) -> bool:
 	match str(rule.get("kind", "")):
+		"MIN_OTHER_TYPE":
+			var have := 0
+			for o in battlefield:
+				var obj := o as GameObject
+				if obj != null and obj.definition is CardDefinition and (obj.definition as CardDefinition).type_line.contains(str(rule.get("type", "?"))):
+					have += 1
+			return have < int(rule.get("n", 0))
+		"MIN_OPPONENTS":
+			return opponents < int(rule.get("n", 0))
 		"REVEAL":
 			return not _any_has(hand, rule.get("types", []))
 		"CONTROL":

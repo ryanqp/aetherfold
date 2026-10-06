@@ -94,6 +94,8 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 	var v := TableView.new()
 	if engine == null or engine.state == null:
 		return v
+	_legal_cache = {}
+	_caching = true
 	var st := engine.state
 	v.turn = st.turn_number
 	v.active_is_you = st.active_player_id == 0
@@ -105,7 +107,9 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 	if session != null:
 		seat = int(session.you_seat)
 	v.your_priority = int(st.awaiting.get("player_id", -1)) == seat
+	var tp := Time.get_ticks_usec()
 	v.attacker_count = engine.legal_attacker_ids(seat).size()
+	GameSession._perf_add("view.legal_attackers", tp)
 	v.turn_track = _track_of(st.phase)
 	v.can_attack = v.attacker_count > 0 and st.active_player_id == seat and (
 		st.step == EngineEnums.Step.DECLARE_ATTACKERS or st.phase == EngineEnums.Phase.MAIN_1
@@ -113,7 +117,9 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 	if session != null:
 		v.selected_id = session.selected_id
 		v.you_drew_this_turn = not session.pending_draw_anim
+		tp = Time.get_ticks_usec()
 		v.prompt = session.prompt_text()
+		GameSession._perf_add("view.prompt_text", tp)
 		v.history = session.history.lines
 		v.coin_flip = session.match_start == GameSession.MatchStart.COIN_FLIP
 		v.flip_called = session.flip_called
@@ -124,7 +130,9 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 		v.match_start = session.match_start
 		v.you_kept = bool(session.kept.get(seat, false))
 		v.rival_kept = bool(session.kept.get(1 - seat if seat < 2 else 0, false))
+		tp = Time.get_ticks_usec()
 		v.you_prompt = session.prompt_for(seat)
+		GameSession._perf_add("view.prompt_for", tp)
 		v.blocks_for_you = session.blocks_seat == seat
 		v.putback_you = int(session.put_back_need.get(seat, 0))
 		v.putback_rival = int(session.put_back_need.get(1 - seat if seat < 2 else 0, 0))
@@ -137,12 +145,18 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 		v.attack_mode = session.choosing_attackers
 	var cat := _catalog()
 	var other := 1 if seat == 0 else 0
+	tp = Time.get_ticks_usec()
 	v.you = _player_dict(engine, seat, cat)
 	v.rival = _player_dict(engine, other, cat)
+	GameSession._perf_add("view.player_dicts", tp)
 	var can_act := session != null and session.match_start == GameSession.MatchStart.MAIN_GAME \
 		and not session.draw_waiting() and not session.awaiting_blocks and not session.choosing_attackers
+	tp = Time.get_ticks_usec()
 	_mark_playable(engine, seat, v.you, can_act)
+	GameSession._perf_add("view.mark_playable", tp)
 	v.stack = _stack_cards(engine, cat)
+	_caching = false
+	_legal_cache = {}
 	return v
 
 
@@ -285,6 +299,8 @@ static func _player_dict(engine: RulesEngine, player_id: int, cat: Object) -> Di
 		subtitle = "",
 		life = p.life,
 		library = engine.library_size(player_id),
+		library_top = _revealed_top(engine, player_id, cat),
+		library_top_public = _top_is_public(engine, player_id),
 		graveyard = engine.state.zones.get_zone(EngineEnums.ZoneId.GRAVEYARD, player_id).size(),
 		exile = engine.state.zones.get_zone(EngineEnums.ZoneId.EXILE, player_id).size(),
 		command = _zone_cards(engine, EngineEnums.ZoneId.COMMAND, player_id, cat),
@@ -341,6 +357,8 @@ static func _status(engine: RulesEngine, player_id: int) -> String:
 	var parts: PackedStringArray = []
 	if p.poison > 0:
 		parts.append("☠%d" % p.poison)
+	if p.energy > 0:
+		parts.append("⚡%d" % p.energy)
 	if p.enduring_story:
 		parts.append("Enduring story")
 	if st.monarch_id == player_id:
@@ -424,6 +442,14 @@ static func _card_dict(engine: RulesEngine, obj: GameObject, cat: Object) -> Dic
 	var is_land := def != null and def.is_land() and not def.is_creature()
 	var snap: Dictionary = engine.layers.snapshot(engine.state, obj) if engine.layers != null else {}
 	var type_line := str(snap.get("type_line", def.type_line if def else ""))
+	## Asked once here instead of once per field: each engine.is_creature_now / has_keyword call is another layer snapshot.
+	var on_bf := obj.zone == EngineEnums.ZoneId.BATTLEFIELD
+	var creature_now := type_line.contains("Creature") if on_bf else (def != null and def.is_creature())
+	var has_haste := false
+	if on_bf and obj.summoned_this_turn:
+		for kw in snap.get("keywords", PackedStringArray()):
+			if str(kw).to_lower() == "haste":
+				has_haste = true
 	var d := {
 		id = str(obj.object_id),
 		instanceId = obj.instance_uuid if obj.instance_uuid != "" else str(obj.object_id),
@@ -439,15 +465,15 @@ static func _card_dict(engine: RulesEngine, obj: GameObject, cat: Object) -> Dic
 		tapped = obj.tapped,
 		sick = obj.summoned_this_turn,
 		zone = _zone_key(obj.zone),
-		power = str(snap.get("power", "")) if def != null and (engine.is_creature_now(obj) if obj.zone == EngineEnums.ZoneId.BATTLEFIELD else def.is_creature()) else "",
-		toughness = str(snap.get("toughness", "")) if def != null and (engine.is_creature_now(obj) if obj.zone == EngineEnums.ZoneId.BATTLEFIELD else def.is_creature()) else "",
+		power = str(snap.get("power", "")) if def != null and creature_now else "",
+		toughness = str(snap.get("toughness", "")) if def != null and creature_now else "",
 		counters = obj.counters.duplicate(),
-		badge = _badge(engine, obj, snap) if obj.zone == EngineEnums.ZoneId.BATTLEFIELD else "",
+		badge = _badge(engine, obj, snap, creature_now) if on_bf else "",
 		is_token = obj.is_token,
 		attacking = _is_attacking(engine, obj),
 		## CR 302.6: a creature can't attack unless you've controlled it since your turn began.
-		summoning_sick = obj.zone == EngineEnums.ZoneId.BATTLEFIELD and obj.summoned_this_turn and engine.is_creature_now(obj) and not engine.has_keyword(obj, "Haste"),
-		ready_to_attack = obj.zone == EngineEnums.ZoneId.BATTLEFIELD and engine.legal_attacker_ids(obj.controller_id).has(obj.object_id),
+		summoning_sick = on_bf and obj.summoned_this_turn and creature_now and not has_haste,
+		ready_to_attack = on_bf and _legal_attackers(engine, obj.controller_id).has(obj.object_id),
 		blocking = _blocking_target(engine, obj),
 		scryfall_id = "",
 		imageUrl = "",
@@ -476,16 +502,20 @@ static func _card_dict(engine: RulesEngine, obj: GameObject, cat: Object) -> Dic
 
 
 ## A short line drawn on a permanent: loyalty, counters, current P/T and what it is attached to or marked with.
-static func _badge(engine: RulesEngine, obj: GameObject, snap: Dictionary) -> String:
+static func _badge(engine: RulesEngine, obj: GameObject, snap: Dictionary, creature_now: bool) -> String:
 	var parts: PackedStringArray = []
 	if obj.counters.has("loyalty"):
 		parts.append("◆%d" % int(obj.counters["loyalty"]))
+	## A Class starts at level 1 with no counter (CR 716.2): show "Level N".
+	var is_class := obj.definition is CardDefinition and (obj.definition as CardDefinition).type_line.contains("Class")
+	if is_class:
+		parts.append("Level %d" % (1 + int(obj.counters.get("level", 0))))
 	for k in obj.counters.keys():
 		var n := int(obj.counters[k])
-		if str(k) == "loyalty" or n == 0:
+		if str(k) == "loyalty" or n == 0 or (is_class and str(k) == "level"):
 			continue
 		parts.append("%s×%d" % [str(k), n])
-	if engine.is_creature_now(obj):
+	if creature_now:
 		parts.append("%d/%d" % [int(snap.get("power", 0)), int(snap.get("toughness", 0))])
 	if obj.attached_to != 0 and engine.state.objects.has(obj.attached_to):
 		var host: GameObject = engine.state.objects[obj.attached_to]
@@ -654,3 +684,44 @@ static func _exile_cards(engine: RulesEngine, player_id: int, cat: Object) -> Ar
 	for c in out:
 		(c as Dictionary)["hideaway"] = hidden.has(int(str((c as Dictionary).get("id", "0"))))
 	return out
+
+
+## "You may look at the top card of your library any time." / "Play with the top card of your library revealed." (Courser of Kruphix,
+## Oracle of Mul Daya, Future Sight ...): the top card as a card dict while the player has such a permanent, else {}.
+static func _revealed_top(engine: RulesEngine, player_id: int, cat: Object) -> Dictionary:
+	if not _top_is_public(engine, player_id) and not _has_top_text(engine, player_id, "you may look at the top card of your library any time"):
+		return {}
+	var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, player_id)
+	if lib == null or lib.object_ids.is_empty():
+		return {}
+	var top: GameObject = engine.state.objects.get(int(lib.object_ids[0]))
+	return _card_dict(engine, top, cat) if top != null else {}
+
+
+## "Play with the top card of your library revealed": everyone sees it.
+static func _top_is_public(engine: RulesEngine, player_id: int) -> bool:
+	return _has_top_text(engine, player_id, "play with the top card of your library revealed")
+
+
+static func _has_top_text(engine: RulesEngine, player_id: int, fragment: String) -> bool:
+	var bf: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return false
+	for oid in bf.object_ids:
+		var o: GameObject = engine.state.objects.get(oid)
+		if o != null and o.controller_id == player_id and o.definition is CardDefinition and (o.definition as CardDefinition).oracle_text.to_lower().contains(fragment):
+			return true
+	return false
+
+
+## Legal attackers per player, worked out once per rebuild (the old code asked again for every card on the table).
+static var _legal_cache: Dictionary = {}
+static var _caching: bool = false
+
+
+static func _legal_attackers(engine: RulesEngine, player_id: int) -> Array:
+	if not _caching:
+		return engine.legal_attacker_ids(player_id)
+	if not _legal_cache.has(player_id):
+		_legal_cache[player_id] = engine.legal_attacker_ids(player_id)
+	return _legal_cache[player_id]

@@ -107,6 +107,41 @@ func _handled_elsewhere(d: CardDefinition, line: String, etb: Dictionary) -> boo
 		return true
 	if low_line in ["~ can't block.", "~ can't attack.", "~ can't attack or block.", "~ can't block or attack."]:
 		return true
+	## Enforced from the printed text: the draw step (TurnManager._has_skip_draw) and blocking (Engine._can_block).
+	if low_line.begins_with("~ can't attack unless defending player controls a"):
+		return true
+	if low_line.begins_with("you control enchanted "):
+		return true
+	## Shown on the table: the revealed top card of the library (TableView._revealed_top).
+	if low_line == "you may look at the top card of your library any time." or low_line == "play with the top card of your library revealed.":
+		return true
+	if low_line in ["~ can block an additional creature each combat.", "~ can block any number of creatures."]:
+		return true
+	if low_line in ["~ can't attack or block alone.", "~ can't attack alone.", "~ can't block alone.", "~ must be blocked if able.", "damage can't be prevented.", "each player can't cast more than one spell each turn."]:
+		return true
+	## Deck-building lines, enforced by CommanderValidator: Backgrounds, Doctor's companion, "a deck can have ...".
+	if low_line == "choose a background" or low_line == "doctor's companion" or low_line.begins_with("a deck can have ") or low_line.begins_with("draft ~ face up"):
+		return true
+	## Daybound's entry rule is done with the keyword (KeywordRules.sync_day_night).
+	if low_line.begins_with("if it's neither day nor night, it becomes day as"):
+		return true
+	if low_line.begins_with("if ~ is in your opening hand, you may begin the game with it on the battlefield"):
+		return true
+	## "Protection from artifacts" (a card type): RulesEngine.protection_types.
+	if low_line.begins_with("protection from "):
+		var all_types := true
+		for part in low_line.trim_prefix("protection from ").trim_suffix(".").replace(", and ", ",").replace(" and ", ",").replace(", ", ",").split(","):
+			var w := str(part).strip_edges()
+			if not (w in ["artifact", "artifacts", "creature", "creatures", "enchantment", "enchantments", "land", "lands", "planeswalker", "planeswalkers", "instant", "instants", "sorcery", "sorceries"]):
+				all_types = false
+		if all_types:
+			return true
+	if low_line == "~ can't be blocked by more than one creature." or low_line == "each creature you control with power 4 or greater can't be blocked by more than one creature." or low_line.begins_with("~ can't attack or block unless you control another creature with power"):
+		return true
+	if low_line == "you may choose not to untap ~ during your untap step." or low_line == "~ doesn't untap during your untap step." \
+			or low_line == "skip your draw step." or low_line == "~ can block only creatures with flying." \
+			or (low_line.begins_with("~ can't be blocked by creatures with power ") and (low_line.ends_with(" or less.") or low_line.ends_with(" or greater."))):
+		return true
 	if low_line.begins_with("~ enters with") and not low_line.contains(" if ") and not ZoneManager.enters_with_counters(d).is_empty():
 		return true
 	if low_line == "you may play an additional land on each of your turns." or low_line == "creatures your opponents control enter tapped.":
@@ -144,6 +179,10 @@ func line_status(d: CardDefinition) -> Array:
 		var raw_line: String = lines[i]
 		var line := OracleIr.strip_ability_word(raw_line)
 		if line == "" or line.begins_with("•") or _keyword_line(line) or _handled_elsewhere(d, line, etb):
+			continue
+		## Level up / station band headers and their P/T lines are applied by LayerManager (KeywordLines.read_bands).
+		if RegEx.create_from_string("^(LEVEL|STATION) \\d+(-\\d+|\\+)$").search(line) != null or RegEx.create_from_string("^\\d+/\\d+$").search(line) != null:
+			out.append({"line": line, "read": true})
 			continue
 		if covered.has(line) and not is_spell:
 			out.append({"line": line, "read": true})

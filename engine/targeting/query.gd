@@ -109,6 +109,8 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 		return false
 	if spec.has("toughness_max") and tg > int(spec["toughness_max"]):
 		return false
+	if bool(spec.get("damaged", false)) and obj.damage_marked <= 0:
+		return false
 	var not_kw := str(spec.get("not_keyword", "")).strip_edges()
 	if not_kw != "" and _has_printed_keyword(def, not_kw):
 		return false

@@ -1973,6 +1973,12 @@ func check_ward(entry: StackEntry) -> void:
 		return
 	for tid in entry.targets:
 		var t := _obj(int(tid))
+		## "When ~ becomes the target of a spell or ability, sacrifice it." / "... an opponent controls, ..." (CR 603.2).
+		if t != null and t.zone == EngineEnums.ZoneId.BATTLEFIELD and engine.triggers != null:
+			for tab in engine.triggers._triggered(engine, t, "BECOMES_TARGET"):
+				if bool((tab as Ability).trigger.get("opp_only", false)) and t.controller_id == entry.controller_id:
+					continue
+				engine.triggers._put_trigger(engine, t, tab as Ability, {"controller_of_source": entry.controller_id})
 		if t == null or t.zone != EngineEnums.ZoneId.BATTLEFIELD or t.controller_id == entry.controller_id:
 			continue
 		var w := ward_of(t)

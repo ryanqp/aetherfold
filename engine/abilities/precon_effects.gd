@@ -620,18 +620,24 @@ static func _discard_any_draw(ex: AbilityExecutor, engine: RulesEngine, entry: S
 
 ## "The owner of target nonland permanent puts it on their choice of the top or bottom of their library."
 static func _tuck(ex: AbilityExecutor, engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
-	var idx := int(fx.params.get("target", 0))
-	if idx < 0 or idx >= entry.targets.size() or int(entry.targets[idx]) < 0:
-		return
-	var obj: GameObject = engine.state.objects.get(int(entry.targets[idx]))
+	var obj: GameObject = null
+	if bool(fx.params.get("self", false)):
+		obj = engine.state.objects.get(entry.source_id)
+	else:
+		var idx := int(fx.params.get("target", 0))
+		if idx < 0 or idx >= entry.targets.size() or int(entry.targets[idx]) < 0:
+			return
+		obj = engine.state.objects.get(int(entry.targets[idx]))
 	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD:
 		return
 	var owner := obj.owner_id
-	var ans := ex._ask(engine, entry, owner, "tuck", "Put %s on the top or the bottom of your library?" % ex._name_of(engine, obj.object_id),
-		[{"value": "top", "label": "Top of library"}, {"value": "bottom", "label": "Bottom of library"}])
-	if ans.s == "paused":
-		return
-	var where := str(ans.value) if ans.s == "picked" else "top"
+	var where := str(fx.params.get("where", ""))
+	if where == "":
+		var ans := ex._ask(engine, entry, owner, "tuck", "Put %s on the top or the bottom of your library?" % ex._name_of(engine, obj.object_id),
+			[{"value": "top", "label": "Top of library"}, {"value": "bottom", "label": "Bottom of library"}])
+		if ans.s == "paused":
+			return
+		where = str(ans.value) if ans.s == "picked" else "top"
 	var moved: GameObject = engine.state.zones.move(obj.object_id, EngineEnums.ZoneId.LIBRARY, owner)
 	if moved != null and where == "bottom":
 		var lib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, owner)

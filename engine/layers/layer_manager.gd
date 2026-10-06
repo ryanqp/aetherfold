@@ -3,7 +3,14 @@ extends RefCounted
 
 ## CR 613. Printed values stay on CardDefinition. This snapshot is the current characteristics.
 
-func snapshot(state: GameState, obj: GameObject) -> Dictionary:
+## mode "full": everything. "type": the type line, subtypes and keywords from effects only (no +N/+N or keyword statics: "is it a creature?").
+## "kw": keywords too, with the keyword-granting statics but without working out power and toughness. These two are what most callers
+## ask, and they skip the expensive part of the lookup.
+func snapshot(state: GameState, obj: GameObject, mode: String = "full") -> Dictionary:
+	return _snapshot_inner(state, obj, mode)
+
+
+func _snapshot_inner(state: GameState, obj: GameObject, mode: String) -> Dictionary:
 	var printed_p := 0
 	var printed_t := 0
 	var type_line := ""
@@ -128,7 +135,7 @@ func snapshot(state: GameState, obj: GameObject) -> Dictionary:
 					var lp := type_line.split("—")
 					type_line = ("%s %s" % [lp[0].strip_edges(), t]).strip_edges() + ((" — " + lp[1].strip_edges()) if lp.size() > 1 else "")
 	## Static abilities of permanents ("creatures you control get +1/+1", equipment). CR 613.4c, 613.1f.
-	var statics := _static_mods(state, obj)
+	var statics := _static_mods(state, obj, mode)
 	mod_p += int(statics["power"])
 	mod_t += int(statics["toughness"])
 	for kw in statics["keywords"]:
@@ -182,7 +189,7 @@ func has_subtype(state: GameState, obj: GameObject, subtype_name: String) -> boo
 
 
 func has_keyword(state: GameState, obj: GameObject, keyword: String) -> bool:
-	var kws: Variant = snapshot(state, obj).get("keywords", PackedStringArray())
+	var kws: Variant = snapshot(state, obj, "kw").get("keywords", PackedStringArray())
 	if not (kws is PackedStringArray):
 		return false
 	var want := keyword.to_lower()
@@ -238,7 +245,48 @@ func abilities_for(state: GameState, obj: GameObject) -> Array:
 				out.append(ab)
 		else:
 			out.append(ab)
+	## "Lands you control have '{T}: Add one mana of any color.'" (Chromatic Lantern, Cryptolith Rite): another permanent's static.
+	if state != null and state.zones != null and obj.zone == EngineEnums.ZoneId.BATTLEFIELD:
+		var gbf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+		if gbf != null:
+			for goid in gbf.object_ids:
+				var gsrc: GameObject = state.objects.get(goid)
+				if gsrc == null or gsrc.face_down or not (gsrc.definition is CardDefinition):
+					continue
+				for gspec in _statics_of(gsrc.definition as CardDefinition)["grant"]:
+					if static_applies(state, gsrc, gspec, obj):
+						var tap_ab := _tap_for_mana(str(gspec["grant_tap_mana"]))
+						if not out.has(tap_ab):
+							out.append(tap_ab)
 	return out
+
+
+## The card's static abilities sorted by what they change, worked out once and kept on the definition (CardDefinition.layer_cache):
+## "char" characteristic-changing, "mod" +N/+N or keyword granting, "grant" tap-for-mana grants, "gy" works from a graveyard.
+func _statics_of(def: CardDefinition) -> Dictionary:
+	if not def.layer_cache.is_empty() and int(def.layer_cache.get("n", -1)) == def.abilities.size():
+		return def.layer_cache
+	var chars: Array = []
+	var mods: Array = []
+	var trig_ons := {}
+	var grants: Array = []
+	for a in def.abilities:
+		var ab := a as Ability
+		if ab != null and ab.kind == &"TRIGGERED" and not ab.unparsed:
+			trig_ons[str(ab.trigger.get("on", ""))] = true
+		if ab == null or ab.kind != &"STATIC" or ab.unparsed or ab.static_spec.is_empty():
+			continue
+		var spec: Dictionary = ab.static_spec
+		for k in CHAR_KEYS:
+			if spec.has(k):
+				chars.append(spec)
+				break
+		if spec.has("power") or spec.has("toughness") or spec.has("keywords"):
+			mods.append(spec)
+		if spec.has("grant_tap_mana"):
+			grants.append(spec)
+	def.layer_cache = {"n": def.abilities.size(), "char": chars, "mod": mods, "grant": grants, "trig_ons": trig_ons, "gy": def.oracle_text.to_lower().contains("is in your graveyard")}
+	return def.layer_cache
 
 
 ## Statics on the battlefield with key `key` that apply to `obj` (Auras on it: doesn't untap, can't attack or block).
@@ -261,8 +309,10 @@ func attached_specs(state: GameState, obj: GameObject, key: String) -> Array:
 
 
 ## Total +P/+T and granted keywords from static abilities on the battlefield that apply to `obj`.
-func _static_mods(state: GameState, obj: GameObject) -> Dictionary:
+func _static_mods(state: GameState, obj: GameObject, mode: String = "full") -> Dictionary:
 	var mods := {"power": 0, "toughness": 0, "keywords": []}
+	if mode == "type":
+		return mods
 	if state == null or obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD or state.zones == null:
 		return mods
 	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
@@ -275,21 +325,17 @@ func _static_mods(state: GameState, obj: GameObject) -> Dictionary:
 		if gy != null:
 			for gid in gy.object_ids:
 				var gobj: GameObject = state.objects.get(gid)
-				if gobj != null and gobj.definition is CardDefinition and (gobj.definition as CardDefinition).oracle_text.to_lower().contains("is in your graveyard"):
+				if gobj != null and gobj.definition is CardDefinition and bool(_statics_of(gobj.definition as CardDefinition).get("gy", false)):
 					sources.append(gid)
 	for oid in sources:
 		var src: GameObject = state.objects.get(oid)
 		if src == null or src.face_down or not (src.definition is CardDefinition):
 			continue
 		var in_gy := src.zone == EngineEnums.ZoneId.GRAVEYARD
-		for a in (src.definition as CardDefinition).abilities:
-			var ab := a as Ability
-			if ab == null or ab.kind != &"STATIC" or ab.unparsed or ab.static_spec.is_empty():
-				continue
-			var spec: Dictionary = ab.static_spec
+		for spec in _statics_of(src.definition as CardDefinition)["mod"]:
 			if in_gy != bool(spec.get("from_graveyard", false)):
 				continue
-			if not (spec.has("power") or spec.has("toughness") or spec.has("keywords")):
+			if mode == "kw" and not spec.has("keywords"):
 				continue
 			if not static_applies(state, src, spec, obj):
 				continue
@@ -339,11 +385,13 @@ func static_applies(state: GameState, src: GameObject, spec: Dictionary, obj: Ga
 
 
 ## "This creature can't attack or block unless you control seven or more lands."
-func combat_restricted(state: GameState, obj: GameObject) -> bool:
+func combat_restricted(state: GameState, obj: GameObject, attacking: bool = false) -> bool:
 	if obj == null or not (obj.definition is CardDefinition):
 		return false
-	## "Enchanted creature can't attack or block." from an Aura on it.
+	## "Enchanted creature can't attack or block." (also "can't attack" only, "can't block" only) from an Aura on it.
 	for spec in attached_specs(state, obj, "cant_attack_block"):
+		return true
+	for spec in attached_specs(state, obj, "cant_attack" if attacking else "cant_block"):
 		return true
 	for a in (obj.definition as CardDefinition).abilities:
 		var ab := a as Ability
@@ -353,6 +401,18 @@ func combat_restricted(state: GameState, obj: GameObject) -> bool:
 		if need.has("lands"):
 			var lands := Query.count_objects(state, obj, {"controller": "SOURCE_CONTROLLER", "type": "land"})
 			if lands < int(need["lands"]):
+				return true
+		if need.has("other_power_min"):
+			var bigger := false
+			var cbf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+			if cbf != null:
+				for coid in cbf.object_ids:
+					var co: GameObject = state.objects.get(coid)
+					if co != null and co.object_id != obj.object_id and co.controller_id == obj.controller_id and _is_creature_line(str(snapshot(state, co).get("type_line", ""))) \
+							and int(snapshot(state, co).get("power", 0)) >= int(need["other_power_min"]):
+						bigger = true
+						break
+			if not bigger:
 				return true
 		if need.has("permanents"):
 			var perms := Query.count_objects(state, obj, {"controller": "SOURCE_CONTROLLER"})
@@ -438,6 +498,21 @@ func condition_met(state: GameState, src: GameObject, cond: Dictionary) -> bool:
 		if not hit:
 			return false
 	if cond.has("monarch") and (state.monarch_id == pid) != bool(cond["monarch"]):
+		return false
+	## Class (CR 716): a Class is level 1 until it gains level counters; "class_level N" = at level N or higher,
+	## "class_level_is N" = exactly at level N (the level-up ability).
+	if src != null and cond.has("class_level") and 1 + int(src.counters.get("level", 0)) < int(cond["class_level"]):
+		return false
+	## "~ gets +2/+2 as long as it's attacking."
+	if src != null and cond.has("attacking") and (not (state.combat is CombatState) or not (state.combat as CombatState).attacker_ids.has(src.object_id)):
+		return false
+	## Level up / station bands (CR 711, 721): the permanent's level or charge counters are within [min, max] (max -1 = no top).
+	if src != null and cond.has("counter_band"):
+		var cb: Dictionary = cond["counter_band"]
+		var cn := int(src.counters.get(str(cb.get("name", "level")), 0))
+		if cn < int(cb.get("min", 0)) or (int(cb.get("max", -1)) >= 0 and cn > int(cb["max"])):
+			return false
+	if src != null and cond.has("class_level_is") and 1 + int(src.counters.get("level", 0)) != int(cond["class_level_is"]):
 		return false
 	return _more_conditions(state, src, pid, cond)
 
@@ -643,17 +718,8 @@ func _char_specs(state: GameState, obj: GameObject) -> Array:
 		var src: GameObject = state.objects.get(oid)
 		if src == null or src.face_down or not (src.definition is CardDefinition):
 			continue
-		for a in (src.definition as CardDefinition).abilities:
-			var ab := a as Ability
-			if ab == null or ab.kind != &"STATIC" or ab.unparsed:
-				continue
-			var spec: Dictionary = ab.static_spec
-			var any := false
-			for k in CHAR_KEYS:
-				if spec.has(k):
-					any = true
-					break
-			if any and static_applies(state, src, spec, obj):
+		for spec in _statics_of(src.definition as CardDefinition)["char"]:
+			if static_applies(state, src, spec, obj):
 				out.append(spec)
 	return out
 
@@ -697,3 +763,9 @@ func _tap_for_mana(mana: String) -> Ability:
 	ab.effects.append(fx)
 	_mana_abilities[mana] = ab
 	return ab
+
+
+## The trigger events ("ENTERS_BATTLEFIELD", "DIES" ...) the card has abilities for, as {on: true}: lets the trigger manager skip cards
+## that can't possibly care about an event without building their full ability list.
+func trigger_ons(def: CardDefinition) -> Dictionary:
+	return _statics_of(def)["trig_ons"]
