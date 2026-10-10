@@ -98,6 +98,20 @@ func definition_for(token_id: String) -> CardDefinition:
 				"text": d.oracle_text,
 			}])
 			return d
+		"map":
+			d.name = "Map"
+			d.type_line = "Token Artifact — Map"
+			d.oracle_text = "{1}, {T}, Sacrifice this artifact: Target creature you control explores. Activate only as a sorcery."
+			d.abilities = _abilities([{
+				"ability_id": "map_explore",
+				"kind": "ACTIVATED",
+				"costs": [{"kind": "MANA", "mana": "{1}"}, {"kind": "TAP"}, {"kind": "SACRIFICE_SELF"}],
+				"targets": [{"id": 0, "kind": "PERMANENT", "count": 1, "query": {"type": "creature", "controller": "SOURCE_CONTROLLER"}}],
+				"effects": [{"kind": "EXPLORE", "params": {"target": 0}}],
+				"restrictions": ["SORCERY_SPEED"],
+				"text": d.oracle_text,
+			}])
+			return d
 		"junk":
 			d.name = "Junk"
 			d.type_line = "Token Artifact — Junk"
@@ -133,8 +147,39 @@ func definition_for(token_id: String) -> CardDefinition:
 			d.power = "0"
 			d.toughness = "0"
 			return d
+		"powerstone":
+			## "{T}: Add {C}. This mana can't be spent to cast a nonartifact spell." (abilities and artifact spells may use it)
+			d.name = "Powerstone"
+			d.type_line = "Token Artifact — Powerstone"
+			d.oracle_text = "{T}: Add {C}. This mana can't be spent to cast a nonartifact spell."
+			d.abilities = _abilities([{
+				"ability_id": "powerstone_c",
+				"kind": "MANA",
+				"costs": [{"kind": "TAP"}],
+				"targets": [],
+				"effects": [{"kind": "ADD_MANA", "params": {"mana": "{C}"}}],
+				"restrictions": [{"spend_only": {"query": {"type": "artifact"}, "abilities": true}}],
+				"text": d.oracle_text,
+			}])
+			return d
 		_:
+			if TEXT_TOKENS.has(token_id):
+				var row: Array = TEXT_TOKENS[token_id]
+				d.name = str(row[0])
+				d.type_line = str(row[1])
+				d.oracle_text = str(row[2])
+				d.abilities = OracleIr.translate_permanent(d)
+				return d
 			return null
+
+
+## Named tokens whose rules are read from their text like any card's (CR 111.10): id -> [name, type line, rules].
+const TEXT_TOKENS := {
+	"lander": ["Lander", "Token Artifact — Lander", "{2}, {T}, Sacrifice this token: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle."],
+	"mutagen": ["Mutagen", "Token Artifact — Mutagen", "{1}, {T}, Sacrifice this token: Put a +1/+1 counter on target creature. Activate only as a sorcery."],
+	"gold": ["Gold", "Token Artifact — Gold", "Sacrifice this artifact: Add one mana of any color."],
+	"shard": ["Shard", "Token Enchantment — Shard", "{2}, Sacrifice this enchantment: Scry 1, then draw a card."],
+}
 
 
 ## A token described by the IR: {name, p, t, colors: ["G"], subtypes: ["Dinosaur"], keywords: ["Trample"],

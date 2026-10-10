@@ -10,7 +10,7 @@ A fan **Magic: The Gathering Commander** table in **Godot 4.7** (GDScript). The 
   - `cards/` — `CardDefinition`, `CardDatabase`, `IrLoader`, `TokenCatalog`. `cards/ir/*.json` is per-card rules IR.
   - `import/` — deck import (Moxfield, Archidekt, Deckstats, TappedOut, plain text) + Commander legality.
   - `session/` — `GameSession` adapter between engine and UI, `TableView`, `DemoSetup`.
-- `scripts/` — Godot UI: `table.gd`, `ui/main_menu.gd`, `rival_ai.gd` (bot), `net/game_net.gd` (LAN rooms, ENet + UDP beacon), autoloads `ScryfallCatalog`, `AppState`, `GameNet`.
+- `scripts/` — Godot UI: `table.gd`, `ui/main_menu.gd`, `net/game_net.gd` (LAN rooms, ENet + UDP beacon), autoloads `ScryfallCatalog`, `AppState`, `GameNet`.
 - `scenes/` — `main_menu.tscn` (main scene), `table.tscn`.
 - `tests/engine/` — `test_*.gd` suites (`extends McpTestSuite`), shared helpers in `fixtures.gd`.
 - `tools/` — `run_tests.gd` (headless runner), `fetch_scryfall.py`, `fetch_card_images.py`.
@@ -19,7 +19,6 @@ A fan **Magic: The Gathering Commander** table in **Godot 4.7** (GDScript). The 
 ## Don't touch
 
 - `addons/godot_ai/` — third-party editor plugin.
-- `scripts/match_state.gd` — leftover prototype; no new gameplay there.
 - `*.uid` files are Godot-generated; commit them alongside new scripts but don't hand-edit.
 
 ## Commands
@@ -34,7 +33,8 @@ godot --headless --path . -s res://tools/run_tests.gd -- --suite=engine_combat -
 
 Exit code 0 = all passed. In Claude's cloud workspace Godot 4.7 can be downloaded from GitHub releases to run the suites headless.
 
-Scryfall catalog (optional, for real cards/art): `python tools/fetch_scryfall.py`, location from `AETHERFOLD_SCRYFALL_DIR` (default `D:\AetherfoldData\scryfall\catalog.jsonl`).
+Scryfall catalog: ships in `data/scryfall/catalog.jsonl` and is read from `res://` (exported with builds; `data/scryfall/images/` is hidden from the exporter by its own `.gdignore`). Downloaded art is cached in `user://card_art`. Refresh: `python tools/fetch_scryfall.py` downloads the bulk file (to `AETHERFOLD_SCRYFALL_DIR`), then `godot --headless --path . -s res://tools/build_catalog.gd -- --src=<bulk .gz>` rewrites `data/scryfall/catalog.jsonl` (keeps every face of multi-face cards, drops art cards and tokens). Use Godot **4.7.x** to run the tests.
+Decks: `DeckStore` (user://imported_decks) writes atomically and never deletes a deck except on the player's request; tests must use `DeckStore.scratch("label")` and `wipe()`, never the real store.
 
 ## How rules are built
 
@@ -60,7 +60,7 @@ Scryfall catalog (optional, for real cards/art): `python tools/fetch_scryfall.py
 - Commander damage (CR 903.10a): combat damage from a commander is tallied per commander in `PlayerState.commander_damage_from`; 21 from one loses the game (`SbaManager._check_commander_damage`). The table shows it under the life total (`TableView` player dict: `cmdr_damage`, `cmdr_need`, `lose_reason`), and the game-over banner (`table.gd` `_build_gameover`) names the cause.
 - The table's pick menu (`GameSession.card_menu` / `zone_menu`) lists every legal cast mode and special action for a card; decisions during resolution use `ChoiceDialog`. Targets for casts are still picked automatically (`GameSession._choose_target_auto`); there is no target picker yet.
 - Blocking: against the bot you block via the table (the bot blocks with `engine/session/ai_blocks.gd`); in an online match each defender declares their own blockers (`GameSession.blocks_seat`, net action `blocks`).
-- Combat damage assignment is automatic (no player-chosen order or split).
+- Combat damage: you divide your attackers' damage among several blockers (and the player, with trample) on the dividing screen; the bot, banded attackers and single blockers are split automatically. "Divided as you choose" spells choose their targets and split together as they resolve.
 - Online play (host + one guest, two seats): host and guest connect over LAN (room code) or the internet (host's public address, UPnP opens UDP 27777). `scripts/net/game_net.gd` holds the lobby (names, decks, ready, 3 s countdown), chat, and the version check (`PROTOCOL_VERSION`: bump it when an RPC changes). The host runs the whole game; the guest's table is a view (`TableView`) and sends actions that run on the host as that seat (`GameSession.as_seat`, `apply_net_action` in `scripts/table.gd`). Pinned: a player cap of 8 (needs a table that draws and routes more than two seats). The opponent never gets a response window unless they hold an instant-speed play (`GameSession._can_respond`).
 - No photo-to-card scanning yet.
 

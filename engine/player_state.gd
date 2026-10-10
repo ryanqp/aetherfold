@@ -13,6 +13,8 @@ var lost: bool = false
 var poison: int = 0
 ## Energy counters (CR 107.14): gained by "you get {E}", paid as a cost.
 var energy: int = 0
+## Experience counters (Commander 2015): "you get an experience counter", counted by the commanders that give them.
+var experience: int = 0
 var mulligan_count: int = 0
 ## Damage dealt to this player this turn (bloodthirst, prowl).
 var damaged_this_turn: bool = false
@@ -38,6 +40,8 @@ var epic_locked: bool = false
 ## Life gained / lost this turn (spectacle, "if you gained life this turn").
 var life_gained_this_turn: int = 0
 var life_lost_this_turn: int = 0
+## The city's blessing (CR 702.131): once you control ten permanents (checked by ascend) you have it for the rest of the game.
+var citys_blessing: bool = false
 ## How many turns this player has taken ("you can't cast ~ during your first, second, or third turns").
 var turns_taken: int = 0
 ## Storied (CR 702.195): enduring story.

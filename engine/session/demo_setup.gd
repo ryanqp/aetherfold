@@ -18,6 +18,9 @@ var human_commanders: PackedStringArray = PackedStringArray()
 var human_name: String = "Krenko"
 var rival_commanders: PackedStringArray = PackedStringArray()
 var rival_name: String = "Talrand"
+## Cards the deck lists that the card database doesn't know, as "Player: Name". They are left out of the game (never dealt as
+## blank cards) and the session reports them in History.
+var missing_cards: PackedStringArray = PackedStringArray()
 
 
 static func memory_db() -> CardDatabase:
@@ -242,15 +245,25 @@ func _deal(
 		var c := int(entry.get("count", 1))
 		for _i in c:
 			pool.append(n)
+	var who := "Seat %d" % (player_id + 1)
 	for cn in commander_names:
 		var cmd_def: CardDefinition = db.definition_for(str(cn))
+		if cmd_def == null:
+			missing_cards.append("%s: %s (commander)" % [who, str(cn)])
+			continue
 		engine.state.zones.create(player_id, EngineEnums.ZoneId.COMMAND, {
 			definition = cmd_def,
 			is_commander = true,
 		})
 	for ln in pool:
+		var def: CardDefinition = db.definition_for(str(ln))
+		if def == null:
+			var entry := "%s: %s" % [who, str(ln)]
+			if not missing_cards.has(entry):
+				missing_cards.append(entry)
+			continue
 		engine.state.zones.create(player_id, EngineEnums.ZoneId.LIBRARY, {
-			definition = db.definition_for(str(ln)),
+			definition = def,
 		})
 	engine.shuffle_library(player_id)
 

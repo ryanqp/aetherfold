@@ -27,6 +27,10 @@ func on_spell_cast(engine: RulesEngine, spell_obj: GameObject, caster_id: int) -
 				spell_types.append(t)
 		if not def.is_creature():
 			spell_types.append("noncreature")
+		## Creature types count too, for "Whenever you cast a noncreature or Dragon spell".
+		if def.type_line.contains("—"):
+			for sub in def.type_line.split("—")[1].strip_edges().split(" ", false):
+				spell_types.append(str(sub).to_lower())
 	var ctx := {object_id = spell_obj.object_id, player_id = caster_id}
 	## Spells cast this turn, by type ("your first noncreature spell each turn").
 	if caster_id >= 0 and caster_id < engine.state.players.size():
@@ -69,6 +73,23 @@ func _matches_spell_cast(ab: Ability, source: GameObject, caster_id: int, spell_
 	## "... from anywhere other than your hand" (Vega, Aerial Extortionist).
 	if bool(f.get("not_from_hand", false)) and spell_obj.cast_from == EngineEnums.ZoneId.HAND:
 		return false
+	## "... during an opponent's turn" / "... during your turn".
+	var when_turn := str(f.get("when_turn", ""))
+	if when_turn == "OPPONENT" and _eng_ref != null and _eng_ref.state.active_player_id == source.controller_id:
+		return false
+	if when_turn == "YOURS" and _eng_ref != null and _eng_ref.state.active_player_id != source.controller_id:
+		return false
+	## "a spell that targets a creature you control" (Mockingbird-style / heroic for the team).
+	if f.get("targets_query") is Dictionary and _eng_ref != null:
+		var te: StackEntry = (_eng_ref.state.stack as MagicStack).top()
+		var hit_one := false
+		if te != null:
+			for tid in te.targets:
+				var tobj: GameObject = _eng_ref.state.objects.get(int(tid))
+				if tobj != null and Query._matches(tobj, source, f["targets_query"] as Dictionary):
+					hit_one = true
+		if not hit_one:
+			return false
 	if ctrl == "OPPONENT" and source.controller_id == caster_id:
 		return false
 	## "Whenever you cast your second spell each turn": the nth spell of any kind (spells_this_turn already includes this one).
@@ -119,6 +140,91 @@ func on_combat_damage_to_player(engine: RulesEngine, source: GameObject, defende
 	ctx["amount"] = amount
 	ctx["defender"] = defender_id
 	_fire(engine, "COMBAT_DAMAGE_TO_PLAYER", source, source, ctx)
+	## "Whenever one or more Dragons you control deal combat damage to an opponent" (Parapet Thrasher): once per damage step.
+	for gw in _battlefield(engine):
+		for gab in _triggered(engine, gw, "GROUP_COMBAT_DAMAGE_TO_OPPONENT"):
+			if gw.controller_id == defender_id or source.controller_id != gw.controller_id:
+				continue
+			var gf: Variant = gab.trigger.get("filter", {})
+			if gf is Dictionary and not Query._matches(source, gw, gf):
+				continue
+			var gkey := engine.state.turn_number * 100 + engine.state.step
+			if int(gw.marks.get("group_cd_key_%s" % str(gab.ability_id), -1)) == gkey:
+				continue
+			gw.marks["group_cd_key_%s" % str(gab.ability_id)] = gkey
+			var gctx := ctx.duplicate()
+			gctx["player_id"] = defender_id
+			_put_trigger(engine, gw, gab, gctx)
+
+
+## "Whenever a Dragon you control becomes the target of a spell or ability an opponent controls" (Thunderbreak Regent):
+## ctx.player_id is whoever controls the spell or ability.
+func on_becomes_target(engine: RulesEngine, target: GameObject, by_player: int) -> void:
+	for src in _battlefield(engine):
+		for ab in _triggered(engine, src, "OTHER_BECOMES_TARGET"):
+			if by_player == target.controller_id:
+				continue
+			var f: Variant = ab.trigger.get("filter", {})
+			if f is Dictionary and not Query._matches(target, src, f):
+				continue
+			_put_trigger(engine, src, ab, {object_id = target.object_id, player_id = by_player})
+
+
+## "When you cycle ~": the cycled card (now in the graveyard) triggers itself.
+func on_cycled(engine: RulesEngine, card: GameObject, owner_id: int) -> void:
+	if card == null:
+		return
+	for ab in _triggered(engine, card, "CYCLED_SELF"):
+		_put_trigger(engine, card, ab, {object_id = card.object_id, player_id = owner_id})
+
+
+## "Whenever you discard a card": ctx.object_id is the discarded card (now in the graveyard, or in exile with madness).
+func on_discarded(engine: RulesEngine, card: GameObject, owner_id: int) -> void:
+	if card == null:
+		return
+	var ctx := {object_id = card.object_id, player_id = owner_id}
+	for src in _battlefield(engine):
+		for ab in _triggered(engine, src, "DISCARDED"):
+			var who := str(ab.trigger.get("who", "ANY"))
+			if (who == "YOU" and src.controller_id != owner_id) or (who == "OPPONENT" and src.controller_id == owner_id):
+				continue
+			## "a noncreature, nonland card" (Waste Not): the discarded card's types.
+			var cf: Variant = ab.trigger.get("card_filter", {})
+			if cf is Dictionary and card.definition is CardDefinition:
+				var tl := (card.definition as CardDefinition).type_line.to_lower()
+				var skip := false
+				for nt in (cf as Dictionary).get("not_types", []):
+					if tl.contains(str(nt)):
+						skip = true
+				for ot in (cf as Dictionary).get("only_types", []):
+					if not tl.contains(str(ot)):
+						skip = true
+				if skip:
+					continue
+			_put_trigger(engine, src, ab, ctx)
+
+
+## "Whenever a player / an opponent / you taps a land for mana": ctx.object_id is the land ("that land"), ctx.player_id who tapped it.
+func on_tap_for_mana(engine: RulesEngine, land: GameObject, tapper: int) -> void:
+	var ctx := {object_id = land.object_id, player_id = tapper}
+	for src in _battlefield(engine):
+		for ab in _triggered(engine, src, "TAPPED_FOR_MANA"):
+			var who := str(ab.trigger.get("who", "ANY"))
+			if who == "OPPONENT" and src.controller_id == tapper:
+				continue
+			if who == "YOU" and src.controller_id != tapper:
+				continue
+			_put_trigger(engine, src, ab, ctx)
+
+
+## "Whenever ~ deals combat damage to a creature": ctx.object_id is the creature that was damaged ("that creature").
+func on_combat_damage_to_creature(engine: RulesEngine, source: GameObject, damaged: GameObject, amount: int) -> void:
+	if source == null or damaged == null or amount <= 0:
+		return
+	var ctx := _ctx_for(engine, source)
+	ctx["amount"] = amount
+	ctx["object_id"] = damaged.object_id
+	_fire(engine, "COMBAT_DAMAGE_TO_CREATURE", source, source, ctx)
 
 
 ## Reads one log event. Called for every event, in order, by RulesEngine.process_zone_events.
@@ -134,6 +240,7 @@ func on_event(engine: RulesEngine, e: GameEvent) -> void:
 		EngineEnums.EventType.STEP_BEGIN:
 			_on_step_begin(engine, int(p.get("step", -1)), e.player_id)
 		EngineEnums.EventType.DAMAGE:
+			_on_damage_dealt(engine, p)
 			if p.has("to_player") and int(p.get("amount", 0)) > 0:
 				_tally_life(engine, int(p.get("to_player", -1)), int(p.get("amount", 0)), false)
 			if p.has("to_object") and int(p.get("amount", 0)) > 0:
@@ -153,6 +260,17 @@ func on_event(engine: RulesEngine, e: GameEvent) -> void:
 func _on_zone_change(engine: RulesEngine, p: Dictionary) -> void:
 	var from_z := int(p.get("from_zone", -1))
 	var to_z := int(p.get("to_zone", -1))
+	## "When ~ is put into a graveyard from anywhere" (Worldspine Wurm, Dread): the card itself, now in the graveyard.
+	if to_z == EngineEnums.ZoneId.GRAVEYARD:
+		var landed: GameObject = engine.state.objects.get(int(p.get("to_id", 0)))
+		if landed != null and landed.zone == EngineEnums.ZoneId.GRAVEYARD:
+			for gab in _triggered(engine, landed, "PUT_INTO_GRAVEYARD"):
+				_put_trigger(engine, landed, gab, {object_id = landed.object_id, player_id = landed.owner_id})
+	## Syr Konrad: a card reaches a graveyard from anywhere but the battlefield, or leaves its owner's graveyard.
+	if to_z == EngineEnums.ZoneId.GRAVEYARD and from_z != EngineEnums.ZoneId.BATTLEFIELD and from_z != -1:
+		_graveyard_watch(engine, "CARD_TO_GRAVEYARD", int(p.get("to_id", 0)))
+	if from_z == EngineEnums.ZoneId.GRAVEYARD and to_z != EngineEnums.ZoneId.GRAVEYARD:
+		_graveyard_watch(engine, "LEAVES_GRAVEYARD", int(p.get("to_id", 0)))
 	if to_z == EngineEnums.ZoneId.BATTLEFIELD:
 		var obj: GameObject = engine.state.objects.get(int(p.get("to_id", 0)))
 		if obj != null and obj.zone == EngineEnums.ZoneId.BATTLEFIELD:
@@ -180,11 +298,38 @@ func _on_zone_change(engine: RulesEngine, p: Dictionary) -> void:
 			toughness = int(lki.get("toughness", 0)),
 			counters = lki.get("counters", {}),
 		}
+		if to_z == EngineEnums.ZoneId.GRAVEYARD or to_z == EngineEnums.ZoneId.EXILE:
+			_fire(engine, "DIES_OR_EXILED", ghost, self_obj, ctx)
 		if to_z == EngineEnums.ZoneId.GRAVEYARD:
 			_fire(engine, "DIES", ghost, self_obj, ctx)
 			_enchanted_died(engine, ghost.object_id, ctx)
+		## "Whenever you sacrifice a Food" / "Whenever a player sacrifices a permanent": the sacrificed permanent is in ctx.object_id.
+		if bool(p.get("sacrificed", false)):
+			for src in _battlefield(engine):
+				for sab in _triggered(engine, src, "SACRIFICED"):
+					var who := str(sab.trigger.get("who", "ANY"))
+					if (who == "YOU" and src.controller_id != ghost.controller_id) or (who == "OPPONENT" and src.controller_id == ghost.controller_id):
+						continue
+					var sfilter: Variant = sab.trigger.get("filter", {})
+					if sfilter is Dictionary and not (sfilter as Dictionary).is_empty() and not Query._matches(ghost, src, sfilter):
+						continue
+					_put_trigger(engine, src, sab, ctx)
 		## "Whenever another permanent you control leaves the battlefield" (Angelic Sleuth): any destination.
 		_fire(engine, "LEAVES", ghost, self_obj, ctx)
+
+
+func _graveyard_watch(engine: RulesEngine, on: String, card_id: int) -> void:
+	var card: GameObject = engine.state.objects.get(card_id)
+	if card == null:
+		return
+	for src in _battlefield(engine):
+		for ab in _triggered(engine, src, on):
+			if bool(ab.trigger.get("mine", false)) and card.owner_id != src.controller_id:
+				continue
+			var f: Variant = ab.trigger.get("filter", {})
+			if f is Dictionary and not (f as Dictionary).is_empty() and not Query._matches(card, src, f):
+				continue
+			_put_trigger(engine, src, ab, {object_id = card.object_id, player_id = card.owner_id})
 
 
 func _on_attack(engine: RulesEngine, e: GameEvent) -> void:
@@ -221,6 +366,11 @@ func _on_attack(engine: RulesEngine, e: GameEvent) -> void:
 		## Exalted (CR 702.83): "whenever a creature you control attacks alone".
 		if attackers.size() == 1:
 			for ab2 in _triggered(engine, src, "ATTACKS_ALONE"):
+				## "Whenever a Samurai or Warrior you control attacks alone": the lone attacker must match.
+				var aaf: Variant = ab2.trigger.get("filter", {})
+				var lone: GameObject = engine.state.objects.get(int(attackers[0]))
+				if aaf is Dictionary and not (aaf as Dictionary).is_empty() and (lone == null or not Query._matches(lone, src, aaf)):
+					continue
 				_put_trigger(engine, src, ab2, {player_id = e.player_id, object_id = int(attackers[0])})
 
 
@@ -412,7 +562,8 @@ func _triggered(engine: RulesEngine, src: GameObject, on: String) -> Array:
 		return out
 	for a in _abilities_of(engine, src):
 		var ab := a as Ability
-		if ab != null and ab.kind == &"TRIGGERED" and not ab.unparsed and str(ab.trigger.get("on", "")) == on:
+		## "Whenever ~ attacks or blocks": one ability listening to several events (`also_on`).
+		if ab != null and ab.kind == &"TRIGGERED" and not ab.unparsed and (str(ab.trigger.get("on", "")) == on or (ab.trigger.get("also_on", []) as Array).has(on)):
 			out.append(ab)
 	return out
 
@@ -545,6 +696,8 @@ func _intervening_if(engine: RulesEngine, source: GameObject, trig: Dictionary) 
 				mine = true
 		if not mine:
 			return false
+	if bool(trig.get("if_not_token", false)) and source.is_token:
+		return false
 	if bool(trig.get("if_harnessed", false)) and not bool(source.marks.get("harnessed", false)):
 		return false
 	if bool(trig.get("if_defender_most_life", false)) and not engine.executor.defender_has_most_life(engine, source):
@@ -617,12 +770,14 @@ func add_lore(engine: RulesEngine, saga: GameObject, n: int, set_exact: bool = f
 
 
 ## Triggers about a player rather than an object: "whenever you win a clash".
-func fire_player_event(engine: RulesEngine, on: String, pid: int) -> void:
+func fire_player_event(engine: RulesEngine, on: String, pid: int, ctx: Dictionary = {}) -> void:
 	for src in _battlefield(engine):
 		if src.controller_id != pid:
 			continue
 		for ab in _triggered(engine, src, on):
-			_put_trigger(engine, src, ab, {player_id = pid})
+			var c := ctx.duplicate()
+			c["player_id"] = pid
+			_put_trigger(engine, src, ab, c)
 
 
 ## "When enchanted creature dies" for an Aura already put into the graveyard by state-based actions.
@@ -708,6 +863,48 @@ func _fire_unblocked(engine: RulesEngine) -> void:
 			var c := _ctx_for(engine, a)
 			c["defender"] = engine.defender_of(a.object_id)
 			_fire(engine, "NOT_BLOCKED", a, a, c)
+
+
+## "Whenever ~ deals damage [to a player / an opponent / a creature]" (Spirit Link, Sabertooth Cobra, Spiritmonger): the source
+## of any damage event. ctx.amount is how much, ctx.player_id / ctx.object_id who or what took it.
+func _on_damage_dealt(engine: RulesEngine, p: Dictionary) -> void:
+	var amount := int(p.get("amount", 0))
+	var src: GameObject = engine.state.objects.get(int(p.get("object_id", 0)))
+	if amount <= 0 or src == null:
+		return
+	var to_player := int(p.get("to_player", -1)) if p.has("to_player") else -1
+	var hit: GameObject = engine.state.objects.get(int(p.get("to_object", 0))) if p.has("to_object") else null
+	var ctx := {amount = amount, source_id = src.object_id, combat = bool(p.get("combat", false))}
+	if to_player >= 0:
+		ctx["player_id"] = to_player
+		ctx["defender"] = to_player
+	if hit != null:
+		ctx["object_id"] = hit.object_id
+		ctx["player_id"] = hit.controller_id
+	var watchers: Array = _battlefield(engine)
+	if not watchers.has(src):
+		watchers.append(src)
+	for w in watchers:
+		for ab in _triggered(engine, w, "DEALS_DAMAGE"):
+			if not _scope_ok(engine, ab, w, src, w == src):
+				continue
+			var to := str(ab.trigger.get("to", "ANY"))
+			if to == "PLAYER" and to_player < 0:
+				continue
+			if to == "OPPONENT" and (to_player < 0 or to_player == w.controller_id):
+				continue
+			if to == "CREATURE" and (hit == null or not engine.is_creature_now(hit)):
+				continue
+			if bool(ab.trigger.get("combat_only", false)) and not bool(ctx.combat):
+				continue
+			if bool(ab.trigger.get("noncombat_only", false)) and bool(ctx.combat):
+				continue
+			_put_trigger(engine, w, ab, ctx.duplicate())
+
+
+## Tapped / untapped since the last look ("Whenever ~ becomes tapped", "Whenever enchanted land becomes tapped").
+func fire_tap_change(engine: RulesEngine, obj: GameObject, tapped: bool) -> void:
+	_fire(engine, "TAPPED" if tapped else "UNTAPPED", obj, obj, _ctx_for(engine, obj))
 
 
 ## Triggers about one object that aren't zone changes: "when ~ becomes monstrous", "when ~ exploits a creature" ...

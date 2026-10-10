@@ -1,6 +1,9 @@
 class_name ImportPipeline
 extends RefCounted
 
+## The card catalog node, handed in by the caller so run() can work on a worker thread without touching the scene tree.
+var catalog: Object = null
+
 
 func run(input: String, allow_network: bool = true) -> Dictionary:
 	var raw := input.strip_edges()
@@ -46,6 +49,7 @@ func run(input: String, allow_network: bool = true) -> Dictionary:
 	result.deck = deck
 	_note(result, "Resolving cards...")
 	var resolver := ScryfallResolver.new()
+	resolver.catalog = catalog
 	var resolved: Dictionary = resolver.resolve(deck, allow_network)
 	result.rows = resolved.get("rows", {})
 	result.unresolved = resolved.get("unresolved", PackedStringArray())

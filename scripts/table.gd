@@ -1,13 +1,16 @@
 extends Control
 
-const USE_ENGINE := true
-const BUILD := 55
+const BUILD := 57
 const Mats := preload("res://engine/session/playmat_catalog.gd")
 const AiBlocks := preload("res://engine/session/ai_blocks.gd")
 const SuperPlaymatScript := preload("res://scripts/playmat/super_playmat.gd")
-const DEBUG_MATCH := true
-const MatchStateScript := preload("res://scripts/match_state.gd")
-const RivalAI := preload("res://scripts/rival_ai.gd")
+const LivingBattlefieldScript := preload("res://scripts/playmat/living_battlefield.gd")
+const MAT_STYLES := ["battlefield", "aether", "painted"]
+const MAT_STYLE_NAMES := {"battlefield": "Battlefield", "aether": "Aether", "painted": "Painted"}
+## Which field node shows each animated style (the felt "__mat" covers "painted").
+const MAT_NODES := {"battlefield": "__battle", "aether": "__live"}
+## Developer logging and the F3 overlay: editor and debug builds only, never in a build handed to players.
+var DEBUG_MATCH: bool = OS.is_debug_build()
 const CardFaceScript := preload("res://scripts/card_face.gd")
 const UiStyle := preload("res://scripts/ui/ui_style.gd")
 const AudioIcon := preload("res://scripts/ui/audio_icon.gd")
@@ -37,7 +40,8 @@ const TURN_RED := Color(0.86, 0.16, 0.14)
 const ATTACK_RED := Color(0.92, 0.22, 0.16)
 const BLOCK_BLUE := Color(0.30, 0.62, 0.98)
 
-var state = MatchStateScript.new()
+## Drawn until a guest receives the host's first view.
+var _waiting_view: TableView = null
 var session = null
 var header_label: Label
 var you_life: Label
@@ -135,6 +139,7 @@ var gameover_sub: Label
 var gameover_again: Button
 var _gameover_shown := false
 var _peer_left := false
+var _net_banner: Label
 
 func _ready() -> void:
 	clip_contents = true
@@ -151,26 +156,27 @@ func _ready() -> void:
 	if net and net.has_signal("view_received") and not net.view_received.is_connected(_refresh):
 		net.view_received.connect(_refresh)
 	add_to_group("aetherfold_table")
-	if USE_ENGINE:
-		session = GameSession.new()
-		session.manual_draw = true
-		session.coin_flip = true
-		session.debug_enabled = DEBUG_MATCH
-		_start_from_app_state()
-	else:
-		_hydrate_from_scryfall()
+	session = GameSession.new()
+	session.manual_draw = true
+	session.coin_flip = true
+	session.debug_enabled = DEBUG_MATCH
+	_start_from_app_state()
 	_build()
 	import_overlay = ImportOverlay.new()
 	add_child(import_overlay)
 	import_overlay.play_imported.connect(_on_play_imported)
 	_refresh()
-	if USE_ENGINE:
-		_set_status("Opening hand — Keep or Mulligan.")
-	else:
-		_set_status("Your turn. Hover a card to enlarge it. Click a card to play it.")
+	_set_status("Opening hand — Keep or Mulligan.")
 
 func _catalog() -> Node:
 	return get_node_or_null("/root/ScryfallCatalog")
+
+
+## The other player's name (the bot plays the deck you picked for it, so it is named after that deck).
+func _rival_name() -> String:
+	var b = _board()
+	var n := str(b.rival.get("name", "")).strip_edges() if b != null else ""
+	return n if n != "" else "Your rival"
 
 
 func _board():
@@ -179,9 +185,11 @@ func _board():
 		var net := get_node_or_null("/root/GameNet")
 		if net != null and net.last_view != null:
 			return net.last_view
-	if USE_ENGINE and session != null and session.view != null:
+	if session != null and session.view != null:
 		return session.view
-	return state
+	if _waiting_view == null:
+		_waiting_view = TableView.waiting()
+	return _waiting_view
 
 
 func _start_from_app_state() -> void:
@@ -243,6 +251,13 @@ func apply_net_action(kind: String, payload: Dictionary, player_id: int) -> void
 	if kind == "mulligan":
 		session.take_mulligan(player_id)
 		_refresh()
+		return
+	## Override menu: the guest asks (the host decides), or answers the host's question.
+	if kind == "override":
+		_on_guest_override(payload.get("op", {}), player_id)
+		return
+	if kind == "override_vote":
+		_on_override_vote(int(payload.get("id", 0)), bool(payload.get("yes", false)))
 		return
 	if kind == "draw":
 		if session.engine.state.draw_pending and session.engine.state.active_player_id == player_id:
@@ -314,38 +329,6 @@ func _set_status(text: String) -> void:
 	if hint_label and text != "":
 		hint_label.text = text
 		_hint_hold = 7.0
-
-func _hydrate_from_scryfall() -> void:
-	var cat := _catalog()
-	if cat == null or not cat.loaded:
-		return
-	_apply_scryfall(state.you["command"])
-	_apply_scryfall(state.you["hand"])
-	_apply_scryfall(state.rival["command"])
-	_apply_scryfall(state.rival["hand"])
-	_apply_scryfall(state.rival["library_cards"])
-	_apply_scryfall(state.you["library_cards"])
-
-func _apply_scryfall(pile: Array) -> void:
-	var cat := _catalog()
-	if cat == null:
-		return
-	for i in pile.size():
-		var card: Dictionary = pile[i]
-		var found: Dictionary = cat.find_by_name(str(card.get("name", "")))
-		if found.is_empty():
-			continue
-		card["name"] = found.get("name", card["name"])
-		card["type"] = found.get("type_line", card.get("type", ""))
-		card["text"] = found.get("oracle_text", card.get("text", ""))
-		card["scryfall_id"] = found.get("id", "")
-		card["images"] = found.get("images", {})
-		card["cmc"] = int(found.get("cmc", card.get("cmc", 0)))
-		if found.get("power") != null:
-			card["power"] = str(found.get("power"))
-		if found.get("toughness") != null:
-			card["toughness"] = str(found.get("toughness"))
-		pile[i] = card
 
 func _build() -> void:
 	var bg := ColorRect.new()
@@ -463,6 +446,9 @@ func _build_header() -> Control:
 	audio_button.tooltip_text = "Master, music and effects volume"
 	row.add_child(audio_button)
 	row.add_child(_header_button("Dice", BRONZE, INK, _on_dice, 72))
+	var override_header := _header_button("Override", BRONZE, INK, _on_override, 88)
+	override_header.tooltip_text = "Table fixes: add mana, change life, draw, kill, revive, exile, make tokens, +1/+1 ... Against the bot it happens at once; online the other player must agree."
+	row.add_child(override_header)
 	var bug_header := _header_button("Bug", BRONZE, INK, _on_report_bug, 56)
 	bug_header.tooltip_text = "Report a bug (F8): saves the last 3 turns of this match and what you tell it."
 	row.add_child(bug_header)
@@ -537,6 +523,13 @@ func _make_field(parent: Control, tint: Color, zone_order: Array, rival_side: bo
 	live.sigil_amount = 0.2
 	live.brightness = 0.82  ## a touch dimmer than the demo so cards and zone labels stay easy to read
 	field.add_child(live)
+	## Living Battlefield: the painted mat for the identity, brought to life (water, lava, leaves, weather,
+	## particles). The rival's is turned 180° so each player sees the arena from their own side.
+	var battle: LivingBattlefieldScript = LivingBattlefieldScript.new()
+	battle.orient = 2 if rival_side else 0
+	battle.fit = 1.0        ## crop to the field instead of stretching, so the painting keeps its proportions
+	battle.brightness = 0.85
+	field.add_child(battle)
 	var zones_col := VBoxContainer.new()
 	zones_col.clip_contents = true
 	var map := {}
@@ -567,6 +560,7 @@ func _make_field(parent: Control, tint: Color, zone_order: Array, rival_side: bo
 	parent.add_child(field)
 	map["__mat"] = mat
 	map["__live"] = live
+	map["__battle"] = battle
 	_show_mat_mode(map)
 	return map
 
@@ -630,8 +624,8 @@ func _build_sidebar() -> Control:
 
 	var life_row := HBoxContainer.new()
 	life_row.add_theme_constant_override("separation", 8)
-	life_row.add_child(_life_block("You", "Krenko", true))
-	life_row.add_child(_life_block("Rival", "Talrand", false))
+	life_row.add_child(_life_block("You", "", true))
+	life_row.add_child(_life_block("Rival", "", false))
 	col.add_child(life_row)
 	col.add_child(_pile_table())
 	col.add_child(_build_command_panel())
@@ -769,7 +763,7 @@ func _on_rival_target_click() -> void:
 
 ## Sidebar button: attack with the selected creature.
 func _on_declare_attack() -> void:
-	if not USE_ENGINE or session == null or session.view == null:
+	if session == null or session.view == null:
 		return
 	var sid := str(session.selected_id)
 	if sid == "":
@@ -1119,7 +1113,7 @@ func _build_menu() -> void:
 	looks.alignment = BoxContainer.ALIGNMENT_CENTER
 	mat_toggle_btn = Button.new()
 	mat_toggle_btn.custom_minimum_size = Vector2(200, 32)
-	mat_toggle_btn.tooltip_text = "Animated: the moving mat in your commander's colors.\nPainted: the felt picture for your colors."
+	mat_toggle_btn.tooltip_text = "Click to switch:\nBattlefield: the painted mat for your commander's colors, brought to life.\nAether: flowing swirls in your colors.\nPainted: the same painting, still."
 	mat_toggle_btn.pressed.connect(_on_toggle_mats)
 	looks.add_child(mat_toggle_btn)
 	col.add_child(looks)
@@ -1229,9 +1223,10 @@ func _build_turn_border() -> void:
 	add_child(turn_border)
 
 func _waiting_for_draw() -> bool:
-	if USE_ENGINE:
-		return session != null and session.pending_draw_anim
-	return state != null and state.active_is_you and not state.you_drew_this_turn
+	## Ask the game itself, not a flag copied at the last refresh, so a pick screen answered in between can't leave it stale.
+	if session != null and session.engine != null and not _is_guest():
+		return session.draw_waiting()
+	return session != null and session.pending_draw_anim
 
 func _process(dt: float) -> void:
 	_flash_t += dt
@@ -1464,8 +1459,33 @@ func _build_chat() -> void:
 		net.chat_received.connect(_on_chat_received)
 	if net != null and not net.menu_received.is_connected(_on_menu_received):
 		net.menu_received.connect(_on_menu_received)
+	if net != null and not net.override_asked.is_connected(_on_override_asked):
+		net.override_asked.connect(_on_override_asked)
 	if net != null and not net.peer_left.is_connected(_on_peer_left):
 		net.peer_left.connect(_on_peer_left)
+	## A dropped connection is not the end: the seat is held and the game waits (AUDIT-016).
+	if net != null and not net.peer_dropped.is_connected(_on_peer_dropped):
+		net.peer_dropped.connect(_on_peer_dropped)
+		net.peer_rejoined.connect(_on_peer_rejoined)
+		net.connection_lost.connect(_on_connection_lost)
+		net.connection_restored.connect(_on_connection_restored)
+	_net_banner = Label.new()
+	_net_banner.visible = false
+	_net_banner.z_index = 80
+	_net_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_net_banner.add_theme_font_size_override("font_size", 18)
+	_net_banner.add_theme_color_override("font_color", Color(1, 0.95, 0.75))
+	var banner_bg := StyleBoxFlat.new()
+	banner_bg.bg_color = Color(0.45, 0.12, 0.08, 0.95)
+	banner_bg.set_corner_radius_all(8)
+	banner_bg.content_margin_left = 16
+	banner_bg.content_margin_right = 16
+	banner_bg.content_margin_top = 6
+	banner_bg.content_margin_bottom = 6
+	_net_banner.add_theme_stylebox_override("normal", banner_bg)
+	_net_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	_net_banner.offset_top = 48
+	add_child(_net_banner)
 	if net != null and not net.notice_received.is_connected(_set_status):
 		net.notice_received.connect(_set_status)
 
@@ -1597,7 +1617,7 @@ func _paint_turn_border() -> void:
 	st.bg_color = Color(0, 0, 0, 0)
 	st.draw_center = false
 	st.set_border_width_all(8)
-	st.border_color = TURN_GREEN if state.active_is_you else TURN_RED
+	st.border_color = TURN_GREEN if bool(_board().active_is_you) else TURN_RED
 	turn_border.add_theme_stylebox_override("panel", st)
 
 func _build_hover() -> void:
@@ -1725,6 +1745,26 @@ func _card_chip(card: Dictionary, compact: bool = false, from_hand: bool = false
 		strip.offset_top = -22
 		b.add_child(strip)
 		b.tooltip_text = (b.tooltip_text + "\n" + badge).strip_edges()
+	## A card with rules text the game can't carry out yet is marked, so a card that "did nothing" is explained, not a mystery.
+	var unsupported: Array = card.get("unsupported", [])
+	if not unsupported.is_empty():
+		var mark := Label.new()
+		mark.text = "!"
+		mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mark.add_theme_font_size_override("font_size", 12)
+		mark.add_theme_color_override("font_color", Color(0.1, 0.06, 0.0))
+		var mbg := StyleBoxFlat.new()
+		mbg.bg_color = Color(1.0, 0.72, 0.18, 0.95)
+		mbg.set_corner_radius_all(8)
+		mbg.content_margin_left = 5
+		mbg.content_margin_right = 5
+		mark.add_theme_stylebox_override("normal", mbg)
+		mark.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+		mark.offset_left = -20
+		mark.offset_top = 2
+		mark.offset_right = -2
+		b.add_child(mark)
+		b.tooltip_text = (b.tooltip_text + "\nThe game can't play this part yet — apply it by hand:\n• " + "\n• ".join(PackedStringArray(unsupported))).strip_edges()
 	var cid := str(card.get("id", ""))
 	b.mouse_entered.connect(_on_hover_card.bind(card.duplicate()))
 	b.mouse_exited.connect(_on_unhover_card)
@@ -1778,15 +1818,18 @@ func _apply_mats() -> void:
 	_set_mat(rival_zones, b.rival.get("identity", []))
 
 func _set_mat(zones: Dictionary, identity: Array) -> void:
-	var live = zones.get("__live")
-	if live != null:
-		var letters := PackedStringArray()
-		for c in identity:
-			letters.append(str(c))
-		## The first time snaps straight to the commander's colors; later changes play the color wave.
-		var first: bool = not live.has_meta("shown")
-		live.set_meta("shown", true)
-		live.set_identity("".join(letters), not first)
+	var letters := PackedStringArray()
+	for c in identity:
+		letters.append(str(c))
+	for node_key in MAT_NODES.values():
+		var anim = zones.get(node_key)
+		if anim == null:
+			continue
+		## The first time snaps straight to the commander's colors; later changes play the transition,
+		## but only on the mat that is on screen (a hidden one just switches).
+		var first: bool = not anim.has_meta("shown")
+		anim.set_meta("shown", true)
+		anim.set_identity("".join(letters), not first and anim.visible)
 	var mat := zones.get("__mat") as TextureRect
 	if mat == null or not mat.visible:
 		return  ## the felt picture is only loaded while it is the one on show
@@ -1796,25 +1839,30 @@ func _set_mat(zones: Dictionary, identity: Array) -> void:
 	mat.set_meta("file", file)
 	mat.texture = Mats.texture(file)
 
-## Animated or painted playmat, as chosen in Menu ▸ Playmat (saved in the player profile).
-func _animated_mats() -> bool:
+## Playmat style chosen in Menu ▸ Playmat (saved in the player profile): battlefield, aether or painted.
+func _mat_style() -> String:
 	var app := get_node_or_null("/root/AppState")
-	return app == null or bool(app.get("animated_mats"))
+	if app == null:
+		return "battlefield"
+	var s := str(app.get("playmat_style"))
+	return s if MAT_STYLES.has(s) else "battlefield"
 
 func _show_mat_mode(zones: Dictionary) -> void:
-	var on := _animated_mats()
-	var live = zones.get("__live")
-	if live != null:
-		live.visible = on
-		live.paused = not on
+	var style := _mat_style()
+	for st in MAT_NODES:
+		var anim = zones.get(MAT_NODES[st])
+		if anim != null:
+			anim.visible = st == style
+			anim.paused = st != style  ## hidden mats stop animating
 	var mat := zones.get("__mat") as TextureRect
 	if mat != null:
-		mat.visible = not on
+		mat.visible = style == "painted"
 
 func _on_toggle_mats() -> void:
 	var app := get_node_or_null("/root/AppState")
-	if app != null and app.has_method("set_animated_mats"):
-		app.set_animated_mats(not _animated_mats())
+	var next: String = MAT_STYLES[(MAT_STYLES.find(_mat_style()) + 1) % MAT_STYLES.size()]
+	if app != null and app.has_method("set_playmat_style"):
+		app.set_playmat_style(next)
 	for zones in [you_zones, rival_zones]:
 		_show_mat_mode(zones)
 	if session != null:
@@ -1823,16 +1871,14 @@ func _on_toggle_mats() -> void:
 
 func _paint_mat_toggle() -> void:
 	if mat_toggle_btn:
-		mat_toggle_btn.text = "Playmat: %s" % ("Animated" if _animated_mats() else "Painted")
+		mat_toggle_btn.text = "Playmat: %s" % MAT_STYLE_NAMES[_mat_style()]
 
 ## A quick flash on a player's mat when their life total changes: red for a loss, gold for a gain.
 func _pulse_on_life(zones: Dictionary, life: int) -> void:
-	var live = zones.get("__live")
-	if live == null:
-		return
+	var live = zones.get(MAT_NODES.get(_mat_style(), "__live"))
 	var before := int(zones.get("__life", life))
 	zones["__life"] = life
-	if not live.visible or life == before:
+	if live == null or not live.visible or life == before:
 		return
 	if life < before:
 		live.pulse(Color(1.0, 0.18, 0.12), clampf(0.45 + 0.08 * (before - life), 0.45, 1.0), 0.8)
@@ -1870,11 +1916,7 @@ func _refresh() -> void:
 	_paint_cmdr_damage(you_cmdr_label, b.you)
 	_paint_cmdr_damage(rival_cmdr_label, b.rival)
 	if rival_title_label:
-		var app_rt := get_node_or_null("/root/AppState")
-		if app_rt != null and app_rt.is_mp():
-			rival_title_label.text = str(b.rival.get("name", "Rival"))
-		else:
-			rival_title_label.text = "Talrand"
+		rival_title_label.text = _rival_name()
 		var rs := str(b.rival.get("status", ""))
 		if rs != "":
 			rival_title_label.text += " · " + rs
@@ -1915,6 +1957,12 @@ func _refresh() -> void:
 		inspector_title.text = str(selected["name"])
 		inspector_type.text = str(selected["type"])
 		inspector_text.text = str(selected["text"])
+		var not_played: Array = selected.get("unsupported", [])
+		if not not_played.is_empty():
+			inspector_text.text = "⚠ Not played by the game yet (do it by hand): " + " / ".join(PackedStringArray(not_played)) + "\n\n" + inspector_text.text
+			inspector_text.max_lines_visible = 8
+		else:
+			inspector_text.max_lines_visible = 4
 		var cat := _catalog()
 		var art: Texture2D = null
 		if cat:
@@ -1933,7 +1981,7 @@ func _refresh() -> void:
 	var net := get_node_or_null("/root/GameNet")
 	if app != null and app.mp_role == "host" and net != null and session != null and session.view != null:
 		net.broadcast_view(session.view)
-	if USE_ENGINE and session != null and session.view != null:
+	if session != null and session.view != null:
 		if session.engine != null and session.engine.is_over():
 			_set_status(str(session.view.prompt))
 		elif not session.pending_draw_anim and str(session.view.prompt) != "" and log_label:
@@ -1959,17 +2007,17 @@ func _set_pile(who: String, player: Dictionary) -> void:
 		cmd_node.text = _short_cmd(player)
 
 func _set_selected(card_id: String) -> void:
-	if USE_ENGINE and session != null:
+	if session != null:
 		session.selected_id = card_id
 		## A guest's stand-in session has no engine: rebuilding its view would replace the host's board with an empty one
 		## (everything then reads "your turn, Main 1"). The view comes from the host (see _sync_guest).
 		if not _is_guest():
 			session.rebuild_view()
-	else:
-		state.selected_id = card_id
 
 
 func _on_select(card_id: String) -> void:
+	if _override_card_clicked(card_id):
+		return
 	if _in_blocking_mode():
 		_on_block_click(card_id)
 		return
@@ -1991,13 +2039,13 @@ func _in_blocking_mode() -> bool:
 	if _is_guest():
 		var v = _board()
 		return v != null and bool(v.blocks_for_you)
-	return USE_ENGINE and session != null and session.awaiting_blocks
+	return session != null and session.awaiting_blocks
 
 
 func _in_attack_mode() -> bool:
 	if _is_guest():
 		return _guest_attack
-	return USE_ENGINE and session != null and session.choosing_attackers
+	return session != null and session.choosing_attackers
 
 
 ## Attack mode: click a creature to add or remove it from the attack.
@@ -2217,27 +2265,9 @@ func _fly_card(card: Dictionary, from_pos: Vector2, to_pos: Vector2, done: Calla
 	)
 
 func _on_hand_card(card_id: String) -> void:
-	if USE_ENGINE:
-		_engine_play_card(card_id)
+	if _override_card_clicked(card_id):
 		return
-	var before: Dictionary = state.card_in_hand(card_id)
-	var from_pos := get_global_mouse_position() - Vector2(40, 56)
-	state.selected_id = card_id
-	var msg := state.play_from_hand(card_id)
-	var ok: bool = msg.begins_with("Played") or msg.begins_with("Cast")
-	if ok:
-		_tap_sfx("card")
-	var to_pos := _zone_anchor("Lands")
-	if msg.find("token") >= 0 or msg.find("Cast") >= 0:
-		to_pos = _zone_anchor("Creatures")
-	if ok and not before.is_empty():
-		_fly_card(before, from_pos, to_pos, func() -> void:
-			_refresh()
-			_set_status(msg)
-		)
-		return
-	_refresh()
-	_set_status(msg)
+	_engine_play_card(card_id)
 
 
 func _engine_play_card(card_id: String) -> void:
@@ -2315,7 +2345,7 @@ func _play_ok_message(before: Dictionary, zone: String, is_land: bool) -> String
 
 
 func _paint_match_buttons() -> void:
-	if not USE_ENGINE or session == null or session.view == null:
+	if session == null or session.view == null:
 		return
 	var v = session.view
 	if all_defend_btn:
@@ -2386,7 +2416,7 @@ func _on_attack() -> void:
 		_set_status("Declare attackers: click your creatures, then click the rival (top right). Press Attack with none picked to skip combat.")
 		_refresh()
 		return
-	if not USE_ENGINE or session == null:
+	if session == null:
 		return
 	if _in_blocking_mode():
 		_confirm_blocks()
@@ -2420,7 +2450,7 @@ func _on_all_attack() -> void:
 		if _client_net("attack"):
 			_set_status("Attacking with everything that can…")
 		return
-	if not USE_ENGINE or session == null or session.view == null or _in_blocking_mode():
+	if session == null or session.view == null or _in_blocking_mode():
 		return
 	if not _in_attack_mode():
 		if not session.can_play():
@@ -2470,7 +2500,7 @@ func _on_all_defend() -> void:
 func _on_next_phase() -> void:
 	if _mp_wait():
 		return
-	if not USE_ENGINE or session == null or session.view == null:
+	if session == null or session.view == null:
 		_on_next_stage()
 		return
 	if _client_net("pass"):
@@ -2522,29 +2552,22 @@ func _on_next_stage() -> void:
 		return
 	if _client_net("pass"):
 		return
-	if USE_ENGINE:
-		if _in_blocking_mode():
-			_set_status("Choose your blockers, then Confirm blocks (or No blocks).")
-			return
-		if _in_attack_mode():
-			_set_status("Pick attackers, then press Attack — or press it with none picked to skip combat.")
-			return
-		if session == null or not session.can_play():
-			_set_status("Keep or Mulligan first.")
-			return
-		if session.draw_waiting():
-			_on_click_library()
-			return
-		session.pass_once()
-		_refresh()
-		if session.engine != null and session.engine.is_over():
-			_set_status("Game over.")
+	if _in_blocking_mode():
+		_set_status("Choose your blockers, then Confirm blocks (or No blocks).")
 		return
-	if not state.active_is_you:
+	if _in_attack_mode():
+		_set_status("Pick attackers, then press Attack — or press it with none picked to skip combat.")
 		return
-	state.next_stage()
+	if session == null or not session.can_play():
+		_set_status("Keep or Mulligan first.")
+		return
+	if session.draw_waiting():
+		_on_click_library()
+		return
+	session.pass_once()
 	_refresh()
-	_set_status("Advanced to %s." % state.phase_name())
+	if session.engine != null and session.engine.is_over():
+		_set_status("Game over.")
 
 func _client_net(kind: String, payload: Dictionary = {}) -> bool:
 
@@ -2562,121 +2585,75 @@ func _on_end_turn() -> void:
 		return
 	if _client_net("end_turn"):
 		return
-	if USE_ENGINE:
-		if session == null:
-			return
-		if not session.can_play():
-			_set_status("Keep or Mulligan first.")
-			return
-		if _in_blocking_mode():
-			_set_status("Choose your blockers, then Confirm blocks (or No blocks).")
-			return
-		if session.draw_waiting():
-			_set_status("Draw first — click your deck.")
-			return
-		_pending_attackers.clear()
-		var life_you := int(session.view.you.get("life", 40))
-		var life_bot := int(session.view.rival.get("life", 40))
-		session.end_you_turn()
-		_tap_sfx("mug")
-		if session.awaiting_blocks:
-			_pending_blocks.clear()
-			_block_pick = ""
-			_refresh()
-			_set_status("You're being attacked! " + str(session.view.prompt))
-			return
-		_refresh()
-		var you_lost: int = life_you - int(session.view.you.get("life", 40))
-		var bot_lost: int = life_bot - int(session.view.rival.get("life", 40))
-		if session.engine.is_over():
-			_set_status(str(session.view.prompt))
-		elif session.pending_draw_anim:
-			var msg := "Your turn — click your deck to draw."
-			if you_lost > 0:
-				msg = "You lost %d life. " % you_lost + msg
-			_set_status(msg)
-		else:
-			var msg2 := str(session.view.prompt)
-			if you_lost > 0:
-				msg2 += " You lost %d life." % you_lost
-			if bot_lost > 0:
-				msg2 += " Talrand lost %d life." % bot_lost
-			_set_status(msg2)
+	if session == null:
 		return
-	if not state.active_is_you:
+	if not session.can_play():
+		_set_status("Keep or Mulligan first.")
 		return
-	if not state.you_drew_this_turn:
+	if _in_blocking_mode():
+		_set_status("Choose your blockers, then Confirm blocks (or No blocks).")
+		return
+	if session.draw_waiting():
 		_set_status("Draw first — click your deck.")
 		return
-	var life_you := int(state.you["life"])
-	var life_bot := int(state.rival["life"])
-	state.end_turn()
-	var msg := RivalAI.take_turn(state)
-	state.begin_your_turn()
-	var you_lost := life_you - int(state.you["life"])
-	var bot_lost := life_bot - int(state.rival["life"])
-	if you_lost > 0:
-		msg += " You lost %d life." % you_lost
-	if bot_lost > 0:
-		msg += " Talrand lost %d life." % bot_lost
-	if int(state.you["life"]) <= 0:
-		msg += " You lost the game."
-	else:
-		msg += " Your turn — click your deck to draw."
+	_pending_attackers.clear()
+	var life_you := int(session.view.you.get("life", 40))
+	var life_bot := int(session.view.rival.get("life", 40))
+	session.end_you_turn()
 	_tap_sfx("mug")
+	if session.awaiting_blocks:
+		_pending_blocks.clear()
+		_block_pick = ""
+		_refresh()
+		_set_status("You're being attacked! " + str(session.view.prompt))
+		return
 	_refresh()
-	_set_status(msg)
+	var you_lost: int = life_you - int(session.view.you.get("life", 40))
+	var bot_lost: int = life_bot - int(session.view.rival.get("life", 40))
+	if session.engine.is_over():
+		_set_status(str(session.view.prompt))
+	elif session.pending_draw_anim:
+		var msg := "Your turn — click your deck to draw."
+		if you_lost > 0:
+			msg = "You lost %d life. " % you_lost + msg
+		_set_status(msg)
+	else:
+		var msg2 := str(session.view.prompt)
+		if you_lost > 0:
+			msg2 += " You lost %d life." % you_lost
+		if bot_lost > 0:
+			msg2 += " %s lost %d life." % [_rival_name(), bot_lost]
+		_set_status(msg2)
 
 func _on_click_library() -> void:
-	if USE_ENGINE:
-		if session == null or not session.can_play():
-			_set_status("Keep or Mulligan first.")
-			return
-		if not session.pending_draw_anim:
-			_set_status("You have already drawn this turn.")
-			return
-		## Online guest: the host takes the card (and asks about dredge); the new hand comes back in the view.
-		if _client_net("draw"):
-			_set_status("Drawing…")
-			return
-		var drawn: Dictionary = session.ack_draw()
-		if drawn.is_empty():
-			_refresh()
-			_set_status("No card to draw.")
-			return
-		_tap_sfx("draw")
-		_show_draw_preview(drawn)
-		var from_pos := Vector2(size.x - 250, size.y - 110)
-		if deck_btn:
-			from_pos = deck_btn.get_global_rect().position
-		var to_pos := Vector2(size.x * 0.35, size.y - 140)
-		if hand_row:
-			to_pos = hand_row.get_global_rect().get_center() - Vector2(40, 56)
-		_fly_card(drawn, from_pos, to_pos, func() -> void:
-			_hide_draw_preview()
-			_refresh()
-			_set_status("Drew %s. Library %d." % [str(drawn.get("name", "a card")), int(session.view.you["library"])])
-		)
+	if session == null or not session.can_play():
+		_set_status("Keep or Mulligan first.")
 		return
-	var msg := state.start_your_turn()
-	var drawn: Dictionary = state.find_card(state.selected_id)
-	if not drawn.is_empty():
-		_apply_scryfall([drawn])
-	if msg.begins_with("Drew"):
-		_tap_sfx("draw")
-		var from_pos := Vector2(size.x - 250, size.y - 110)
-		if deck_btn:
-			from_pos = deck_btn.get_global_rect().position
-		var to_pos := Vector2(size.x * 0.35, size.y - 140)
-		if hand_row:
-			to_pos = hand_row.get_global_rect().get_center() - Vector2(40, 56)
-		_fly_card(drawn, from_pos, to_pos, func() -> void:
-			_refresh()
-			_set_status(msg)
-		)
+	if not session.pending_draw_anim:
+		_set_status("You have already drawn this turn.")
 		return
-	_refresh()
-	_set_status(msg)
+	## Online guest: the host takes the card (and asks about dredge); the new hand comes back in the view.
+	if _client_net("draw"):
+		_set_status("Drawing…")
+		return
+	var drawn: Dictionary = session.ack_draw()
+	if drawn.is_empty():
+		_refresh()
+		_set_status("No card to draw.")
+		return
+	_tap_sfx("draw")
+	_show_draw_preview(drawn)
+	var from_pos := Vector2(size.x - 250, size.y - 110)
+	if deck_btn:
+		from_pos = deck_btn.get_global_rect().position
+	var to_pos := Vector2(size.x * 0.35, size.y - 140)
+	if hand_row:
+		to_pos = hand_row.get_global_rect().get_center() - Vector2(40, 56)
+	_fly_card(drawn, from_pos, to_pos, func() -> void:
+		_hide_draw_preview()
+		_refresh()
+		_set_status("Drew %s. Library %d." % [str(drawn.get("name", "a card")), int(session.view.you["library"])])
+	)
 
 func _paint_library_btn() -> void:
 	if you_library_btn == null:
@@ -2690,7 +2667,7 @@ func _paint_library_btn() -> void:
 	you_library_btn.tooltip_text = "Click to draw" if need else "Your library"
 
 func _on_click_command() -> void:
-	if not USE_ENGINE or session == null or session.view == null:
+	if session == null or session.view == null:
 		return
 	var cmds: Array = session.view.you.get("command", [])
 	if cmds.is_empty():
@@ -2702,22 +2679,13 @@ func _on_click_command() -> void:
 
 
 func _on_activate() -> void:
-	if USE_ENGINE:
-		if session == null:
-			return
-		var sid: String = str(session.selected_id)
-		if sid == "":
-			_set_status("Select a card first.")
-			return
-		_engine_play_card(sid)
+	if session == null:
 		return
-	if not state.active_is_you:
+	var sid: String = str(session.selected_id)
+	if sid == "":
+		_set_status("Select a card first.")
 		return
-	var msg := state.activate_selected()
-	if msg.begins_with("Played") or msg.begins_with("Cast"):
-		_tap_sfx("card")
-	_refresh()
-	_set_status(msg)
+	_engine_play_card(sid)
 
 func _tap_sfx(kind: String) -> void:
 	if sfx == null or sfx.muted:
@@ -2782,7 +2750,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif key.keycode == KEY_F8:
 		_on_report_bug()
 		get_viewport().set_input_as_handled()
-	elif key.keycode == KEY_F3:
+	elif key.keycode == KEY_ESCAPE and not _override_op.is_empty():
+		_override_disarm()
+		get_viewport().set_input_as_handled()
+	elif key.keycode == KEY_F3 and DEBUG_MATCH:
 		_show_debug = not _show_debug
 		if debug_label:
 			debug_label.visible = _show_debug
@@ -2936,7 +2907,7 @@ func _refresh_ability_panel() -> void:
 		var old := ability_box.get_child(0)
 		ability_box.remove_child(old)
 		old.queue_free()  ## not free(): this runs from a button inside this very box, still emitting "pressed"
-	if not USE_ENGINE or session == null or session.engine == null:
+	if session == null or session.engine == null:
 		return
 	var eng: RulesEngine = session.engine
 	if eng.state.mode == EngineEnums.EngineMode.AWAITING_DECISION and int(eng.state.awaiting.get("player_id", -1)) == 0:
@@ -3030,7 +3001,7 @@ func _on_menu_picked(value: Variant) -> void:
 
 
 func _on_click_pile(zone_id: int, title: String) -> void:
-	if not USE_ENGINE or session == null:
+	if session == null:
 		return
 	var entries: Array = session.zone_menu(zone_id)
 	if entries.is_empty():
@@ -3049,10 +3020,33 @@ func _current_prompt() -> Dictionary:
 	return session.prompt_for(session.you_seat)
 
 
+var _distribute_dialog: DistributeDialog = null
+
+
 func _update_prompts() -> void:
 	var data: Dictionary = _current_prompt()
 	var want_sig := str(data.get("sig", ""))
 	var kind := str(data.get("kind", ""))
+	## Dividing damage (combat, or a spell): its own screen with a counter for each thing that can take some.
+	if kind != "distribute" and _distribute_dialog != null:
+		_distribute_dialog.queue_free()
+		_distribute_dialog = null
+	if kind == "distribute":
+		if _choice_dialog != null:
+			_choice_dialog.queue_free()
+			_choice_dialog = null
+		if _distribute_dialog != null and _distribute_dialog.signature == want_sig:
+			return
+		if _distribute_dialog != null:
+			_distribute_dialog.queue_free()
+		_distribute_dialog = DistributeDialog.new()
+		_distribute_dialog.signature = want_sig
+		add_child(_distribute_dialog)
+		_distribute_dialog.show_split(str(data.get("title", "Divide")), str(data.get("sub", "")), int(data.get("total", 0)), data.get("options", []),
+			int(data.get("max_targets", 0)), data.get("default", {}), str(data.get("cancel", "Split it for me")))
+		_distribute_dialog.confirmed.connect(_on_distribute_answer)
+		_distribute_dialog.automatic.connect(_on_distribute_answer.bind(null))
+		return
 	var title := str(data.get("title", ""))
 	var sub := str(data.get("sub", ""))
 	var options: Array = data.get("options", [])
@@ -3086,6 +3080,25 @@ func _on_dialog_option_hover(card: Dictionary) -> void:
 	if hover_wrap != null:
 		hover_wrap.z_index = 120  ## above the pick screen
 	_on_hover_card(card)
+
+
+## The split from the dividing screen (null: let the game split it).
+func _on_distribute_answer(split: Variant) -> void:
+	if _distribute_dialog != null:
+		_distribute_dialog.queue_free()
+		_distribute_dialog = null
+	if split == null:
+		if _client_net("answer", {"kind": "distribute", "cancel": true}):
+			return
+	elif _client_net("answer", {"kind": "distribute", "value": split}):
+		return
+	if session == null:
+		return
+	session.last_error = ""
+	session.answer_prompt(session.you_seat, "distribute", split)
+	_refresh()
+	if session.last_error != "":
+		_set_status(session.last_error)
 
 
 func _close_choice() -> void:
@@ -3351,7 +3364,7 @@ func _refresh_coin() -> void:
 	if app_c != null and app_c.is_mp():
 		_refresh_coin_mp()
 		return
-	var show: bool = USE_ENGINE and session.match_start == GameSession.MatchStart.COIN_FLIP
+	var show: bool = session.match_start == GameSession.MatchStart.COIN_FLIP
 	coin_overlay.visible = show
 	if not show:
 		_coin_state = 0
@@ -3391,7 +3404,7 @@ func _coin_landed() -> void:
 		return
 	coin_face.text = "HEADS" if session.coin_heads else "TAILS"
 	var wins: bool = session.first_player == session.you_seat
-	coin_status.text = ("It's %s. You go first!" if wins else "It's %s. Talrand goes first.") % ("heads" if session.coin_heads else "tails")
+	coin_status.text = ("It's %s. You go first!" if wins else "It's %s. " + _rival_name() + " goes first.") % ("heads" if session.coin_heads else "tails")
 	coin_continue.visible = true
 	_coin_state = 2
 
@@ -3403,7 +3416,7 @@ func _on_coin_continue() -> void:
 	_coin_state = 0
 	_refresh()
 	if session.first_player != session.you_seat:
-		_set_status("Talrand won the flip and goes first.")
+		_set_status("%s won the flip and goes first." % _rival_name())
 
 
 func _build_mulligan_overlay() -> void:
@@ -3600,7 +3613,7 @@ func _refresh_mulligan() -> void:
 	var st := -1
 	var you_kept := false
 	var rival_kept := true
-	if USE_ENGINE and session != null and not guest:
+	if session != null and not guest:
 		st = session.match_start
 		you_kept = bool(session.kept.get(session.you_seat, false))
 		rival_kept = bool(session.kept.get(1 - int(session.you_seat), true))
@@ -3826,24 +3839,18 @@ func _on_play_imported(deck: NormalizedDeck, rows: Dictionary) -> void:
 
 func _on_new_game() -> void:
 	_mulligan_sig = ""
-	if USE_ENGINE:
-		session = GameSession.new()
-		session.manual_draw = true
-		session.coin_flip = true
-		session.debug_enabled = DEBUG_MATCH
-		session.start_table_demo()
-	else:
-		state = MatchStateScript.new()
-		_hydrate_from_scryfall()
+	## The same two decks that were chosen in the menu (it used to start the generated Krenko-vs-Talrand demo).
+	session = GameSession.new()
+	session.manual_draw = true
+	session.coin_flip = true
+	session.debug_enabled = DEBUG_MATCH
+	_start_from_app_state()
 	menu_overlay.visible = false
 	if dice_overlay:
 		dice_overlay.visible = false
 	_was_tapped.clear()
 	_refresh()
-	if USE_ENGINE:
-		_set_status("Opening hand — Keep or Mulligan. Library %d." % session.engine.library_size(0))
-	else:
-		_set_status("New game vs Talrand. Hover a card to enlarge it. Click a card to play it.")
+	_set_status("Opening hand — Keep or Mulligan. Library %d." % session.engine.library_size(0))
 
 func _on_art_updated(_card_id: String) -> void:
 	_refresh()
@@ -3869,8 +3876,38 @@ func _notice_if_failed(player_id: int) -> void:
 		net.send_notice(player_id, session.last_error)
 
 
+## Online, host side: the guest's connection dropped. Their seat is held; the game waits for them.
+func _on_peer_dropped(player_name: String, seconds: int) -> void:
+	_show_net_banner("%s lost their connection — waiting up to %d minutes for them to come back…" % [player_name, seconds / 60])
+
+
+func _on_peer_rejoined(player_name: String) -> void:
+	_net_banner.visible = false
+	_set_status("%s is back." % player_name)
+	_refresh()  ## sends the whole board to them again
+
+
+## Online, guest side: the host's connection dropped and the game keeps trying to get back in.
+func _on_connection_lost(seconds: int) -> void:
+	_show_net_banner("Lost the connection to the host — trying to reconnect for up to %d minutes…" % (seconds / 60))
+
+
+func _on_connection_restored() -> void:
+	_net_banner.visible = false
+	_set_status("Reconnected.")
+	_refresh()
+
+
+func _show_net_banner(text: String) -> void:
+	if _net_banner != null:
+		_net_banner.text = text
+		_net_banner.visible = true
+
+
 ## Online: the other player left or lost their connection. The match can't go on, so say so and offer the way out.
 func _on_peer_left(player_name: String) -> void:
+	if _net_banner != null:
+		_net_banner.visible = false
 	if gameover_overlay == null:
 		return
 	if _gameover_shown:
@@ -4031,6 +4068,210 @@ func _audio_row(label_text: String, icon_kind: String, start: float, on_change: 
 	col.add_child(sl)
 	row.add_child(col)
 	return row
+
+
+# --- Override menu ---------------------------------------------------------------------------------------------
+## Table-fixing actions (add mana, change life, kill, revive, make tokens ...). Against the bot they happen at once; online
+## the other player is asked first and must say yes. A card action stays "armed": click cards on the table to apply it to
+## each, and stop with Esc or the banner.
+var _override_panel: OverridePanel = null
+var _override_op: Dictionary = {}
+var _override_banner: Button = null
+var _override_dialog: ChoiceDialog = null
+var _consent_queue: Array = []
+var _override_asks: Dictionary = {}  ## host: id -> the action the guest is being asked about
+var _override_next_id: int = 1
+
+
+func _override_online() -> bool:
+	return _is_guest() or (session != null and session.skip_ai)
+
+
+func _on_override() -> void:
+	if _override_panel != null and is_instance_valid(_override_panel):
+		_close_override_panel()
+		return
+	if session == null and not _is_guest():
+		return
+	_override_panel = OverridePanel.new()
+	_override_panel.z_index = 90
+	add_child(_override_panel)
+	_override_panel.setup(_rival_name(), _override_online(), not _is_guest())
+	_override_panel.act.connect(_override_request)
+	_override_panel.arm.connect(_override_arm)
+	_override_panel.pick_card.connect(_override_pick_card)
+	_override_panel.closed.connect(_close_override_panel)
+	_override_panel.position = Vector2(maxf(8.0, get_viewport_rect().size.x - 580.0), 56.0)
+	_place_override_panel.call_deferred()
+
+
+## Once the panel has its real size, keep it fully on the screen.
+func _place_override_panel() -> void:
+	if _override_panel != null and is_instance_valid(_override_panel):
+		_override_panel.position.x = maxf(8.0, get_viewport_rect().size.x - _override_panel.size.x - 12.0)
+
+
+func _close_override_panel() -> void:
+	if _override_panel != null and is_instance_valid(_override_panel):
+		_override_panel.queue_free()
+	_override_panel = null
+
+
+## Pick a card action, then click cards on the table.
+func _override_arm(op: Dictionary, hint: String) -> void:
+	_override_op = op
+	_close_override_panel()
+	if _override_banner == null:
+		_override_banner = Button.new()
+		_override_banner.z_index = 85
+		_override_banner.add_theme_font_size_override("font_size", 16)
+		_override_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+		_override_banner.offset_top = 56
+		_override_banner.pressed.connect(_override_disarm)
+		add_child(_override_banner)
+	_override_banner.text = "Override: %s — click cards  (Esc or click here to stop)" % hint
+	_override_banner.visible = true
+
+
+func _override_disarm() -> void:
+	_override_op = {}
+	if _override_banner != null:
+		_override_banner.visible = false
+	_set_status("Override stopped.")
+
+
+## A card was clicked while an action is armed: apply it to that card. True if the click was used up.
+func _override_card_clicked(card_id: String) -> bool:
+	if _override_op.is_empty():
+		return false
+	var op := _override_op.duplicate()
+	op["object_id"] = int(card_id)
+	_override_request(op)
+	return true
+
+
+## Do it, or ask first: against the bot at once; as the host the guest is asked; as the guest the host is asked.
+func _override_request(op: Dictionary) -> void:
+	if _is_guest():
+		_client_net("override", {"op": op})
+		_set_status("Asked the host to allow it…")
+		return
+	if session == null:
+		return
+	if session.skip_ai:
+		var id := _override_next_id
+		_override_next_id += 1
+		_override_asks[id] = op
+		var net := get_node_or_null("/root/GameNet")
+		var text: String = session.override_describe(op)
+		if net != null:
+			net.send_override_ask(1, id, text)
+		_set_status("Waiting for %s to allow: %s." % [_rival_name(), text])
+		return
+	_override_do(op, session.you_seat)
+
+
+func _override_do(op: Dictionary, caller: int) -> void:
+	var text: String = session.override_describe(op, caller)
+	var err: String = session.override_apply(op, caller)
+	_refresh()
+	if err == "":
+		_tap_sfx("card")
+	_set_status(("Override: %s." % text) if err == "" else err)
+
+
+## Host: the guest asks to change the table. The host decides.
+func _on_guest_override(op: Variant, seat: int) -> void:
+	if not (op is Dictionary) or session == null:
+		return
+	var plain: Dictionary = op
+	var text: String = session.override_describe(plain, seat)
+	var host_name := str(session.engine.state.players[session.you_seat].name)
+	_ask_consent("%s wants to change the table" % _rival_name(), text, func(yes: bool) -> void:
+		var net := get_node_or_null("/root/GameNet")
+		if yes:
+			var err: String = session.override_apply(plain, seat)
+			_refresh()
+			if net != null:
+				net.send_notice(seat, ("Allowed: %s." % text) if err == "" else err)
+			_set_status(("Allowed: %s." % text) if err == "" else err)
+		else:
+			if net != null:
+				net.send_notice(seat, "%s declined: %s." % [host_name, text])
+			_set_status("You declined: %s." % text)
+	)
+
+
+## Host: the guest answered a request the host made.
+func _on_override_vote(id: int, yes: bool) -> void:
+	if not _override_asks.has(id) or session == null:
+		return
+	var op: Dictionary = _override_asks[id]
+	_override_asks.erase(id)
+	if yes:
+		_override_do(op, session.you_seat)
+	else:
+		_set_status("%s declined: %s." % [_rival_name(), session.override_describe(op)])
+
+
+## Guest: the host asks to change the table.
+func _on_override_asked(id: int, text: String) -> void:
+	_ask_consent("%s wants to change the table" % _rival_name(), text, func(yes: bool) -> void:
+		_client_net("override_vote", {"id": id, "yes": yes})
+	)
+
+
+## One yes / no question at a time, over the table.
+func _ask_consent(title: String, text: String, on_answer: Callable) -> void:
+	_consent_queue.append([title, text, on_answer])
+	if _override_dialog == null:
+		_consent_next()
+
+
+func _consent_next() -> void:
+	if _consent_queue.is_empty():
+		_override_dialog = null
+		return
+	var item: Array = _consent_queue.pop_front()
+	var d := ChoiceDialog.new()
+	_override_dialog = d
+	add_child(d)
+	d.show_choices(str(item[0]), str(item[1]), [{"value": true, "label": "Allow"}, {"value": false, "label": "Decline", "mine": false}], "")
+	d.picked.connect(func(v: Variant) -> void:
+		d.queue_free()
+		_override_dialog = null
+		(item[2] as Callable).call(bool(v))
+		_consent_next()
+	)
+
+
+## "Revive", "Tutor", "Play from hand" ...: choose which card from one of your piles.
+func _override_pick_card(zone: String, to: String, title: String) -> void:
+	_close_override_panel()
+	var options: Array = []
+	if zone == "LIBRARY":
+		if session == null or _is_guest():
+			return
+		for c in session.override_pile("LIBRARY"):
+			options.append({"value": int(c.id), "label": str(c.name), "detail": str(c.detail)})
+	else:
+		var v = _board()
+		var key: String = {"GRAVEYARD": "graveyard_cards", "EXILE": "exile_cards", "HAND": "hand"}.get(zone, "")
+		if v == null or key == "":
+			return
+		for c in v.you.get(key, []):
+			options.append({"value": int(str(c.get("id", "0"))), "label": str(c.get("name", "Card")), "detail": str(c.get("type_line", c.get("type", "")))})
+	if options.is_empty():
+		_set_status("There is nothing there.")
+		return
+	var d := ChoiceDialog.new()
+	add_child(d)
+	d.show_choices(title, "%d cards" % options.size(), options, "Cancel")
+	d.picked.connect(func(value: Variant) -> void:
+		d.queue_free()
+		_override_request({"op": "move", "object_id": int(value), "to": to})
+	)
+	d.cancelled.connect(func() -> void: d.queue_free())
 
 
 func _exit_tree() -> void:

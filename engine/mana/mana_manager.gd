@@ -14,7 +14,10 @@ func on_step_end() -> void:
 		return
 	for p in gs.players:
 		if p.mana is ManaPool:
+			## Leyline Tyrant: "You don't lose unspent red mana as steps and phases end."
+			var kept_red := (p.mana as ManaPool).r if _keeps_red(gs, p.player_id) else 0
 			(p.mana as ManaPool).empty()
+			(p.mana as ManaPool).r = kept_red
 	## Firebending (CR 702.189a): its {R} stays until end of combat. Unspent, it comes back after each combat step.
 	if gs.step == EngineEnums.Step.END_COMBAT:
 		gs.combat_mana.clear()
@@ -24,6 +27,21 @@ func on_step_end() -> void:
 			var pl := pool(int(pid))
 			if pl != null and keep > 0:
 				pl.r += keep
+
+
+func _keeps_red(gs: GameState, player_id: int) -> bool:
+	var bf: Zone = gs.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD) if gs.zones != null else null
+	if bf == null:
+		return false
+	for oid in bf.object_ids:
+		var o: GameObject = gs.objects.get(oid)
+		if o == null or o.controller_id != player_id or not (o.definition is CardDefinition):
+			continue
+		for a in (o.definition as CardDefinition).abilities:
+			var ab := a as Ability
+			if ab != null and ab.kind == &"STATIC" and str(ab.static_spec.get("keep_mana", "")) == "R":
+				return true
+	return false
 
 
 func pool(player_id: int) -> ManaPool:

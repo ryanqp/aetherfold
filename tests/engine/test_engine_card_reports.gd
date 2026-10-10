@@ -1665,3 +1665,59 @@ func test_a_bot_turn_rebuilds_the_table_view_once() -> void:
 	session.ai_take_turn(1)
 	var row: Array = GameSession.perf.get("rebuild_view", [0, 0])
 	assert_true(int(row[1]) <= 1, "the whole turn rebuilt the view %d times" % int(row[1]))
+
+
+func test_pay_two_then_bite_only_when_the_payment_is_made() -> void:
+	var cat := Fixtures.memory_catalog()
+	var m := cat as CatalogSource.Memory
+	m.add(_row("Test Itz", "{R}{G}", 2, "Legendary Creature — Dinosaur", "Haste\nWhen Test Itz enters, you may pay {2}. When you do, target Dinosaur you control deals damage equal to its power to another target creature.", "2", "3"))
+	m.add(_row("Test Bear", "{1}{G}", 2, "Creature — Bear", "", "2", "2"))
+	var d := CardDatabase.new()
+	d.setup(cat)
+	for paid in [false, true]:
+		var engine := Fixtures.empty_engine_1v1()
+		var itz := Fixtures.spawn_named(engine, d, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Itz")
+		var bear := Fixtures.spawn_named(engine, d, 1, EngineEnums.ZoneId.BATTLEFIELD, "Test Bear")
+		var fxs: Array = []
+		for a in (itz.definition as CardDefinition).abilities:
+			if (a as Ability).kind == &"TRIGGERED":
+				fxs.append_array((a as Ability).effects)
+		var kinds: Array = []
+		for fx in fxs:
+			kinds.append(str((fx as AbilityEffect).kind))
+		assert_false(kinds.has("MAY"), "no separate may step before the payment")
+		assert_true(kinds.has("PAY_OPTIONAL") and kinds.has("FIGHT"), "payment and bite were read: %s" % str(kinds))
+		if paid:
+			engine.mana.add(0, ManaCost.parse("{2}"))
+		var e := engine.put_synthetic(itz, 0, fxs, {})
+		e.targets = [itz.object_id, bear.object_id]
+		engine.resolve_top()
+		engine.sba.check(engine)
+		assert_eq(_on_bf(engine, bear), not paid, "the bear %s" % ("died" if paid else "lives without the payment"))
+
+
+func test_sunfrill_style_copy_keeps_its_name_and_ability() -> void:
+	var cat := Fixtures.memory_catalog()
+	var m := cat as CatalogSource.Memory
+	m.add(_row("Test Imitator", "{2}{G}", 3, "Creature — Dinosaur", "Whenever Test Imitator attacks, you may have it become a copy of another target Dinosaur you control, except its name is Test Imitator and it has this ability.", "3", "3"))
+	m.add(_row("Test Rex", "{4}{G}", 5, "Creature — Dinosaur", "Trample", "5", "5"))
+	var d := CardDatabase.new()
+	d.setup(cat)
+	var engine := Fixtures.empty_engine_1v1()
+	var rex := Fixtures.spawn_named(engine, d, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Rex")
+	var imi := Fixtures.spawn_named(engine, d, 0, EngineEnums.ZoneId.BATTLEFIELD, "Test Imitator")
+	var fxs: Array = []
+	for a in (imi.definition as CardDefinition).abilities:
+		if (a as Ability).kind == &"TRIGGERED":
+			fxs.append_array((a as Ability).effects)
+	var e := engine.put_synthetic(imi, 0, fxs, {})
+	e.targets = [rex.object_id]
+	e.choices["copy_it"] = true
+	engine.resolve_top()
+	assert_eq(engine.power_of(imi), 5, "it is a 5/5 now")
+	assert_eq((imi.definition as CardDefinition).name, "Test Imitator", "the name stays")
+	var has_own := false
+	for a in (imi.definition as CardDefinition).abilities:
+		if (a as Ability).kind == &"TRIGGERED":
+			has_own = true
+	assert_true(has_own, "it still has the copying ability")

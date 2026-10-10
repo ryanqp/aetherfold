@@ -151,7 +151,7 @@ func legal_ids(engine: RulesEngine, query: Dictionary, source_id: int = -1) -> A
 			return out
 		for oid in bf.object_ids:
 			var obj: GameObject = engine.state.objects.get(oid)
-			if obj != null and Query._matches(obj, src_obj, q) and not _cant_be_targeted(engine, obj, src):
+			if obj != null and Query._matches(obj, src_obj, q) and combat_ok(engine, obj, q) and not _cant_be_targeted(engine, obj, src):
 				out.append(obj.object_id)
 	elif kind == "CARD_IN_ZONE":
 		## A card in a graveyard (or other non-shared zone), e.g. "target creature card from your graveyard".
@@ -185,6 +185,30 @@ func legal_ids(engine: RulesEngine, query: Dictionary, source_id: int = -1) -> A
 					continue
 				out.append(creature.object_id)
 	return out
+
+
+## "target attacking creature", "target blocking creature", "target attacking or blocking creature": the combat in progress.
+static func combat_ok(engine: RulesEngine, obj: GameObject, q: Dictionary) -> bool:
+	var want_atk := bool(q.get("attacking", false))
+	var want_blk := bool(q.get("blocking", false))
+	var want_any := bool(q.get("in_combat", false))
+	if not (want_atk or want_blk or want_any):
+		return true
+	var cs: CombatState = engine.state.combat as CombatState if engine.state.combat is CombatState else null
+	if cs == null:
+		return false
+	var attacking := cs.attacker_ids.has(obj.object_id)
+	var blocking := false
+	for raw in cs.blockers.values():
+		if raw is Array and (raw as Array).has(obj.object_id):
+			blocking = true
+	if want_any:
+		return attacking or blocking
+	if want_atk and not attacking:
+		return false
+	if want_blk and not blocking:
+		return false
+	return true
 
 
 func is_legal(engine: RulesEngine, query: Dictionary, target_id: int, source_id: int = -1) -> bool:

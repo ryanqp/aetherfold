@@ -154,6 +154,9 @@ func _event(engine: RulesEngine, e: GameEvent, you_seat: int) -> void:
 		EngineEnums.EventType.GAME_OVER:
 			_add("Game over.", "info")
 		EngineEnums.EventType.NOTE:
+			## A note only one player may see ("You look at the top card of your library: X") is shown to that player only.
+			if e.payload.has("private_to") and int(e.payload["private_to"]) != you_seat:
+				return
 			_add(str(e.payload.get("text", "")), "info")
 
 

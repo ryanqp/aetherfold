@@ -32,10 +32,12 @@ static func apply(ex: AbilityExecutor, engine: RulesEngine, entry: StackEntry, s
 		"GRAFT_MOVE":
 			_graft_move(ex, engine, entry, source)
 		"POISON":
-			var d := int(entry.ctx.get("defender", -1))
-			if d >= 0 and d < engine.state.players.size():
-				engine.state.players[d].poison += int(p.get("n", 1))
-				engine.sba.check(engine)
+			## Poisonous: the player it hit. "That player / target player / each opponent gets a poison counter": `who`.
+			var poisoned: Array = ex._players_for(engine, entry, str(p["who"])) if p.has("who") else [int(entry.ctx.get("defender", -1))]
+			for d in poisoned:
+				if int(d) >= 0 and int(d) < engine.state.players.size():
+					engine.state.players[int(d)].poison += int(p.get("n", 1))
+			engine.sba.check(engine)
 		"MENTOR":
 			_mentor(engine, source)
 		"MOBILIZE":
@@ -87,8 +89,13 @@ static func apply(ex: AbilityExecutor, engine: RulesEngine, entry: StackEntry, s
 		"VOTE":
 			_vote(ex, engine, entry, p)
 		"EXERT":
-			if source != null:
+			## CR 701.43: it won't untap during its controller's next untap step ("frozen"); "whenever you exert a creature" triggers.
+			if source != null and source.zone == EngineEnums.ZoneId.BATTLEFIELD:
 				source.marks["exerted"] = true
+				source.marks["exerted_turn"] = engine.state.turn_number
+				source.marks["frozen"] = true
+				if engine.triggers != null:
+					engine.triggers.fire_player_event(engine, "EXERTED", source.controller_id, {object_id = source.object_id})
 		"VENTURE":
 			venture(ex, engine, entry, str(p.get("dungeon", "")))
 		"TAKE_INITIATIVE":

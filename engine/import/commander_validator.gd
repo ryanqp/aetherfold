@@ -95,32 +95,80 @@ func _is_background(row: Dictionary) -> bool:
 	return str(row.get("type_line", "")).find("Background") >= 0
 
 
+## The rules lines of a card, lower-cased, one per line (the Oracle text of every face).
+func _text_lines(row: Dictionary) -> PackedStringArray:
+	var text := str(row.get("oracle_text", ""))
+	var faces: Variant = row.get("faces", [])
+	if faces is Array:
+		for f in faces:
+			if f is Dictionary:
+				text += "\n" + str((f as Dictionary).get("oracle_text", ""))
+	var out := PackedStringArray()
+	for l in text.to_lower().split("\n"):
+		var line := str(l).strip_edges()
+		if line != "":
+			out.append(line)
+	return out
+
+
+## Plain Partner (CR 702.124f): a line that is just "Partner" (reminder text allowed). "Partner with ..." and the
+## "Partner — Survivors" style variants are different abilities and do not pair with it.
 func _has_partner(row: Dictionary) -> bool:
-	var kw: Variant = row.get("keywords", [])
-	if kw is Array or kw is PackedStringArray:
-		for k in kw:
-			if str(k).to_lower() == "partner":
-				return true
-	var ot := str(row.get("oracle_text", "")).to_lower()
-	return ot.find("partner") >= 0 and ot.find("partner with") < 0
+	for line in _text_lines(row):
+		if line == "partner" or line.begins_with("partner ("):
+			return true
+	return false
+
+
+## "Partner — Father & Son", "Partner — Survivors" ...: the variant's name, or "". Two cards pair only with the same variant.
+func _partner_variant(row: Dictionary) -> String:
+	for line in _text_lines(row):
+		if line.begins_with("partner —") or line.begins_with("partner -") or line.begins_with("partner—"):
+			var rest := line.substr(line.find("—") + 1) if line.find("—") >= 0 else line.substr(line.find("-") + 1)
+			var paren := rest.find("(")
+			if paren >= 0:
+				rest = rest.substr(0, paren)
+			return rest.strip_edges()
+	return ""
+
+
+func _has_line(row: Dictionary, prefix: String) -> bool:
+	for line in _text_lines(row):
+		if line.begins_with(prefix):
+			return true
+	return false
+
+
+func _is_doctor(row: Dictionary) -> bool:
+	var tl := str(row.get("type_line", ""))
+	return tl.contains("Time Lord") and tl.contains("Doctor") and tl.contains("Legendary") and tl.contains("Creature")
 
 
 func _partner_with(row: Dictionary) -> String:
 	var ot := str(row.get("oracle_text", ""))
 	var re := RegEx.new()
-	re.compile("Partner with ([^\\n(]+)")
+	re.compile("(?i)Partner with ([^\\n(]+)")
 	var m := re.search(ot)
 	if m:
 		return m.get_string(1).strip_edges()
 	return ""
 
 
+## Two commanders are legal together when they share Partner, the same Partner variant, name each other (Partner with),
+## both have Friends forever, one "chooses a Background" and the other is one, or a Doctor meets a "Doctor's companion".
 func _pair_legal(a: Dictionary, b: Dictionary) -> bool:
-	if _is_background(a) and _can_be_commander(b):
+	if _is_background(a) and _has_line(b, "choose a background") and _can_be_commander(b):
 		return true
-	if _is_background(b) and _can_be_commander(a):
+	if _is_background(b) and _has_line(a, "choose a background") and _can_be_commander(a):
 		return true
 	if _has_partner(a) and _has_partner(b):
+		return true
+	var va := _partner_variant(a)
+	if va != "" and va == _partner_variant(b):
+		return true
+	if _has_line(a, "friends forever") and _has_line(b, "friends forever"):
+		return true
+	if (_is_doctor(a) and _has_line(b, "doctor's companion")) or (_is_doctor(b) and _has_line(a, "doctor's companion")):
 		return true
 	var aw := _partner_with(a)
 	var bw := _partner_with(b)

@@ -58,23 +58,23 @@ At the table:
 
 Without a local Scryfall catalog, the demo still runs (Krenko vs Talrand). Card art downloads from Scryfall when names resolve.
 
-### Optional: full card catalog (better art)
+### The card catalog
 
-The game looks for a catalog at `D:\AetherfoldData\scryfall\catalog.jsonl`.
+The catalog ships with the game: `data/scryfall/catalog.jsonl` (about 38,600 cards) is exported with every build, so nothing
+needs to be installed. Card art is downloaded from Scryfall as you play and cached in the game's own data folder
+(`user://card_art`).
 
-To put it somewhere else:
+To refresh the catalog from Scryfall: run `python tools/fetch_scryfall.py` (it downloads Scryfall's bulk file to
+`AETHERFOLD_SCRYFALL_DIR`, default `D:\AetherfoldData\scryfall`), then rebuild the game's catalog with
+`godot --headless --path . -s res://tools/build_catalog.gd -- --src=<path to oracle-cards.jsonl.gz>`. That rewrites
+`data/scryfall/catalog.jsonl`, keeping every face of double-faced, split and adventure cards and leaving out art cards and
+tokens. To try a different catalog without replacing the shipped one, set `AETHERFOLD_SCRYFALL_DIR` before starting the game.
 
-```
-set AETHERFOLD_SCRYFALL_DIR=C:\path\to\scryfall
-```
+## Building
 
-Then run:
-
-```
-python tools/fetch_scryfall.py
-```
-
-That only downloads metadata + image URLs, not every card image. Images cache as you play.
+`export_presets.cfg` has a **Windows Desktop** and an **Android** preset (arm64, landscape, with the internet and Wi-Fi
+permissions online play needs). Android needs the Android SDK and a JDK set in Godot's Editor Settings; signing keys are never
+stored in the project. The editor addon (`addons/godot_ai`), `tests/`, `tools/` and the loose card pictures are left out of builds.
 
 ## Running tests
 
@@ -104,7 +104,7 @@ More detail, including how to add a suite: [docs/testing.md](docs/testing.md).
 
 To give a card real rules (draw, tokens, counters, …) add JSON under `engine/cards/ir/`. Walkthrough and a copy-paste template: [docs/adding-a-card.md](docs/adding-a-card.md).
 
-**Live rules live in `engine/`, not `scripts/match_state.gd`.** What to edit: [docs/migration-status.md](docs/migration-status.md).
+**Live rules live in `engine/`.** What to edit: [docs/migration-status.md](docs/migration-status.md).
 
 Player-count / 1v1 vs N-player notes (before bigger multiplayer): [docs/player-count-audit.md](docs/player-count-audit.md).
 

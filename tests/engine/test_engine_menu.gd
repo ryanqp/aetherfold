@@ -49,7 +49,7 @@ func test_store_rename_delete() -> void:
 		"Krenko, Mob Boss": {name = "Krenko, Mob Boss", type_line = "Legendary Creature — Goblin Warrior", color_identity = ["R"], commander_legal = true},
 		"Mountain": {name = "Mountain", type_line = "Basic Land — Mountain", color_identity = ["R"], commander_legal = true},
 	}
-	var store := DeckStore.new()
+	var store := DeckStore.scratch("menu")
 	var path := store.save(deck, rows, {ok = true, total = 100, errors = PackedStringArray(), warnings = PackedStringArray()})
 	assert_true(path != "")
 	assert_true(store.rename(path, "Renamed Krenko"))
@@ -57,3 +57,4 @@ func test_store_rename_delete() -> void:
 	assert_eq(str(loaded.get("name", "")), "Renamed Krenko")
 	assert_true(store.delete_path(path))
 	assert_true(store.load_path(path).is_empty())
+	store.wipe()

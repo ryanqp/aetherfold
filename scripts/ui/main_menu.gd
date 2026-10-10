@@ -59,7 +59,6 @@ func _ready() -> void:
 		add_child(loading)
 		await cat_gate.catalog_ready
 		loading.queue_free()
-	DeckStore.new().purge_test_decks()  ## once per launch; the deck lists only read (T-010)
 	_install_precons()
 	_build_hub()
 	_build_vs()
@@ -87,7 +86,7 @@ func _ready() -> void:
 	_show("hub")
 
 
-## The eight Commander precon starter decks ship with the game (res://data/precons); any that aren't saved on
+## The nine Commander precon starter decks ship with the game (res://data/precons); any that aren't saved on
 ## this computer yet are saved now, and the starter decks they replaced are deleted.
 func _install_precons() -> void:
 	var res: Dictionary = PreconDecks.new().install()
@@ -441,10 +440,14 @@ func _deck_button(rec: Dictionary, selected: String, is_player: bool) -> Button:
 	if str(rec.get("source", "")) == PreconDecks.SOURCE:
 		b.text = "  %s\n  %s  ·  %s" % [nm, cmd, str(rec.get("precon_set", "Precon"))]
 	elif bool(rec.get("builtin", false)):
-		b.text = "  %s  (starter)" % nm
+		b.text = "  %s\n  Random starter: a new mix of cards every game" % nm
 	else:
 		b.text = "  %s" % nm
 	b.tooltip_text = "%s — commander: %s" % [nm, cmd]
+	var problems := DeckCatalog.problems_of(rec)
+	if not problems.is_empty():
+		b.text += "\n  ⚠ Not a legal Commander deck"
+		b.tooltip_text += "\n\n" + "\n".join(problems)
 	var tex := _cmd_tex(rec)
 	if tex:
 		b.icon = tex
@@ -502,6 +505,50 @@ func _cmd_tex(rec: Dictionary) -> Texture2D:
 
 
 func _on_start_vs() -> void:
+	## A deck that was deleted or can't be read is reported (it used to be replaced by Krenko without a word), and a deck that
+	## isn't a legal Commander deck asks first. Casual games stay allowed.
+	var warnings := PackedStringArray()
+	for pair in [["Your deck", vs_player_id], ["Bot deck", vs_bot_id]]:
+		var check: Dictionary = DeckCatalog.playable(str(pair[1]))
+		if not bool(check.get("ok", false)):
+			if status_label != null:
+				status_label.text = "%s: %s Pick another deck." % [str(pair[0]), str(check.get("text", ""))]
+			_refresh_vs_lists()
+			_show_vs_notice("%s: %s Pick another deck." % [str(pair[0]), str(check.get("text", ""))])
+			return
+		var problems: PackedStringArray = check.get("problems", PackedStringArray())
+		if not problems.is_empty():
+			warnings.append("%s — %s: %s" % [str(pair[0]), str(check.get("name", "")), "; ".join(problems)])
+	if warnings.is_empty():
+		_begin_vs()
+		return
+	var dlg := ConfirmationDialog.new()
+	dlg.title = "Not a legal Commander deck"
+	dlg.dialog_text = "%s\n\nPlay anyway?" % "\n\n".join(warnings)
+	dlg.ok_button_text = "Play anyway"
+	dlg.cancel_button_text = "Back"
+	add_child(dlg)
+	dlg.confirmed.connect(_begin_vs)
+	dlg.visibility_changed.connect(func() -> void:
+		if not dlg.visible:
+			dlg.queue_free()
+	)
+	dlg.popup_centered(Vector2i(560, 0))
+
+
+func _show_vs_notice(text: String) -> void:
+	var dlg := AcceptDialog.new()
+	dlg.title = "Can't start"
+	dlg.dialog_text = text
+	add_child(dlg)
+	dlg.visibility_changed.connect(func() -> void:
+		if not dlg.visible:
+			dlg.queue_free()
+	)
+	dlg.popup_centered(Vector2i(480, 0))
+
+
+func _begin_vs() -> void:
 	var app := _app()
 	if app:
 		app.player_deck_id = vs_player_id
@@ -536,14 +583,14 @@ func _build_mp() -> void:
 	mp_connect_box = VBoxContainer.new()
 	mp_connect_box.add_theme_constant_override("separation", 12)
 	c.add_child(mp_connect_box)
-	_sub(mp_connect_box, "Play on the same network with a room code, or over the internet: host a room, send your friend the online address shown, and they type it in below.")
+	_sub(mp_connect_box, "Play on the same network with a room code, or over the internet: host a room, send your friend the online address AND the room code shown, and they type both in below.")
 	mp_code_edit = LineEdit.new()
-	mp_code_edit.placeholder_text = "Room code (leave blank to generate)"
+	mp_code_edit.placeholder_text = "Room code (to host, leave blank to generate one)"
 	mp_code_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mp_code_edit.max_length = 8
 	mp_connect_box.add_child(mp_code_edit)
 	mp_ip_edit = LineEdit.new()
-	mp_ip_edit.placeholder_text = "Host's online address, e.g. 203.0.113.5 (blank = same network, uses the room code)"
+	mp_ip_edit.placeholder_text = "Host's online address, e.g. 203.0.113.5 (blank = same network)"
 	mp_ip_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mp_connect_box.add_child(mp_ip_edit)
 	var row := HBoxContainer.new()
@@ -672,8 +719,8 @@ func _on_mp_join() -> void:
 	if net == null:
 		return
 	var code := mp_code_edit.text.strip_edges()
-	if code == "" and mp_ip_edit.text.strip_edges() == "":
-		mp_status.text = "Enter a room code (same network) or the host's online address."
+	if code == "":
+		mp_status.text = "Enter the room code your friend gave you (and their online address if you are not on the same network)."
 		return
 	net.join_room(code, mp_ip_edit.text)
 	mp_status.text = net.last_status
@@ -823,7 +870,6 @@ func _refresh_gallery() -> void:
 		var ch := gallery_grid.get_child(0)
 		gallery_grid.remove_child(ch)
 		ch.queue_free()
-	DeckStore.new().purge_test_decks()
 	var recs: Array = DeckStore.new().list_decks()
 	if recs.is_empty():
 		var empty := Label.new()
@@ -837,7 +883,7 @@ func _refresh_gallery() -> void:
 
 func _gallery_card(rec: Dictionary) -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(240, 280)
+	panel.custom_minimum_size = Vector2(240, 310)
 	var st := StyleBoxFlat.new()
 	st.bg_color = Color(0.12, 0.11, 0.10)
 	st.set_corner_radius_all(10)
@@ -861,7 +907,19 @@ func _gallery_card(rec: Dictionary) -> PanelContainer:
 	name_edit.text = default_nm
 	name_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var path := str(rec.get("_path", ""))
-	name_edit.text_submitted.connect(func(n): DeckStore.new().rename(path, n))
+	## The new name is kept when you press Enter or click away; a name that can't be saved goes back to the old one.
+	var shown := {"name": default_nm}  ## a Dictionary, because a lambda gets a copy of plain variables
+	var rename_now := func(n: String) -> void:
+		if n.strip_edges() == str(shown.name).strip_edges():
+			return
+		var store := DeckStore.new()
+		if store.rename(path, n):
+			shown.name = DeckText.sanitize_name(n)
+		elif status_label != null:
+			status_label.text = store.last_error
+		name_edit.text = str(shown.name)
+	name_edit.text_submitted.connect(rename_now)
+	name_edit.focus_exited.connect(func() -> void: rename_now.call(name_edit.text))
 	col.add_child(name_edit)
 	var meta := Label.new()
 	meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -878,6 +936,13 @@ func _gallery_card(rec: Dictionary) -> PanelContainer:
 					total += int(e.get("quantity", 1))
 		total += 1
 	meta.text = "%s  ·  %d cards" % [DeckCatalog.commander_name(rec), total]
+	var problems := DeckCatalog.problems_of(rec)
+	if not problems.is_empty():
+		meta.text += "\n⚠ " + problems[0] + ("  (+%d more)" % (problems.size() - 1) if problems.size() > 1 else "")
+		meta.add_theme_color_override("font_color", Color(0.95, 0.62, 0.30))
+		meta.tooltip_text = "\n".join(problems)
+		meta.mouse_filter = Control.MOUSE_FILTER_PASS
+		meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(meta)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -890,14 +955,53 @@ func _gallery_card(rec: Dictionary) -> PanelContainer:
 	row.add_child(play)
 	var del := Button.new()
 	del.text = "Delete"
-	del.pressed.connect(func():
-		DeckStore.new().delete_path(path)
-		_refresh_gallery()
-	)
+	del.pressed.connect(func(): _confirm_delete_deck(path, default_nm))
 	row.add_child(del)
 	col.add_child(row)
+	var row2 := HBoxContainer.new()
+	row2.alignment = BoxContainer.ALIGNMENT_CENTER
+	var copy_btn := Button.new()
+	copy_btn.text = "Copy deck"
+	copy_btn.tooltip_text = "Make your own copy of this deck to change."
+	copy_btn.pressed.connect(func() -> void:
+		var store := DeckStore.new()
+		if store.duplicate(path) == "" and status_label != null:
+			status_label.text = store.last_error
+		_refresh_gallery()
+	)
+	row2.add_child(copy_btn)
+	var export_btn := Button.new()
+	export_btn.text = "Copy list"
+	export_btn.tooltip_text = "Copy the decklist as text to the clipboard, to paste into any deck site or the Import window."
+	export_btn.pressed.connect(func() -> void:
+		DisplayServer.clipboard_set(DeckStore.export_text(DeckStore.new().load_path(path)))
+		export_btn.text = "Copied!"
+	)
+	row2.add_child(export_btn)
+	col.add_child(row2)
 	panel.add_child(col)
 	return panel
+
+
+## Deleting a deck asks first: one mis-tap must not lose a 100-card deck.
+func _confirm_delete_deck(path: String, deck_name: String) -> void:
+	var dlg := ConfirmationDialog.new()
+	dlg.title = "Delete deck"
+	dlg.dialog_text = "Delete \"%s\"? This can't be undone." % deck_name
+	dlg.ok_button_text = "Delete"
+	dlg.cancel_button_text = "Keep"
+	add_child(dlg)
+	dlg.confirmed.connect(func() -> void:
+		var store := DeckStore.new()
+		if not store.delete_path(path) and status_label != null:
+			status_label.text = "Could not delete \"%s\"." % deck_name
+		_refresh_gallery()
+	)
+	dlg.visibility_changed.connect(func() -> void:
+		if not dlg.visible:
+			dlg.queue_free()
+	)
+	dlg.popup_centered()
 
 
 func _build_builder() -> void:
@@ -952,6 +1056,9 @@ func _on_cmd_search(q: String) -> void:
 			var row: Dictionary = cat.cards_by_name[key]
 			var tl := str(row.get("type_line", ""))
 			if tl.find("Legendary") < 0 and tl.find("Background") < 0:
+				continue
+			## Only cards that are legal in Commander at all (it listed banned and silver-border legends too).
+			if not bool(row.get("commander_legal", false)):
 				continue
 			builder_cmd_list.add_item(str(row.get("name", key)))
 			n += 1
@@ -1018,7 +1125,10 @@ func _on_save_builder() -> void:
 		deck.add_main(str(k), int(builder_cards[k]))
 	var resolved: Dictionary = ScryfallResolver.new().resolve(deck, true)
 	var val: Dictionary = CommanderValidator.new().validate(deck, resolved.get("rows", {}), resolved.get("unresolved", PackedStringArray()))
-	DeckStore.new().save(deck, resolved.get("rows", {}), val)
+	var builder_store := DeckStore.new()
+	if builder_store.save(deck, resolved.get("rows", {}), val) == "":
+		builder_count.text = "Could not save the deck. %s" % builder_store.last_error
+		return
 	_show("gallery")
 
 
@@ -1112,7 +1222,7 @@ func _on_mp_copy_address() -> void:
 		mp_status.text = "Host a room first; the address appears once it is known."
 		return
 	DisplayServer.clipboard_set(addr)
-	mp_status.text = "Copied address %s. Send it to your friend." % addr
+	mp_status.text = "Copied address %s. Send it to your friend together with the room code." % addr
 
 
 func _on_menu_node_added(node: Node) -> void:

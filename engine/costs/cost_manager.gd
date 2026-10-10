@@ -97,6 +97,11 @@ func pay(obj: GameObject, ability: Ability) -> bool:
 				if st2 == null:
 					break
 				var victim: GameObject = pick[k]
+				## "X is the sacrificed creature's power" (Ghoulcaller Gisa): remembered for the ability that is being paid for.
+				if victim.definition is CardDefinition:
+					obj.marks["sac_power"] = int(obj.marks.get("sac_power", 0)) + (victim.definition as CardDefinition).power.to_int() + victim.counters.get("+1/+1", 0)
+				if cost.kind == &"SACRIFICE":
+					victim.marks["sacrificed"] = true  ## read by "Whenever you sacrifice a ..." (see TriggerManager)
 				st2.zones.move(victim.object_id, EngineEnums.ZoneId.HAND if cost.kind == &"RETURN_OWN" else EngineEnums.ZoneId.GRAVEYARD, victim.owner_id)
 		elif cost.kind == &"UNTAP_PERMANENTS":
 			var untap_list := _tapped_candidates(obj, str(cost.mana))

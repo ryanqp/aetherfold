@@ -6,7 +6,7 @@ extends RefCounted
 ## Called by AbilityExecutor for kinds it doesn't know (after KeywordEffects). An effect that asks the player
 ## something asks first and changes the game after: a paused effect runs again from its start once answered.
 
-const KINDS := ["MODAL", "POWER_DAMAGE_EACH", "CAST_FREE_FROM_HAND", "PAY_OPTIONAL", "GRANT_FLASH",
+const KINDS := ["REVEAL_TOP_BRANCH", "DRAW_HAND_SIZE", "WHEEL_GREATEST", "CHOOSE_RANDOM_OPPONENT", "EACH_DAMAGES_CONTROLLER", "SWAP_LIFE_TOTALS", "FIGHT_PAIRS", "EACH_PLAYER_CHOOSES", "DESTROY_CHOSEN", "PERMIT_GRAVEYARD_CAST", "MODAL", "POWER_DAMAGE_EACH", "CAST_FREE_FROM_HAND", "PAY_OPTIONAL", "GRANT_FLASH",
 	"GAIN_KEYWORD_CHOICE", "BECOME_COPY", "EXILE_CARD", "GRAVEYARD_EXILED_WITH", "REVEAL_TOP_CAST_FREE",
 	"EXILE_TOP_EACH_CAST_FREE", "RIOT"]
 
@@ -17,6 +17,96 @@ static func handles(kind: String) -> bool:
 
 static func apply(ex: AbilityExecutor, engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
 	match str(fx.kind):
+		"SWAP_LIFE_TOTALS":
+			## "Two target players exchange life totals." (CR 119.7): each gets the other's total.
+			var ta := int(fx.params.get("a", 0))
+			var tb := int(fx.params.get("b", 1))
+			if ta < entry.targets.size() and tb < entry.targets.size():
+				var pa := TargetingManager.decode_player(int(entry.targets[ta]))
+				var pb := TargetingManager.decode_player(int(entry.targets[tb]))
+				if pa >= 0 and pb >= 0 and pa != pb:
+					var la: int = engine.state.players[pa].life
+					var lb: int = engine.state.players[pb].life
+					engine.state.players[pa].life = lb
+					engine.state.players[pb].life = la
+					entry.ctx["life_diff"] = absi(la - lb)
+					engine.state.log.append(EngineEnums.EventType.LIFE_CHANGE, entry.controller_id, {to_player = pa, amount = la - lb})
+					engine.state.log.append(EngineEnums.EventType.LIFE_CHANGE, entry.controller_id, {to_player = pb, amount = lb - la})
+					if engine.sba != null:
+						engine.sba.check(engine)
+		"REVEAL_TOP_BRANCH":
+			## Coiling Oracle / Thrasios: reveal the top card; a land goes onto the battlefield, anything else to your hand.
+			var rlib: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.LIBRARY, entry.controller_id)
+			if rlib != null and not rlib.is_empty():
+				var rtop: GameObject = engine.state.objects.get(int(rlib.object_ids[0]))
+				if rtop != null and rtop.definition is CardDefinition:
+					if (rtop.definition as CardDefinition).is_land():
+						var rland: GameObject = engine.state.zones.move(rtop.object_id, EngineEnums.ZoneId.BATTLEFIELD, entry.controller_id)
+						if rland != null and bool(fx.params.get("tapped", false)):
+							rland.tapped = true
+					elif bool(fx.params.get("draw", false)):
+						engine.draw_card(entry.controller_id)
+					else:
+						engine.state.zones.move(rtop.object_id, EngineEnums.ZoneId.HAND, entry.controller_id)
+		"DRAW_HAND_SIZE":
+			## Ancient Excavation: draw as many cards as are in your hand; the discard that follows matches what was drawn.
+			var dhz: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, entry.controller_id)
+			var dn := dhz.size() if dhz != null else 0
+			var got := 0
+			for _k in dn:
+				if engine.draw_card(entry.controller_id) != null:
+					got += 1
+			entry.ctx["drawn_this_way"] = got
+		"WHEEL_GREATEST":
+			## Windfall: everyone discards their hand, then draws as many as the biggest hand discarded.
+			var most := 0
+			var live: Array = []
+			for wp in engine.state.players:
+				if wp.lost:
+					continue
+				live.append(wp.player_id)
+				var hz: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.HAND, wp.player_id)
+				if hz == null:
+					continue
+				var hand_ids: Array = hz.object_ids.duplicate()
+				most = maxi(most, hand_ids.size())
+				for hid in hand_ids:
+					engine.discard_card(wp.player_id, int(hid))
+			for wpid in live:
+				for _d in most:
+					engine.draw_card(int(wpid))
+		"CHOOSE_RANDOM_OPPONENT":
+			## "Choose an opponent at random" (Vial Smasher the Fierce): remembered for "that player" later in the ability.
+			var rivals: Array = []
+			for rp in engine.state.players:
+				if rp.player_id != entry.controller_id and not rp.lost:
+					rivals.append(rp.player_id)
+			if not rivals.is_empty():
+				entry.ctx["chosen_opponent"] = int(rivals[engine.state.rng.randi_range(0, rivals.size() - 1)])
+		"EACH_DAMAGES_CONTROLLER":
+			## "Each creature deals 1 damage to its controller" (Rakdos Charm).
+			var each_n := int(ex._value(engine, entry, source, fx.params.get("n", 1)))
+			var bfz: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+			for eid in bfz.object_ids.duplicate():
+				var ec: GameObject = engine.state.objects.get(eid)
+				if ec != null and engine.is_creature_now(ec):
+					ex._damage_player(engine, entry, ec.controller_id, each_n)
+		"FIGHT_PAIRS":
+			_fight_pairs(ex, engine, entry, source, fx)
+		"EACH_PLAYER_CHOOSES":
+			_each_player_chooses(ex, engine, entry, source, fx)
+		"DESTROY_CHOSEN":
+			for cid in entry.ctx.get("chosen_ids", []):
+				var victim: GameObject = engine.state.objects.get(int(cid))
+				if victim != null and victim.zone == EngineEnums.ZoneId.BATTLEFIELD:
+					engine.destroy_permanent(victim)
+			if engine.sba != null:
+				engine.sba.check(engine)
+		"PERMIT_GRAVEYARD_CAST":
+			## Zul Ashur: "You may cast target Zombie creature card from your graveyard this turn."
+			var pcard := ex._object_ref(engine, entry, source, fx.params.get("target", 0))
+			if pcard != null and pcard.zone == EngineEnums.ZoneId.GRAVEYARD:
+				pcard.marks["graveyard_cast_turn"] = engine.state.turn_number
 		"MODAL":
 			_modal(ex, engine, entry, source, fx)
 		"POWER_DAMAGE_EACH":
@@ -44,10 +134,77 @@ static func apply(ex: AbilityExecutor, engine: RulesEngine, entry: StackEntry, s
 			_riot(ex, engine, entry)
 
 
+## "For each creature your opponents control, create a 4/4 Beast. Each of those tokens fights a different one of those creatures."
+## The i-th token made by this spell fights the i-th matching creature.
+static func _fight_pairs(ex: AbilityExecutor, engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var tokens: Array = entry.ctx.get("created_ids", [])
+	var targets: Array = ex._each(engine, entry, source, fx.params.get("query", {}))
+	for i in mini(tokens.size(), targets.size()):
+		var a: GameObject = engine.state.objects.get(int(tokens[i]))
+		var b: GameObject = targets[i]
+		if a == null or b == null or a.zone != EngineEnums.ZoneId.BATTLEFIELD or b.zone != EngineEnums.ZoneId.BATTLEFIELD:
+			continue
+		var pa := engine.power_of(a)
+		var pb := engine.power_of(b)
+		engine.damage_object(a, b, pa)
+		engine.damage_object(b, a, pb)
+	if engine.sba != null:
+		engine.sba.check(engine)
+
+
+## "Starting with the next opponent in turn order, each player chooses a creature you don't control": every player picks one
+## matching creature (a person is asked; the bot picks the biggest threat for the caster and its own weakest for itself).
+## The picks are remembered for DESTROY_CHOSEN.
+static func _each_player_chooses(ex: AbilityExecutor, engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
+	var picked: Array = entry.ctx.get("chosen_ids", [])
+	var order: Array = []
+	for step in range(1, engine.state.players.size() + 1):
+		order.append((entry.controller_id + step) % engine.state.players.size())
+	for pid in order:
+		if engine.state.players[int(pid)].lost:
+			continue
+		var link := "choose_%d" % int(pid)
+		var pool: Array = []
+		for o in ex._each(engine, entry, source, fx.params.get("query", {})):
+			if not picked.has((o as GameObject).object_id):
+				pool.append(o)
+		if pool.is_empty():
+			continue
+		var options: Array = []
+		for o2 in pool:
+			options.append(ex._card_option(engine, (o2 as GameObject).object_id))
+		var ans := ex._ask(engine, entry, int(pid), link, "Choose a creature you don't control... (it will be destroyed)", options)
+		if ans.s == "paused":
+			return
+		if ans.s == "picked":
+			picked.append(int(ans.value))
+			continue
+		## No person to ask: the caster takes the strongest, anyone else gives up their weakest.
+		var best: GameObject = null
+		for o3 in pool:
+			var obj: GameObject = o3
+			if best == null:
+				best = obj
+			elif int(pid) == entry.controller_id:
+				if engine.power_of(obj) > engine.power_of(best):
+					best = obj
+			elif engine.power_of(obj) < engine.power_of(best):
+				best = obj
+		if best != null:
+			picked.append(best.object_id)
+	entry.ctx["chosen_ids"] = picked
+
+
 # --- Modal spells (CR 700.2) ----------------------------------------------------------------------------
 
 ## "Choose one / three. You may choose the same mode more than once. If you control a commander, you may choose
 ## both instead." The modes are picked as the spell resolves (targets of a mode too), then run in printed order.
+static func _mode_used_this_turn(engine: RulesEngine, source: GameObject, mode_index: int) -> bool:
+	if source == null or int(source.marks.get("modes_used_turn", -1)) != engine.state.turn_number:
+		return false
+	return (source.marks.get("modes_used", []) as Array).has(mode_index)
+
+
 static func _modal(ex: AbilityExecutor, engine: RulesEngine, entry: StackEntry, source: GameObject, fx: AbilityEffect) -> void:
 	var pid := entry.controller_id
 	var modes: Array = fx.params.get("modes", [])
@@ -84,6 +241,8 @@ static func _modal(ex: AbilityExecutor, engine: RulesEngine, entry: StackEntry, 
 			for i in modes.size():
 				if picks.has(i) and not bool(fx.params.get("repeat", false)):
 					continue
+				if bool(fx.params.get("no_repeat_turn", false)) and _mode_used_this_turn(engine, source, i):
+					continue
 				options.append({"value": i, "label": _short(str((modes[i] as Dictionary).get("text", "Mode"))), "detail": str((modes[i] as Dictionary).get("text", ""))})
 			if options.is_empty():
 				break
@@ -108,6 +267,14 @@ static func _modal(ex: AbilityExecutor, engine: RulesEngine, entry: StackEntry, 
 				break
 			picks.append(int(ans2.value))
 		picks.sort()
+	## "Choose one that hasn't been chosen this turn" (Parapet Thrasher): remember which modes were taken.
+	if bool(fx.params.get("no_repeat_turn", false)) and source != null:
+		var used: Array = source.marks.get("modes_used", []) if int(source.marks.get("modes_used_turn", -1)) == engine.state.turn_number else []
+		for pk in picks:
+			if not used.has(int(pk)):
+				used.append(int(pk))
+		source.marks["modes_used"] = used
+		source.marks["modes_used_turn"] = engine.state.turn_number
 	## Targets of each chosen mode.
 	var chosen_targets: Array = []
 	for k in picks.size():
@@ -271,6 +438,30 @@ static func _cast_free_from_hand(ex: AbilityExecutor, engine: RulesEngine, entry
 static func _pay_optional(ex: AbilityExecutor, engine: RulesEngine, entry: StackEntry, fx: AbilityEffect) -> void:
 	var pid := entry.controller_id
 	var link := str(fx.params.get("link", "paid"))
+	## Energy or life instead of mana: "you may pay {E}{E}" / "you may pay 2 life".
+	if fx.params.has("energy") or fx.params.has("life"):
+		var ps: PlayerState = engine.state.players[pid]
+		var energy := int(fx.params.get("energy", 0))
+		var psrc: GameObject = engine.state.objects.get(entry.source_id)
+		var life := ex._value(engine, entry, psrc, fx.params.get("life", 0))
+		if (energy > 0 and ps.energy < energy) or (fx.params.has("life") and ps.life < life):
+			entry.choices[link] = false
+			return
+		var what := ("{E}".repeat(energy) + " (you have %d)" % ps.energy) if energy > 0 else "%d life" % life
+		var pans := ex._ask_yes_no(engine, entry, pid, link + "_q", "Pay %s?" % what)
+		if pans.s == "paused":
+			return
+		var pyes := true if pans.s == "auto" else bool(pans.value)
+		if pyes:
+			if energy > 0:
+				ps.energy -= energy
+			else:
+				var lf := AbilityEffect.new()
+				lf.kind = &"LOSE_LIFE"
+				lf.params = {"n": life, "who": "CONTROLLER"}
+				ex._apply(engine, entry, psrc, lf)
+		entry.choices[link] = pyes
+		return
 	var cost := ManaCost.parse(str(fx.params.get("cost", "")))
 	if not engine.can_afford(pid, cost):
 		entry.choices[link] = false
@@ -314,16 +505,33 @@ static func _become_copy(ex: AbilityExecutor, engine: RulesEngine, entry: StackE
 		return
 	if ans.s == "auto" and engine.power_of(target) <= engine.power_of(source):
 		return
-	var effect := ContinuousEffect.new()
-	effect.object_ids = [source.object_id]
-	effect.source_id = source.object_id
-	effect.controller_id = entry.controller_id
-	effect.until_eot = false
-	effect.timestamp = engine.state.next_timestamp
-	engine.state.next_timestamp += 1
-	effect.copy_def = target.definition as CardDefinition
-	effect.keep_ability_ids = [str(entry.ability_id)]
-	engine.state.effects.append(effect)
+	## CR 707.2: it takes the copiable values of the other permanent (no duration here, so for good), "except its name is ~ and it has
+	## this ability": the name stays and the copying ability is kept next to the copied ones.
+	var own: CardDefinition = source.definition as CardDefinition
+	var copy := (target.definition as CardDefinition).copy_def()
+	copy.name = own.name
+	var kept: Ability = null
+	for a in own.abilities:
+		if a is Ability and str((a as Ability).ability_id) == str(entry.ability_id):
+			kept = a
+	if kept == null:
+		## Not found by id (an ability put on the stack by hand): the one that holds this effect.
+		for a in own.abilities:
+			if a is Ability:
+				for e in (a as Ability).effects:
+					if (e as AbilityEffect).kind == &"BECOME_COPY":
+						kept = a
+	if kept != null:
+		var abilities: Array = []
+		for a in copy.abilities:
+			if not (a is Ability and str((a as Ability).ability_id) == str(kept.ability_id)):
+				abilities.append(a)
+		abilities.append(kept)
+		copy.abilities = abilities
+	## "... until end of turn": the printed card comes back at cleanup (LayerManager.clear_until_eot).
+	if str(fx.params.get("duration", "")) == "END_OF_TURN" and not source.marks.has("copy_revert"):
+		source.marks["copy_revert"] = own
+	source.definition = copy
 	if engine.sba != null:
 		engine.sba.check(engine)
 

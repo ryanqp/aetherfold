@@ -104,3 +104,43 @@ Scryfall's `color_identity` array (for example `["W","U"]`) can be passed as `""
 * **Recolor everything:** edit `ManaPalette.swatch()` (the deep / base / light / accent colors for each mana color).
 * **Change a color's personality:** edit `ManaPalette.traits()`. For example, give Blue a little `cell_amount` for an icy, cracked look.
 * **Change the overall look:** adjust `pattern_scale`, `sigil_amount` and `brightness` in the Inspector, or the shader's `vignette_strength` and `grain_strength`.
+
+---
+
+# Living Battlefield
+
+This is the table's default playmat. It shows **your commander's painted mat brought to life**, as a cinemagraph. The art is the real painting from `assets/playmats`, at full quality. The animation moves and lights the painting's own pixels instead of drawing over them:
+
+* **Water** ripples and flows, with soft glints of light.
+* **Lava, fire and torches** breathe, flicker and give off heat haze.
+* **Leaves and grass** sway in gusts, with dappled light moving across them.
+* **Across the whole scene:** cloud shadows drift, fog banks roll, god rays shift, and stormy scenes get lightning.
+* Each scene has its own **particles**: embers, ash, snow, fireflies, spores, petals, dust or motes of light.
+
+To choose a mat, use **Menu ▸ Playmat**. It cycles **Battlefield → Aether → Painted** (Painted is the same picture, still) and saves the choice in `user://player.cfg`.
+
+| File | What it is |
+|---|---|
+| `scripts/playmat/living_battlefield.gdshader` | The animation shader, plus the soft "portal" dissolve when the identity changes |
+| `scripts/playmat/living_battlefield.gd` | `LivingBattlefield`: attach it to a `ColorRect`. Its API is `identity`, `set_identity()`, `pulse()`, `paused`, `orient`, `fit`, `liveliness` and `art_dir` |
+| `scripts/playmat/battlefield_scenes.gd` | `BattlefieldScenes`: what comes alive in each of the 32 paintings (strengths, flow direction, fog colour, particles) |
+| `scripts/playmat/art_masks.gd` | `ArtMasks`: finds water, lava/fire, foliage and sky in a painting automatically, then caches the result in `user://playmat_masks` |
+| `scripts/playmat/battlefield_demo.gd` + `scenes/battlefield_demo.tscn` | A gallery of all 32. Click one to view it full screen |
+
+**Try it:** open `scenes/battlefield_demo.tscn` and press **F6**. Click a scene. Use ←/→ to dissolve to the next identity, Space to pulse, O for orientation, L for liveliness, P to pause and Esc to go back.
+
+## Using your own paintings
+
+Put 32 images in a folder, named like the felt mats (`White.jpg`, `White-Blue.jpg`, …, `Colorless.jpg`, `White-Blue-Black-Red-Green.jpg`). Then point `art_dir` at that folder; for the table, set it in `_make_field` in `scripts/table.gd`. The water, lava, foliage and sky areas are detected from each new image, so the animation follows the new art. If a painting's content differs a lot from the old one (for example a vista with sky instead of a top-down arena), retune its entry in `BattlefieldScenes.PRESETS`, such as `sky_amount` or the particles.
+
+## On the table
+
+* The rival's mat is **rotated 180°** (`orient = 2`), so each player sees the arena from their own side.
+* `fit = 1.0` crops the painting to the wide field instead of stretching it. `0` shows the whole painting, squeezed.
+* `brightness = 0.85` keeps cards readable.
+* The mat flashes red when life is lost and gold when it's gained.
+
+## Notes
+
+* The first time an identity's painting is used, its effect map is built. That takes about 0.2 s per painting, after which it is saved and loads instantly. If you change the detection rules in `art_masks.gd`, bump `ArtMasks.VERSION` so the saved maps are rebuilt.
+* `liveliness` (0–1.5) scales every effect at once. `drift` controls the slow camera breathing; set it to 0 for a locked frame.

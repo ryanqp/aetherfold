@@ -54,6 +54,9 @@ static func parse(s: String) -> ManaCost:
 					c.colorless += 1
 				"X":
 					c.x += 1
+				## Snow mana (CR 107.4h) is paid as one generic: the pool doesn't track which mana came from snow sources.
+				"S":
+					c.generic += 1
 				_:
 					pass
 	return c

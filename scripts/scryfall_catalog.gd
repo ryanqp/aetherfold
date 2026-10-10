@@ -1,8 +1,11 @@
 extends Node
 
-## Loads the lean Scryfall Oracle catalog from D: so the Godot project on C: stays small.
-const DATA_DIR := "D:/AetherfoldData/scryfall"
+## Loads the lean Scryfall Oracle catalog. The catalog ships inside the game (res://data/scryfall, exported with it), so every
+## player has the same cards on every platform. Card art is downloaded on demand into user://card_art; the pictures kept in
+## res://data/scryfall/images are only a development convenience (that folder is hidden from the exporter).
 const PROJECT_DATA_DIR := "res://data/scryfall"
+const ART_CACHE_DIR := "user://card_art"
+const NOT_GAME_LAYOUTS := ["art_series", "token", "double_faced_token", "emblem", "vanguard", "scheme", "planar", "reversible_card"]
 const CATALOG_FILE := "catalog.jsonl"
 const META_FILE := "meta.json"
 
@@ -15,11 +18,16 @@ var meta: Dictionary = {}
 var cards_by_name: Dictionary = {}
 var cards_by_id: Dictionary = {}
 var _textures: Dictionary = {}
+## Least recently used first. A full-art texture is over a megabyte, so only the newest MAX_TEXTURES are kept in memory (AUDIT-020).
+var _texture_order: Array = []
+const MAX_TEXTURES := 200
 var _http: HTTPRequest
 var _download_queue: Array = []
 var _download_busy := false
 var _download_dest := ""
 var _download_card_id := ""
+const RETRY_AFTER_MS := 300000
+var _failed_until: Dictionary = {}  ## picture path -> the time (msec) it may be requested again
 
 func _ready() -> void:
 	_http = HTTPRequest.new()
@@ -37,12 +45,8 @@ func data_dir() -> String:
 	var override := OS.get_environment("AETHERFOLD_SCRYFALL_DIR").strip_edges()
 	if override != "":
 		return override.replace("\\", "/")
-	## The card data and art ship with the project (res://data/scryfall), so every player has the same cards.
-	## The older copy at D:/AetherfoldData/scryfall is only a fallback.
-	var shipped := ProjectSettings.globalize_path(PROJECT_DATA_DIR)
-	if FileAccess.file_exists(shipped.path_join(CATALOG_FILE)):
-		return shipped
-	return DATA_DIR
+	## res:// is read directly (never turned into a disk path), so it works inside an exported game too.
+	return PROJECT_DATA_DIR
 
 ## Emitted once the catalog is available (right away in headless runs, after a background load in the game).
 signal catalog_ready
@@ -99,6 +103,10 @@ func _parse_catalog() -> Dictionary:
 		var card: Variant = JSON.parse_string(line)
 		if typeof(card) != TYPE_DICTIONARY:
 			continue
+		## Art cards, tokens, emblems and the like are not cards you can put in a deck; they must never answer to a real
+		## card's name ("Delver of Secrets" used to find the art card).
+		if str(card.get("layout", "normal")) in NOT_GAME_LAYOUTS:
+			continue
 		var cid := str(card.get("id", ""))
 		if cid != "":
 			by_id[cid] = card
@@ -110,9 +118,11 @@ func _parse_catalog() -> Dictionary:
 		var faces: Variant = card.get("faces", [])
 		if faces is Array:
 			for face in faces:
-				if _normalize(str(face)) == _normalize(str(card.get("name", ""))):
+				## A face is {name, mana_cost, type_line, oracle_text, ...} (older catalogs listed bare names).
+				var face_name := str((face as Dictionary).get("name", "")) if face is Dictionary else str(face)
+				if _normalize(face_name) == _normalize(str(card.get("name", ""))):
 					continue
-				_index_name(by_name, str(face), card, false)
+				_index_name(by_name, face_name, card, false)
 	res.count = loaded_cards.size()
 	res.ok = loaded_cards.size() > 0
 	if not res.ok:
@@ -176,8 +186,15 @@ func status_text() -> String:
 		return "Scryfall: %d cards (oracle %s)" % [card_count, updated.substr(0, 10)]
 	return "Scryfall: not loaded — %s" % load_error
 
+## Where downloaded art is written: always the player's own data folder, never the game's files.
 func image_dir() -> String:
-	return data_dir().path_join("images")
+	return ART_CACHE_DIR
+
+
+## Pictures that may already exist: the download cache first, then the ones kept with the project during development.
+func _image_candidates(cid: String, kind: String) -> PackedStringArray:
+	var file := "%s_%s.jpg" % [cid, kind]
+	return PackedStringArray([ART_CACHE_DIR.path_join(file), data_dir().path_join("images").path_join(file)])
 
 func scryfall_id_of(card: Dictionary) -> String:
 	var cid := str(card.get("scryfall_id", "")).strip_edges()
@@ -194,17 +211,28 @@ func texture_for(card: Dictionary, kind: String = "small") -> Texture2D:
 		return null
 	var path := image_dir().path_join("%s_%s.jpg" % [cid, kind])
 	if _textures.has(path):
+		_remember_texture(path, _textures[path])
 		return _textures[path]
-	if FileAccess.file_exists(path):
-		var img := Image.new()
-		if img.load(path) == OK:
-			var tex := ImageTexture.create_from_image(img)
-			_textures[path] = tex
-			return tex
+	for candidate in _image_candidates(cid, kind):
+		if FileAccess.file_exists(candidate):
+			var img := Image.new()
+			if img.load(candidate) == OK:
+				var tex := ImageTexture.create_from_image(img)
+				_remember_texture(path, tex)
+				return tex
 	_queue_image(card, kind, path)
 	if kind != "small":
 		return texture_for(card, "small")
 	return null
+
+## Keeps `tex` as the most recently used picture, and drops the oldest ones past the limit.
+func _remember_texture(path: String, tex: Texture2D) -> void:
+	_textures[path] = tex
+	_texture_order.erase(path)
+	_texture_order.append(path)
+	while _texture_order.size() > MAX_TEXTURES:
+		_textures.erase(_texture_order.pop_front())
+
 
 func _queue_image(card: Dictionary, kind: String, dest: String) -> void:
 	var images: Variant = card.get("images", {})
@@ -219,6 +247,9 @@ func _queue_image(card: Dictionary, kind: String, dest: String) -> void:
 	for item in _download_queue:
 		if str(item.get("dest", "")) == dest:
 			return
+	## A picture that failed to download (offline, 404) is not asked for again for a few minutes.
+	if Time.get_ticks_msec() < int(_failed_until.get(dest, 0)):
+		return
 	_download_queue.append({"url": url, "dest": dest, "card_id": scryfall_id_of(card)})
 	_pump_downloads()
 
@@ -247,8 +278,10 @@ func _on_image_downloaded(result: int, code: int, _headers: PackedStringArray, b
 			file.close()
 		var img := Image.new()
 		if img.load_jpg_from_buffer(body) == OK or img.load(dest) == OK:
-			_textures[dest] = ImageTexture.create_from_image(img)
+			_remember_texture(dest, ImageTexture.create_from_image(img))
 		art_updated.emit(cid)
+	else:
+		_failed_until[dest] = Time.get_ticks_msec() + RETRY_AFTER_MS
 	_pump_downloads()
 
 

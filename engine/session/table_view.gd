@@ -7,6 +7,8 @@ const RIVAL_TEAL := Color(0.18, 0.42, 0.48)
 
 var you: Dictionary = {}
 var rival: Dictionary = {}
+## The rival seat before face-down cards are masked (host side only, for the rival's own client).
+var rival_full: Dictionary = {}
 var turn: int = 1
 var active_is_you: bool = true
 var phase_name_str: String = "Main"
@@ -147,7 +149,10 @@ static func from_engine(engine: RulesEngine, session: GameSession) -> TableView:
 	var other := 1 if seat == 0 else 0
 	tp = Time.get_ticks_usec()
 	v.you = _player_dict(engine, seat, cat)
-	v.rival = _player_dict(engine, other, cat)
+	## The other player's face-down permanents show as nameless 2/2s here; the unmasked seat is kept for the network, so that
+	## player's own client can still look at their cards.
+	v.rival_full = _player_dict(engine, other, cat)
+	v.rival = _masked_board(v.rival_full)
 	GameSession._perf_add("view.player_dicts", tp)
 	var can_act := session != null and session.match_start == GameSession.MatchStart.MAIN_GAME \
 		and not session.draw_waiting() and not session.awaiting_blocks and not session.choosing_attackers
@@ -210,16 +215,58 @@ func to_plain() -> Dictionary:
 func to_plain_for_remote() -> Dictionary:
 	var d := to_plain()
 	d.you = _redacted_player(you)
+	## The guest's own face-down permanents are theirs to look at (CR 708.3): send the unmasked seat, not the host's masked view.
+	if not rival_full.is_empty():
+		d.rival = rival_full
 	d.you_prompt = {}  ## the host's own question (it may show hidden cards) never goes to the guest
 	return d
 
 
+## What the other player is allowed to see of a face-down permanent (CR 708.2): a nameless 2/2 creature, no rules text, no art.
+static func masked_face_down(card: Dictionary) -> Dictionary:
+	if not bool(card.get("face_down", false)):
+		return card
+	var out := card.duplicate(true)
+	out.cardId = ""
+	out.name = "Face-down creature"
+	out.type = "Creature"
+	out.text = ""
+	out.mana_cost = ""
+	out.color = ""
+	out.kind = "spell"
+	out.cmc = 0
+	out.power = "2"
+	out.toughness = "2"
+	out.badge = "face down  2/2"
+	out.scryfall_id = ""
+	out.imageUrl = ""
+	out.images = {}
+	out.playable = false
+	out.commander_tax = 0
+	out.masked = true
+	return out
+
+
+## A player's board as the OTHER player sees it: face-down permanents and face-down exiled cards are masked.
+static func _masked_board(p: Dictionary) -> Dictionary:
+	var out := p.duplicate(false)
+	for key in ["creatures", "noncreatures", "lands", "exile_cards"]:
+		var pile: Array = []
+		for c in p.get(key, []):
+			pile.append(masked_face_down(c))
+		out[key] = pile
+	return out
+
+
 static func _redacted_player(p: Dictionary) -> Dictionary:
-	var out := p.duplicate(true)
+	var out := _masked_board(p.duplicate(true))
 	out.hand = _redacted_hand(p.get("hand", []))
+	## The top card of a library is private unless the player plays with it revealed.
+	if not bool(p.get("library_top_public", false)):
+		out.library_top = {}
 	## A hideaway card in exile is hidden from the other player.
 	var pile: Array = []
-	for c in p.get("exile_cards", []):
+	for c in out.get("exile_cards", []):
 		if bool((c as Dictionary).get("hideaway", false)):
 			pile.append({hidden = true, id = str((c as Dictionary).get("id", "")), hideaway = true})
 		else:
@@ -273,6 +320,25 @@ static func from_plain(d: Dictionary) -> TableView:
 	v.attack_mode = bool(d.get("attack_mode", false))
 	v.turn_track = str(d.get("turn_track", "main1"))
 	return v
+
+
+## An empty table to draw before the first real view arrives (an online guest waiting for the host).
+static func waiting() -> TableView:
+	var v := TableView.new()
+	v.you = _blank_player("You")
+	v.rival = _blank_player("Rival")
+	v.prompt = "Waiting for the host…"
+	v.active_is_you = false
+	return v
+
+
+static func _blank_player(player_name: String) -> Dictionary:
+	return {
+		name = player_name, subtitle = "", life = 40, library = 0, library_top = {}, library_top_public = false,
+		graveyard = 0, exile = 0, command = [], creatures = [], noncreatures = [], lands = [], hand = [],
+		untapped_lands = 0, mana = 0, status = "", identity = [], mulligans = 0, graveyard_cards = [], exile_cards = [],
+		cmdr_damage = [], cmdr_need = 21, lost = false, lose_reason = "",
+	}
 
 
 static func _player_dict(engine: RulesEngine, player_id: int, cat: Object) -> Dictionary:
@@ -359,6 +425,8 @@ static func _status(engine: RulesEngine, player_id: int) -> String:
 		parts.append("☠%d" % p.poison)
 	if p.energy > 0:
 		parts.append("⚡%d" % p.energy)
+	if p.experience > 0:
+		parts.append("Experience %d" % p.experience)
 	if p.enduring_story:
 		parts.append("Enduring story")
 	if st.monarch_id == player_id:
@@ -470,6 +538,7 @@ static func _card_dict(engine: RulesEngine, obj: GameObject, cat: Object) -> Dic
 		counters = obj.counters.duplicate(),
 		badge = _badge(engine, obj, snap, creature_now) if on_bf else "",
 		is_token = obj.is_token,
+		face_down = obj.face_down,
 		attacking = _is_attacking(engine, obj),
 		## CR 302.6: a creature can't attack unless you've controlled it since your turn began.
 		summoning_sick = on_bf and obj.summoned_this_turn and creature_now and not has_haste,

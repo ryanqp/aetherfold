@@ -11,7 +11,6 @@ Thanks for helping. This is a Godot **4.7** Commander table: a real rules kernel
 - `docs/` — how to run tests, add a card, migration status.
 - `addons/godot_ai/` — third-party editor plugin. **Do not edit it** unless you are fixing the plugin itself.
 
-`scripts/match_state.gd` is leftover prototype code. Do not add new gameplay there. See [docs/migration-status.md](docs/migration-status.md).
 
 ## Run the game
 

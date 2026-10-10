@@ -2,8 +2,6 @@
 extends McpTestSuite
 
 const Fixtures := preload("res://tests/engine/fixtures.gd")
-const RivalAI := preload("res://scripts/rival_ai.gd")
-const MatchStateScript := preload("res://scripts/match_state.gd")
 
 var db: CardDatabase
 
@@ -83,31 +81,6 @@ func test_ai_holds_unsummon_with_no_creature() -> void:
 	session.ai_take_turn(1)
 	assert_true(_names_in(engine, EngineEnums.ZoneId.HAND, 1).has("Unsummon"))
 	assert_false(_names_in(engine, EngineEnums.ZoneId.GRAVEYARD, 1).has("Unsummon"))
-
-
-func test_legacy_rival_reads_ir_effects() -> void:
-	assert_true(RivalAI._is_counterspell({"name": "Counterspell"}))
-	assert_true(RivalAI._is_counterspell({"name": "Cancel"}))
-	assert_false(RivalAI._is_counterspell({"name": "Swan Song"}))
-	assert_false(RivalAI._is_counterspell({"name": "Opt"}))
-	var state = MatchStateScript.new()
-	state.difficulty = 3
-	state.rival["hand"] = []
-	state.rival["library_cards"] = [
-		{"name": "Island", "type": "Basic Land — Island"},
-		{"name": "Island", "type": "Basic Land — Island"},
-	]
-	state.rival["library"] = 2
-	state.you["creatures"] = [{"name": "Goblin Piker", "type": "Creature — Goblin", "power": "2"}]
-	state.you["hand"] = []
-	var log := PackedStringArray()
-	RivalAI._on_spell(state, {"name": "Opt", "type": "Instant", "cmc": 1}, 3, log)
-	assert_eq(state.rival["hand"].size(), 1)
-	RivalAI._on_spell(state, {"name": "Unsummon", "type": "Instant", "cmc": 1}, 0, log)
-	assert_eq(state.you["creatures"].size(), 1)
-	RivalAI._on_spell(state, {"name": "Unsummon", "type": "Instant", "cmc": 1}, 2, log)
-	assert_eq(state.you["creatures"].size(), 0)
-	assert_eq(state.you["hand"].size(), 1)
 
 
 func _bot_ready() -> GameSession:

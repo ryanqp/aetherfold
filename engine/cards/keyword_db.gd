@@ -5,7 +5,7 @@ extends RefCounted
 ## `status` says what the engine does with it today:
 ##   ENFORCED  the engine applies the rule itself (combat, damage, targeting ...); nothing to read
 ##   READ      OracleIr turns it into an ability (equip, prowess)
-##   NONE      has no effect the engine needs (devoid, partner, ascend)
+##   NONE      has no effect the engine needs (devoid, partner)
 ##   MISSING   known, but not implemented yet; the card is listed as "not coded" with the keyword's name
 ## Add a keyword here once the engine does something with it, then change its status.
 
@@ -29,7 +29,7 @@ const KEYWORDS := {
 	"prowess": {"status": "READ", "cr": "702.108", "note": "Gets +1/+1 until end of turn whenever you cast a noncreature spell."},
 	"devoid": {"status": "NONE", "cr": "702.114", "note": "Colorless."},
 	"partner": {"status": "NONE", "cr": "702.124", "note": "Deck building only."},
-	"ascend": {"status": "NONE", "cr": "702.131", "note": "City's blessing at ten permanents."},
+	"ascend": {"status": "ENFORCED", "cr": "702.131", "note": "The city's blessing is gained at ten permanents and kept for the rest of the game (PlayerState.citys_blessing)."},
 	"ward": {"status": "ENFORCED", "cr": "702.21", "note": "Counter a spell or ability that targets it unless its controller pays the ward cost (mana or life)."},
 	"kicker": {"status": "ENFORCED", "cr": "702.33", "note": "Optional extra cost when casting; if it was kicked effects are read."},
 	"multikicker": {"status": "ENFORCED", "cr": "702.33c", "note": "Optional extra cost, paid 1 to 3 times from the cast menu."},
@@ -67,6 +67,7 @@ const KEYWORDS := {
 	"mill": {"status": "READ", "cr": "701.17", "note": "Put the top cards of a library into its graveyard."},
 	"scry": {"status": "READ", "cr": "701.22", "note": "Look at the top cards of your library."},
 	"landfall": {"status": "READ", "cr": "207.2c", "note": "Ability word: triggers when a land enters under your control."},
+	"threshold": {"status": "READ", "cr": "207.2c", "note": "Ability word: seven or more cards in your graveyard (read as that condition)."},
 	"battle cry": {"status": "READ", "cr": "702.91", "note": "Other attackers get +1/+0."},
 	"bushido": {"status": "READ", "cr": "702.45", "note": "Gets +N/+N whenever it blocks or becomes blocked."},
 	"flanking": {"status": "READ", "cr": "702.25", "note": "Blockers without flanking get -1/-1 when it becomes blocked."},
@@ -328,7 +329,7 @@ static func lookup(line: String) -> Dictionary:
 		best = "landwalk"
 	## "Plainscycling {2}", "Wizardcycling {3}" are all typecycling (CR 702.29e).
 	if best == "":
-		var cyc := RegEx.create_from_string("^[a-z]+cycling\\b").search(low)
+		var cyc := RegEx.create_from_string("^(?:basic )?[a-z]+cycling\\b").search(low)
 		if cyc != null:
 			best = "typecycling"
 	if best == "":

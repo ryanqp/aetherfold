@@ -5,7 +5,14 @@ extends RefCounted
 ## emerge, morph, madness, miracle, suspend, rebound, convoke, delve, cycling, ninjutsu, crew, ward, phasing.
 ## Card data comes from CardDefinition.kw() (see KeywordLines). Everything here runs inside RulesEngine.
 
-var engine: RulesEngine
+## The engine owns this object, so it holds the engine only weakly: a strong link back made a reference cycle that kept every
+## finished game's objects alive (AUDIT-027).
+var _engine_ref: WeakRef
+var engine: RulesEngine:
+	get:
+		return _engine_ref.get_ref() as RulesEngine if _engine_ref != null else null
+	set(value):
+		_engine_ref = weakref(value) if value != null else null
 
 
 func _init(p_engine: RulesEngine = null) -> void:
@@ -30,6 +37,21 @@ func kw_of(obj: GameObject) -> Dictionary:
 				var g: Dictionary = (sp as Dictionary)["grant_kw"]
 				for k in g.keys():
 					out[k] = g[k]
+	## "Creature spells you cast have convoke" (Dazzling Theater): a permanent lends a keyword to spells while they are cast.
+	if obj != null and obj.zone != EngineEnums.ZoneId.BATTLEFIELD and engine != null and engine.state != null and engine.state.zones != null:
+		var bfz: Zone = engine.state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+		if bfz != null:
+			for boid in bfz.object_ids:
+				var bsrc: GameObject = engine.state.objects.get(boid)
+				if bsrc == null or not (bsrc.definition is CardDefinition):
+					continue
+				for ba in (bsrc.definition as CardDefinition).abilities:
+					var bab := ba as Ability
+					if bab != null and bab.kind == &"STATIC" and bab.static_spec.has("grant_spell_kw"):
+						var gs_spec: Dictionary = bab.static_spec["grant_spell_kw"]
+						if Query._matches(obj, bsrc, gs_spec.get("query", {}) as Dictionary):
+							out = out.duplicate()
+							out[str(gs_spec.get("keyword", ""))] = true
 	return out
 
 
@@ -263,6 +285,11 @@ func _alt_cost(pid: int, obj: GameObject, def: CardDefinition, kw: Dictionary, m
 			out["return_ids"] = [rid]
 			out["sneak_defender"] = engine.defender_of(rid)
 			return _cost(str(kw.sneak))
+		"graveyard_perm":
+			if obj.zone != EngineEnums.ZoneId.GRAVEYARD or not _may_cast_from_graveyard(obj, def):
+				_fail(out, "nothing lets you cast this from your graveyard right now")
+				return null
+			return ManaCost.for_card(def.mana_cost, def.cmc)
 		"mayhem":
 			if obj.zone != EngineEnums.ZoneId.GRAVEYARD or obj.discarded_turn != st.turn_number or not kw.has("mayhem"):
 				_fail(out, "mayhem needs it discarded this turn")
@@ -362,6 +389,11 @@ func _alt_cost(pid: int, obj: GameObject, def: CardDefinition, kw: Dictionary, m
 			var oc := ManaCost.for_card(def.mana_cost, def.cmc)
 			oc.generic = maxi(0, oc.generic - _def(_obj(sac)).cmc)
 			return oc
+		"free_commander":
+			if not kw.has("free_commander") or not _controls_commander(pid):
+				_fail(out, "you don't control a commander")
+				return null
+			return ManaCost.new()
 		"alt_tap":
 			if not kw.has("alt_tap"):
 				_fail(out, "no such cost")
@@ -854,6 +886,8 @@ func cast_options(pid: int, obj: GameObject) -> Array:
 			"airbend":
 				out.append(_opt("Cast for {2}", "Airbent: {2} instead of its mana cost", {"mode": "airbent"}))
 	elif zone == EngineEnums.ZoneId.GRAVEYARD:
+		if _may_cast_from_graveyard(obj, def):
+			out.append(_opt("Cast %s" % def.mana_cost, "Allowed from your graveyard right now", {"mode": "graveyard_perm"}))
 		if kw.has("jump_start"):
 			out.append(_opt("Jump-start %s" % def.mana_cost, "Discard a card as well; exiled afterwards", {"mode": "jump_start"}))
 		if kw.has("disturb") and def.back_face != null:
@@ -871,6 +905,30 @@ func cast_options(pid: int, obj: GameObject) -> Array:
 		if kw.has("retrace"):
 			out.append(_opt("Retrace", "Discard a land card in addition to the mana cost", {"mode": "retrace"}))
 	return out
+
+
+## A card in the graveyard that may be cast for its normal cost: its own "You may cast ~ from your graveyard as long as you control a
+## Zombie" (Gravecrawler), or another effect permitted it for this turn (Zul Ashur). Nonland cards only.
+func _may_cast_from_graveyard(obj: GameObject, def: CardDefinition) -> bool:
+	if def.is_land():
+		return false
+	if int(obj.marks.get("graveyard_cast_turn", -1)) == engine.state.turn_number:
+		return true
+	for a in def.abilities:
+		if a is Ability and (a as Ability).kind == &"STATIC" and (a as Ability).static_spec.has("cast_from_graveyard_if"):
+			var cond: Variant = (a as Ability).static_spec["cast_from_graveyard_if"]
+			if cond is Dictionary and engine.layers.condition_met(engine.state, obj, cond):
+				return true
+	return false
+
+
+## "If you control a commander": one of your commanders is on the battlefield.
+func _controls_commander(pid: int) -> bool:
+	for coid in _zone_ids(EngineEnums.ZoneId.BATTLEFIELD, -1):
+		var co := _obj(int(coid))
+		if co != null and co.controller_id == pid and co.is_commander:
+			return true
+	return false
 
 
 ## Cast options from hand for the keyword abilities with alternative or additional costs.
@@ -901,6 +959,8 @@ func _more_hand_options(pid: int, obj: GameObject, def: CardDefinition, kw: Dict
 		out.append(_opt("Awaken %d — %s" % [int(kw.awaken.n), str(kw.awaken.cost)], "Also a land you control becomes a 0/0 haste Elemental with %d +1/+1 counters" % int(kw.awaken.n), {"mode": "awaken"}))
 	if kw.has("offering"):
 		out.append(_opt("%s offering" % str(kw.offering).capitalize(), "Sacrifice a %s: costs that much less; any time you could cast an instant" % str(kw.offering).capitalize(), {"mode": "offering"}))
+	if kw.has("free_commander") and _controls_commander(pid):
+		out.append(_opt("Cast without paying its mana cost", "You control a commander", {"mode": "free_commander"}))
 	if kw.has("alt_tap"):
 		out.append(_opt("Pay %s and tap %d creatures with %s" % [str(kw.alt_tap.cost), int(kw.alt_tap.n), str(kw.alt_tap.keyword)], "Instead of its mana cost", {"mode": "alt_tap"}))
 	if def.other_half != null and not def.other_half.oracle_text.to_lower().contains("aftermath"):
@@ -1000,7 +1060,7 @@ func split_second_active() -> bool:
 
 
 ## Modes that cast a card from the graveyard, and from exile.
-const GRAVEYARD_MODES := ["flashback", "escape", "retrace", "jump_start", "disturb", "harmonize", "mayhem", "aftermath"]
+const GRAVEYARD_MODES := ["flashback", "escape", "retrace", "jump_start", "disturb", "harmonize", "mayhem", "aftermath", "graveyard_perm"]
 const EXILE_MODES := ["foretold", "plotted", "warped", "airbent"]
 
 
@@ -1531,6 +1591,10 @@ func submit_special(action: GameAction) -> SubmitResult:
 				fx.kind = &"SEARCH_LIBRARY"
 				fx.params = {"filter": _cycling_filter(ty), "n": 1, "to": "HAND"}
 			engine.put_synthetic(null, pid, [fx], {}, obj.object_id)
+			## "When you cycle ~" goes on the stack above the cycling ability itself.
+			if engine.triggers != null:
+				engine.triggers.on_cycled(engine, obj, pid)
+				engine.triggers.fire_player_event(engine, "CYCLED", pid, {object_id = obj.object_id})
 		"suspend":
 			if obj.zone != EngineEnums.ZoneId.HAND or not kw.has("suspend") or not engine._timing_ok_to_cast(pid, obj):
 				r.error = "can't suspend that"
@@ -1556,6 +1620,9 @@ func submit_special(action: GameAction) -> SubmitResult:
 			obj.ward_extra = ""
 			if kw.has("megamorph"):
 				obj.counters["+1/+1"] = int(obj.counters.get("+1/+1", 0)) + 1
+			## "When ~ is turned face up" (CR 708.8): a special action, so its triggers go on the stack right away.
+			if engine.triggers != null:
+				engine.triggers._fire(engine, "TURNED_FACE_UP", obj, obj, engine.triggers._ctx_for(engine, obj))
 		"encore", "eternalize", "embalm":
 			var sp := str(action.extra.get("special", ""))
 			var sorcery_now: bool = pid == engine.state.active_player_id and engine._is_main_phase() and engine._stack_empty()
@@ -1975,6 +2042,7 @@ func check_ward(entry: StackEntry) -> void:
 		var t := _obj(int(tid))
 		## "When ~ becomes the target of a spell or ability, sacrifice it." / "... an opponent controls, ..." (CR 603.2).
 		if t != null and t.zone == EngineEnums.ZoneId.BATTLEFIELD and engine.triggers != null:
+			engine.triggers.on_becomes_target(engine, t, entry.controller_id)
 			for tab in engine.triggers._triggered(engine, t, "BECOMES_TARGET"):
 				if bool((tab as Ability).trigger.get("opp_only", false)) and t.controller_id == entry.controller_id:
 					continue
@@ -2112,6 +2180,13 @@ func on_new_turn() -> void:
 	engine.state.creatures_died_this_turn = 0
 	if engine.state.active_player_id >= 0 and engine.state.active_player_id < engine.state.players.size():
 		engine.state.players[engine.state.active_player_id].turns_taken += 1
+	var cast_total := 0
+	var cast_most := 0
+	for cp in engine.state.players:
+		cast_total += cp.spells_this_turn.size()
+		cast_most = maxi(cast_most, cp.spells_this_turn.size())
+	engine.state.spells_last_turn_total = cast_total
+	engine.state.spells_last_turn_most = cast_most
 	for p in engine.state.players:
 		p.damaged_this_turn = false
 		p.combat_damagers_types = []

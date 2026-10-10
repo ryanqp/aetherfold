@@ -124,12 +124,16 @@ func is_basic_land() -> bool:
 
 
 func enters_tapped() -> bool:
-	var t := oracle_text.to_lower().replace("\n", " ")
-	if t.find("enters the battlefield tapped") < 0 and t.find("enters tapped") < 0:
-		return false
-	if t.find("unless") >= 0 or t.find("if you don't") >= 0:
-		return false
-	return true
+	## One line says it ("This land enters tapped."); another line may be about something else entirely (Rupture Spire's
+	## "When this land enters, sacrifice it unless you pay {1}."), so each line is judged on its own.
+	for line in oracle_text.to_lower().split("\n"):
+		var l := str(line)
+		if l.find("enters the battlefield tapped") < 0 and l.find("enters tapped") < 0:
+			continue
+		if l.find("unless") >= 0 or l.find("if you don't") >= 0:
+			continue
+		return true
+	return false
 
 
 func is_instant() -> bool:

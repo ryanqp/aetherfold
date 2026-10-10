@@ -125,6 +125,10 @@ func start_with_demo(demo: DemoSetup, seed: int = -1) -> void:
 	## Everyone at the table clicks their own library for the draw step; online that includes the guest (seat 1).
 	engine.manual_draw_seats = ([0, 1] if skip_ai else [you_seat]) if manual_draw else []
 	engine.setup_demo(demo, FormatRules.commander_1v1_table(), seed)
+	## Cards the card database didn't know are left out of the game; say so where the player can see it.
+	if not demo.missing_cards.is_empty():
+		engine.state.log.append(EngineEnums.EventType.NOTE, you_seat, {
+			text = "Left out of the game (not found in the card database): %s." % ", ".join(demo.missing_cards)})
 	_note_unread_cards()
 	selected_id = ""
 	pending_draw_anim = false
@@ -309,6 +313,35 @@ static func _perf_add(name: String, started_usec: int) -> void:
 	perf[name] = row
 
 
+## The Override menu (TableOverrides): a one-line summary, and doing it. `caller` is the seat that asked (default: you).
+func override_describe(op: Dictionary, caller: int = -1) -> String:
+	return TableOverrides.describe(engine, op, you_seat if caller < 0 else caller)
+
+
+func override_apply(op: Dictionary, caller: int = -1) -> String:
+	var err := TableOverrides.apply(engine, op, you_seat if caller < 0 else caller)
+	rebuild_view()
+	return err
+
+
+## The cards of one of your piles that an override can move: [{id, name, detail}], for the picker.
+func override_pile(zone_name: String, seat: int = -1) -> Array:
+	var out: Array = []
+	var zone_id: int = TableOverrides.ZONE_BY_NAME.get(zone_name, -1)
+	if zone_id < 0:
+		return out
+	var z: Zone = engine.state.zones.get_zone(zone_id, you_seat if seat < 0 else seat)
+	if z == null:
+		return out
+	for oid in z.object_ids:
+		var o: GameObject = engine.state.objects.get(oid)
+		if o != null and o.definition is CardDefinition:
+			var d := o.definition as CardDefinition
+			out.append({"id": o.object_id, "name": d.name, "detail": d.type_line + ("  %s" % d.mana_cost if d.mana_cost != "" else "")})
+	out.sort_custom(func(a, b) -> bool: return str(a.name) < str(b.name))
+	return out
+
+
 func rebuild_view() -> void:
 	if _bulk > 0:
 		_view_dirty = true
@@ -321,7 +354,49 @@ func rebuild_view() -> void:
 		history.pump(engine, you_seat, match_start == MatchStart.MAIN_GAME)
 		_perf_add("history.pump", th)
 	view = TableView.from_engine(engine, self)
+	_stamp_unsupported(view)
 	_perf_add("rebuild_view", t0)
+
+
+## Rules text the game does not act on, per card name (read once; the engine's definitions never change mid-game).
+var _unsupported_cache: Dictionary = {}
+
+
+## The lines of a card's text the engine can't carry out ([] for a fully read card).
+func unsupported_lines(def: CardDefinition) -> Array:
+	if def == null or db == null:
+		return []
+	var key := def.name
+	if not _unsupported_cache.has(key):
+		_unsupported_cache[key] = db.unread_lines(def)
+	return _unsupported_cache[key]
+
+
+## Marks every visible card whose text the game can't fully play, so nobody wonders why a card "did nothing" (AUDIT-007).
+## A card dict gets `unsupported: [lines]`; cards with nothing unread are left alone. Hidden and masked cards are skipped.
+func _stamp_unsupported(v: TableView) -> void:
+	if v == null or engine == null or engine.state == null or db == null:
+		return
+	for side_info in [[v.you, false], [v.rival, true]]:
+		var side: Dictionary = side_info[0]
+		var is_rival: bool = side_info[1]
+		for key in ["creatures", "noncreatures", "lands", "hand", "command", "graveyard_cards", "exile_cards"]:
+			for c in side.get(key, []):
+				var card: Dictionary = c
+				if bool(card.get("hidden", false)) or bool(card.get("masked", false)) or (key == "hand" and is_rival):
+					continue
+				var obj: GameObject = engine.state.objects.get(int(str(card.get("id", "0"))))
+				if obj == null or not (obj.definition is CardDefinition):
+					continue
+				var lines := unsupported_lines(obj.definition as CardDefinition)
+				if not lines.is_empty():
+					card["unsupported"] = lines
+	for c2 in v.stack:
+		var obj2: GameObject = engine.state.objects.get(int(str((c2 as Dictionary).get("id", "0"))))
+		if obj2 != null and obj2.definition is CardDefinition:
+			var l2 := unsupported_lines(obj2.definition as CardDefinition)
+			if not l2.is_empty():
+				(c2 as Dictionary)["unsupported"] = l2
 
 
 ## True while it is your turn and you still have to click your library for the turn's card.
@@ -453,6 +528,16 @@ func prompt_for(seat: int) -> Dictionary:
 	if engine.state.mode == EngineEnums.EngineMode.AWAITING_DECISION and int(engine.state.awaiting.get("player_id", -1)) == seat \
 			and engine.state.pending_decision is PlayerDecision:
 		var dec := engine.state.pending_decision as PlayerDecision
+		## Dividing damage: combat damage among blockers, or a divided-damage spell's split.
+		if dec.kind == &"DISTRIBUTE":
+			var dist_opts: Array = []
+			for cand in dec.candidates:
+				var ci: Dictionary = dec.info.get(str(cand), {})
+				dist_opts.append({"value": int(cand), "label": str(ci.get("label", cand)), "detail": str(ci.get("detail", "")), "lethal": int(ci.get("lethal", 0)), "player": bool(ci.get("player", false))})
+			var sub := "Place all %d points%s." % [dec.total, " (at most %d targets)" % dec.max_targets if dec.max_targets > 0 else ""]
+			return {"kind": "distribute", "title": dec.prompt, "sub": sub, "options": dist_opts, "total": dec.total, "max_targets": dec.max_targets,
+				"default": dec.info.get("default", {}), "cancel": "Split it for me", "faces": [],
+				"sig": "distribute:%d:%s" % [dec.decision_id, dec.link]}
 		var faces: Array = []
 		for sid in dec.show_ids:
 			var so: GameObject = engine.state.objects.get(int(sid))
@@ -472,7 +557,9 @@ func prompt_for(seat: int) -> Dictionary:
 				dopts.append(opt)
 			if dec.optional:
 				cancel = "Skip"
-		return {"kind": "decision", "title": dec.prompt if dec.prompt != "" else "Choose", "sub": "", "options": dopts,
+		## A question may carry what the ability does after its first line ("Raging Regisaur: choose a target." then its text).
+		var prompt_lines := dec.prompt.split("\n", false, 1)
+		return {"kind": "decision", "title": str(prompt_lines[0]) if prompt_lines.size() > 0 else "Choose", "sub": str(prompt_lines[1]) if prompt_lines.size() > 1 else "", "options": dopts,
 			"cancel": cancel, "faces": faces, "sig": "decision:%d:%s:%s" % [dec.decision_id, dec.link, dec.prompt]}
 	return {}
 
@@ -488,6 +575,21 @@ func answer_prompt(seat: int, kind: String, value: Variant) -> void:
 					cancel_target()
 				else:
 					choose_target(int(value))
+			"distribute":
+				if engine.state.mode != EngineEnums.EngineMode.AWAITING_DECISION or int(engine.state.awaiting.get("player_id", -1)) != seat:
+					return
+				var da := GameAction.new()
+				da.player_id = seat
+				if value is Dictionary:
+					da.kind = GameAction.Kind.SUBMIT_DECISION
+					da.extra = {split = value}
+				else:
+					da.kind = GameAction.Kind.DECLINE_DECISION
+				var dr := submit(da)
+				if dr.ok:
+					resolve_stack_then_yield()
+				else:
+					last_error = dr.error
 			"decision":
 				if engine.state.mode != EngineEnums.EngineMode.AWAITING_DECISION or int(engine.state.awaiting.get("player_id", -1)) != seat:
 					return
@@ -790,9 +892,17 @@ func _open_target_prompt(cand_ids: Array, slot: int, hostile: bool) -> void:
 	for tid in cand_ids:
 		options.append(_target_option(int(tid)))
 	var total: int = engine._cast_queries.size()
+	## What the spell does, so it is clear whether the pick is for damage, healing, a counter ...
+	var what := ""
+	if src != null and src.definition is CardDefinition:
+		what = (src.definition as CardDefinition).oracle_text.replace((src.definition as CardDefinition).name, "~")
+		what = what.replace("~", src_name)
+		if what.length() > 240:
+			what = what.substr(0, 237) + "..."
+	var steps := "Target %d of %d" % [slot + 1, total] if total > 1 else ""
 	target_prompt = {
 		"title": "Choose a target for %s" % src_name,
-		"sub": "Target %d of %d" % [slot + 1, total] if total > 1 else "",
+		"sub": (steps + "\n" if steps != "" else "") + what,
 		"options": options,
 	}
 	target_pending = true

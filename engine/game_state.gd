@@ -41,6 +41,10 @@ var replacement = null
 var pending_decision = null
 ## The active player must draw for the turn before the turn can go on (manual draw seats only).
 var draw_pending: bool = false
+## Spells cast in the previous turn: in all, and the most by one player (the older werewolves: "if no spells were cast last
+## turn" / "if a player cast two or more spells last turn").
+var spells_last_turn_total: int = 0
+var spells_last_turn_most: int = 0
 ## Permanents that exiled cards "until it leaves the battlefield": source object id -> exiled object ids.
 var exile_links: Dictionary = {}
 ## Rebound (CR 702.88): cards exiled to be cast again at their owner's next upkeep: {owner, object_id, turn}.

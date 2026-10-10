@@ -117,6 +117,18 @@ func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip
 	## "If that creature would die this turn, exile it instead." (Fiery Intervention, Magma Jet-style riders)
 	if dest_zone == EngineEnums.ZoneId.GRAVEYARD and old.zone == EngineEnums.ZoneId.BATTLEFIELD and int(old.marks.get("exile_if_dies_turn", -1)) == gs.turn_number:
 		dest_zone = EngineEnums.ZoneId.EXILE
+	## Kalitas: "If a nontoken creature an opponent controls would die, instead exile that card and create a 2/2 black Zombie token."
+	var replaced_by: GameObject = null
+	var replaced_spec: Dictionary = {}
+	if dest_zone == EngineEnums.ZoneId.GRAVEYARD and old.zone == EngineEnums.ZoneId.BATTLEFIELD and not old.is_token \
+			and old.definition is CardDefinition and (old.definition as CardDefinition).is_creature():
+		var hit := _death_replacer(gs, old)
+		if hit != null:
+			replaced_by = hit
+			for ab in (hit.definition as CardDefinition).abilities:
+				if ab is Ability and (ab as Ability).kind == &"STATIC" and (ab as Ability).static_spec.has("dies_exile_make_token"):
+					replaced_spec = (ab as Ability).static_spec["dies_exile_make_token"]
+			dest_zone = EngineEnums.ZoneId.EXILE
 	## Unearth (CR 702.84a) and disturb / warp-style "exile it instead": leaving for anywhere but exile, it's exiled.
 	if old.zone == EngineEnums.ZoneId.BATTLEFIELD and dest_zone != EngineEnums.ZoneId.EXILE and (old.unearthed or bool(old.marks.get("exile if it would leave", false))):
 		dest_zone = EngineEnums.ZoneId.EXILE
@@ -232,11 +244,34 @@ func move(object_id: int, dest_zone: int, dest_owner: int = EngineIds.NONE, skip
 		definition = old.definition,
 		from_controller = old.controller_id,
 		was_token = old.is_token,
+		sacrificed = bool(old.marks.get("sacrificed", false)),
 		lki = last_known,
 	})
 	ev.object_ids.append(old.object_id)
 	ev.object_ids.append(new_obj.object_id)
+	## ... and the replacement's controller gets the token it promised.
+	if replaced_by != null and not replaced_spec.is_empty():
+		var token_def := TokenCatalog.new().from_spec(replaced_spec)
+		var made := create(replaced_by.controller_id, EngineEnums.ZoneId.BATTLEFIELD, {definition = token_def, is_token = true, controller_id = replaced_by.controller_id})
+		if made != null:
+			gs.log.append(EngineEnums.EventType.ZONE_CHANGE, replaced_by.controller_id, {from_id = 0, to_id = made.object_id,
+				from_zone = -1, to_zone = EngineEnums.ZoneId.BATTLEFIELD, linked_from = 0})
 	return new_obj
+
+
+## A permanent whose static ability replaces this creature's death (Kalitas), or null.
+func _death_replacer(gs: GameState, dying: GameObject) -> GameObject:
+	var bf := get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return null
+	for oid in bf.object_ids:
+		var o: GameObject = gs.objects.get(oid)
+		if o == null or o.controller_id == dying.controller_id or not (o.definition is CardDefinition):
+			continue
+		for ab in (o.definition as CardDefinition).abilities:
+			if ab is Ability and (ab as Ability).kind == &"STATIC" and (ab as Ability).static_spec.has("dies_exile_make_token"):
+				return o
+	return null
 
 
 func _last_known(old: GameObject) -> Dictionary:

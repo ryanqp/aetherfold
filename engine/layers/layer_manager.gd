@@ -274,6 +274,8 @@ func _statics_of(def: CardDefinition) -> Dictionary:
 		var ab := a as Ability
 		if ab != null and ab.kind == &"TRIGGERED" and not ab.unparsed:
 			trig_ons[str(ab.trigger.get("on", ""))] = true
+			for also in ab.trigger.get("also_on", []):
+				trig_ons[str(also)] = true
 		if ab == null or ab.kind != &"STATIC" or ab.unparsed or ab.static_spec.is_empty():
 			continue
 		var spec: Dictionary = ab.static_spec
@@ -415,10 +417,32 @@ func combat_restricted(state: GameState, obj: GameObject, attacking: bool = fals
 			if not bigger:
 				return true
 		if need.has("permanents"):
-			var perms := Query.count_objects(state, obj, {"controller": "SOURCE_CONTROLLER"})
-			if perms < int(need["permanents"]):
+			## "Unless you have the city's blessing": ten permanents, and once gained it stays (CR 702.131c).
+			if need.get("permanents") == 10:
+				if not citys_blessing(state, obj.controller_id):
+					return true
+			elif Query.count_objects(state, obj, {"controller": "SOURCE_CONTROLLER"}) < int(need["permanents"]):
 				return true
 	return false
+
+
+## Does `pid` have the city's blessing? Ten or more permanents earns it, and it is never lost again.
+static func citys_blessing(state: GameState, pid: int) -> bool:
+	if pid < 0 or pid >= state.players.size():
+		return false
+	var p: PlayerState = state.players[pid]
+	if p.citys_blessing:
+		return true
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	var n := 0
+	if bf != null:
+		for oid in bf.object_ids:
+			var o: GameObject = state.objects.get(oid)
+			if o != null and o.controller_id == pid:
+				n += 1
+	if n >= 10:
+		p.citys_blessing = true
+	return p.citys_blessing
 
 
 func _type_line_of(obj: GameObject) -> String:
@@ -426,6 +450,14 @@ func _type_line_of(obj: GameObject) -> String:
 
 
 func clear_until_eot(state: GameState) -> void:
+	## "~ becomes a copy of target creature until end of turn" ends: the permanent is itself again.
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf != null:
+		for oid in bf.object_ids:
+			var o: GameObject = state.objects.get(oid)
+			if o != null and o.marks.has("copy_revert"):
+				o.definition = o.marks["copy_revert"]
+				o.marks.erase("copy_revert")
 	var kept: Array = []
 	for e in state.effects:
 		if e is ContinuousEffect and (e as ContinuousEffect).until_eot:
@@ -512,6 +544,9 @@ func condition_met(state: GameState, src: GameObject, cond: Dictionary) -> bool:
 		var cn := int(src.counters.get(str(cb.get("name", "level")), 0))
 		if cn < int(cb.get("min", 0)) or (int(cb.get("max", -1)) >= 0 and cn > int(cb["max"])):
 			return false
+	## "~ has hexproof as long as it's untapped."
+	if src != null and cond.has("untapped") and src.tapped == bool(cond["untapped"]):
+		return false
 	if src != null and cond.has("class_level_is") and 1 + int(src.counters.get("level", 0)) != int(cond["class_level_is"]):
 		return false
 	return _more_conditions(state, src, pid, cond)
@@ -534,6 +569,10 @@ func condition_met(state: GameState, src: GameObject, cond: Dictionary) -> bool:
 ##   paid_has / paid_lacks "Land"      the card discarded or sacrificed as an additional cost was (wasn't) of that type
 ##   not {cond}                       the nested condition does not hold
 func _more_conditions(state: GameState, src: GameObject, pid: int, cond: Dictionary) -> bool:
+	if cond.has("spells_last_turn_max") and state.spells_last_turn_total > int(cond["spells_last_turn_max"]):
+		return false
+	if cond.has("player_spells_last_turn_min") and state.spells_last_turn_most < int(cond["player_spells_last_turn_min"]):
+		return false
 	if cond.has("controls") and cond.has("max") and Query.count_objects(state, src, cond["controls"]) > int(cond["max"]):
 		return false
 	if cond.has("my_turn") and (state.active_player_id == pid) != bool(cond["my_turn"]):
@@ -543,6 +582,8 @@ func _more_conditions(state: GameState, src: GameObject, pid: int, cond: Diction
 		if cond.has("life_min") and me.life < int(cond["life_min"]):
 			return false
 		if cond.has("life_max") and me.life > int(cond["life_max"]):
+			return false
+		if cond.has("life_exact") and me.life != int(cond["life_exact"]):
 			return false
 		if cond.has("attacked") and me.attacked_this_turn != bool(cond["attacked"]):
 			return false
@@ -635,6 +676,22 @@ func _more_conditions(state: GameState, src: GameObject, pid: int, cond: Diction
 				if ao.controller_id == pid:
 					best_mine = maxi(best_mine, amv)
 		if (best_mine >= 0 and best_mine >= best_all) != bool(cond["greatest_artifact"]):
+			return false
+	## Thickest in the Thicket: "you control the creature with the greatest power or tied for the greatest power".
+	if cond.has("greatest_power") and me != null:
+		var power_mine := -9999
+		var power_all := -9999
+		var bfg: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+		if bfg != null:
+			for goid in bfg.object_ids:
+				var go: GameObject = state.objects.get(goid)
+				if go == null or not (go.definition is CardDefinition) or not (go.definition as CardDefinition).is_creature():
+					continue
+				var gp := int(snapshot(state, go).get("power", 0))
+				power_all = maxi(power_all, gp)
+				if go.controller_id == pid:
+					power_mine = maxi(power_mine, gp)
+		if (power_mine > -9999 and power_mine >= power_all) != bool(cond["greatest_power"]):
 			return false
 	## "As long as ~ has four or more +1/+1 counters on it": counters on the source itself.
 	if cond.has("self_counters") and src != null:

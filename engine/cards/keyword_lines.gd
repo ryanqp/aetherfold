@@ -186,6 +186,10 @@ static func _one(low: String, out: Dictionary) -> bool:
 	if m != null:
 		out["alt_tap"] = {"cost": _cost(m.get_string(1)), "n": OracleIr._num(m.get_string(2)), "keyword": m.get_string(3)}
 		return true
+	## Flawless Maneuver / Fierce Guardianship: "If you control a commander, you may cast ~ without paying its mana cost."
+	if _m("^if you control a commander, you may cast (?:this spell|~) without paying its mana cost$", low) != null:
+		out["free_commander"] = true
+		return true
 	## Dash, prowl ... handled below; "Companion — <condition>" is deck building only.
 	if low.begins_with("companion —") or low.begins_with("companion -"):
 		out["companion"] = true

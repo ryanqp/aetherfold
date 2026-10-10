@@ -14,6 +14,11 @@ var min_count: int = 1
 var max_count: int = 1
 var optional: bool = false
 var candidates: Array = []
+## DISTRIBUTE decisions: how many points (damage) are to be divided among the candidates. info[str(cand)] holds a label, a detail
+## and the `lethal` amount; info["default"] is the automatic split {cand: amount}.
+var total: int = 0
+## DISTRIBUTE: at most this many candidates may get anything (0 = no limit): "divided among one, two, or three targets".
+var max_targets: int = 0
 
 ## Text for the choice screen, keyed by str(candidate): {label, detail}.
 var info: Dictionary = {}

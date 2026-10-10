@@ -4,6 +4,10 @@ extends RefCounted
 const COLLECTION_URL := "https://api.scryfall.com/cards/collection"
 const BATCH := 75
 
+## The card catalog to look names up in. A worker thread must not walk the scene tree, so an import started from the
+## UI passes the catalog node in; with none, it is looked up in the tree (tests and tools run on the main thread).
+var catalog: Object = null
+
 
 func resolve(deck: NormalizedDeck, allow_network: bool = true) -> Dictionary:
 	var unresolved: PackedStringArray = PackedStringArray()
@@ -100,7 +104,8 @@ func _match_asked(resolved_name: String, asked: Array) -> String:
 func _normalize_api_card(card: Dictionary) -> Dictionary:
 	var images := {}
 	var iu: Variant = card.get("image_uris", {})
-	if iu is Dictionary:
+	## A double-faced card has no top-level image_uris: its pictures are on the faces (the front one is shown).
+	if iu is Dictionary and not (iu as Dictionary).is_empty():
 		images = {
 			small = str(iu.get("small", "")),
 			normal = str(iu.get("normal", "")),
@@ -172,6 +177,10 @@ static func with_front_face(row: Dictionary, card: Dictionary) -> Dictionary:
 	for k in ["power", "toughness", "loyalty"]:
 		if str(row.get(k, "")) == "":
 			row[k] = str(f.get(k, ""))
+	## A transform / modal card has no top-level colors either: the front face's colors are the card's colors.
+	var row_colors: Variant = row.get("colors", [])
+	if (row_colors is Array and (row_colors as Array).is_empty()) and f.get("colors") is Array:
+		row["colors"] = f.get("colors")
 	return row
 
 
@@ -218,6 +227,8 @@ func _cache_row(row: Dictionary) -> void:
 
 
 func _catalog() -> Object:
+	if catalog != null:
+		return catalog
 	var loop := Engine.get_main_loop()
 	if loop is SceneTree:
 		return (loop as SceneTree).root.get_node_or_null("/root/ScryfallCatalog")

@@ -20,6 +20,18 @@ static func parse(json: Dictionary, source_url: String = "") -> NormalizedDeck:
 	var cards: Variant = json.get("cards", [])
 	if not (cards is Array):
 		return deck
+	## A card is in the deck when its FIRST category is one the deck counts ("includedInDeck"); Maybeboard, Sideboard and
+	## "Tokens & Extras" are normally off, but a player's own "Tokens" tag for token makers is on. Names are not guessed.
+	var counted := {}
+	var premier := {}
+	var cat_list: Variant = json.get("categories", [])
+	if cat_list is Array:
+		for c in cat_list:
+			if c is Dictionary:
+				var cname := str((c as Dictionary).get("name", "")).to_lower()
+				counted[cname] = bool((c as Dictionary).get("includedInDeck", true))
+				if bool((c as Dictionary).get("isPremier", false)):
+					premier[cname] = true
 	for raw in cards:
 		if not (raw is Dictionary):
 			continue
@@ -29,17 +41,21 @@ static func parse(json: Dictionary, source_url: String = "") -> NormalizedDeck:
 		if cv is Array:
 			for c in cv:
 				cats.append(str(c).to_lower())
-		var skip := false
-		for c2 in cats:
-			if str(c2) in ["maybeboard", "sideboard", "considering", "tokens"]:
-				skip = true
-		if skip:
+		if bool(row.get("companion", false)):
+			continue  ## a companion waits outside the 100
+		var primary := str(cats[0]) if not cats.is_empty() else ""
+		var in_deck := true
+		if counted.has(primary):
+			in_deck = bool(counted[primary])
+		elif primary in ["maybeboard", "sideboard", "considering"]:
+			in_deck = false  ## a deck export without a category list
+		if not in_deck:
 			continue
 		var n := _name_of(row)
 		var q := int(row.get("quantity", 1))
 		var is_cmd := false
 		for c3 in cats:
-			if str(c3) == "commander" or str(c3) == "commanders" or str(c3) == "partner":
+			if str(c3) == "commander" or str(c3) == "commanders" or str(c3) == "partner" or premier.has(str(c3)):
 				is_cmd = true
 		if is_cmd:
 			deck.add_commander(n, q)

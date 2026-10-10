@@ -81,7 +81,7 @@ func unread_lines(d: CardDefinition) -> Array:
 		covered.append(str((a as Ability).text).strip_edges())
 	for raw in text.split("\n"):
 		var line := OracleIr.strip_ability_word(str(raw).strip_edges())
-		if line == "" or covered.has(line) or _keyword_line(line):
+		if line == "" or line.begins_with("•") or covered.has(line) or _keyword_line(line):
 			continue
 		if _handled_elsewhere(d, line, etb):
 			continue
@@ -101,6 +101,9 @@ func _handled_elsewhere(d: CardDefinition, line: String, etb: Dictionary) -> boo
 		return true
 	## Printed combat-damage prevention on the permanent itself (Engine._prints_combat_prevention).
 	if low_line == "prevent all combat damage that would be dealt to ~.":
+		return true
+	## Enforced while paying (Engine._creature_mana_only_ctx): only creatures' mana can pay for this spell.
+	if low_line.begins_with("spend only mana produced by creatures to cast"):
 		return true
 	## The engine does not enforce a maximum hand size, so "no maximum hand size" already holds.
 	if low_line == "you have no maximum hand size.":

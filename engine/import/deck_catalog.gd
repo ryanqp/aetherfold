@@ -39,6 +39,43 @@ static func all_choices() -> Array:
 	return out
 
 
+## Why a saved deck is not a legal Commander deck, one short line each ([] when it is legal, or a starter deck). Read from the
+## validation saved with the deck; "Unresolved" cards count too, because they are left out of the game.
+static func problems_of(rec: Dictionary) -> PackedStringArray:
+	var out := PackedStringArray()
+	if bool(rec.get("builtin", false)):
+		return out
+	var v: Variant = rec.get("validation")
+	if not (v is Dictionary):
+		return out
+	var vd: Dictionary = v
+	if not bool(vd.get("ok", true)):
+		for e in vd.get("errors", []):
+			var line := str(e).split("\n")[0].strip_edges()
+			if line != "" and not out.has(line):
+				out.append(line)
+		if out.is_empty():
+			out.append("This deck did not pass the Commander check.")
+	var missing := 0
+	for w in vd.get("warnings", []):
+		if str(w).begins_with("Unresolved:"):
+			missing += 1
+	if missing > 0:
+		out.append("%d card%s could not be found and would be left out." % [missing, "s" if missing != 1 else ""])
+	return out
+
+
+## Whether a deck choice (a builtin id or a saved deck's path) can be played right now: {ok, text}. A deleted or unreadable
+## deck is reported instead of quietly turning into Krenko.
+static func playable(choice_id: String) -> Dictionary:
+	if _is_builtin(choice_id):
+		return {ok = true, text = ""}
+	var rec: Dictionary = DeckStore.new().load_path(choice_id)
+	if rec.is_empty():
+		return {ok = false, text = "That deck could not be found or read any more."}
+	return {ok = true, text = "", problems = problems_of(rec), name = str(rec.get("name", commander_name(rec)))}
+
+
 static func commander_name(rec: Dictionary) -> String:
 	var cmds: Variant = rec.get("commander", [])
 	if cmds is Array and not (cmds as Array).is_empty():
@@ -72,6 +109,8 @@ static func vs_pair(player_id: String, rival_id: String) -> DemoSetup:
 ## An online match: both decks come as records (the guest's was sent over the network, so no ids or paths are
 ## looked up on this computer). `p_name` / `r_name` become the players' names at the table.
 static func vs_pair_recs(p_rec: Dictionary, r_rec: Dictionary, p_name: String = "", r_name: String = "") -> DemoSetup:
+	p_rec = _with_catalog_rows(p_rec)
+	r_rec = _with_catalog_rows(r_rec)
 	var pid := _id_of_rec(p_rec)
 	var rid := _id_of_rec(r_rec)
 	var d: DemoSetup
@@ -84,6 +123,31 @@ static func vs_pair_recs(p_rec: Dictionary, r_rec: Dictionary, p_name: String = 
 	if r_name.strip_edges() != "":
 		d.rival_name = r_name
 	return d
+
+
+## Cards that this computer's own catalog knows are played as the catalog has them, whatever the record carries. A guest's deck
+## arrives with its own card rows; without this they could give a card different text or stats, and because both decks share
+## one card database, the same change would reach the host's copies of that card too (AUDIT-015).
+static func prefer_catalog_rows(rows: Dictionary, cat: Object = null) -> Dictionary:
+	if cat == null:
+		cat = DemoSetup._scryfall()
+	if cat == null or not cat.has_method("find_by_name"):
+		return rows
+	var out := rows.duplicate()
+	for k in rows.keys():
+		var row: Variant = rows[k]
+		var known: Variant = cat.find_by_name(str((row as Dictionary).get("name", k)) if row is Dictionary else str(k))
+		if known is Dictionary and not (known as Dictionary).is_empty():
+			out[k] = known
+	return out
+
+
+static func _with_catalog_rows(rec: Dictionary) -> Dictionary:
+	if bool(rec.get("builtin", false)) or not (rec.get("cards", null) is Dictionary):
+		return rec
+	var copy := rec.duplicate()
+	copy["cards"] = prefer_catalog_rows(rec.get("cards", {}))
+	return copy
 
 
 ## A starter deck keeps its builtin id; anything else is "custom" and is read from the record itself.
@@ -172,6 +236,26 @@ static func _side(choice_id: String) -> Dictionary:
 	return _side_of_rec(rec)
 
 
+## Decks saved before the catalog kept every face hold double-faced, split and adventure cards as bare names, which play as
+## blank cards. Those rows are swapped for the catalog's full rows (nothing else in the deck is touched).
+static func refresh_rows(rows: Dictionary, cat: Object = null) -> Dictionary:
+	if cat == null:
+		cat = DemoSetup._scryfall()
+	if cat == null or not cat.has_method("find_by_name"):
+		return rows
+	var out := rows.duplicate()
+	for k in rows.keys():
+		var row: Variant = rows[k]
+		if not (row is Dictionary):
+			continue
+		var faces: Variant = (row as Dictionary).get("faces", [])
+		if faces is Array and not (faces as Array).is_empty() and not ((faces as Array)[0] is Dictionary):
+			var fresh: Variant = cat.find_by_name(str((row as Dictionary).get("name", k)))
+			if fresh is Dictionary and not (fresh as Dictionary).is_empty():
+				out[k] = fresh
+	return out
+
+
 ## A custom deck read from its record (the commander, the mainboard and the card rows saved with it).
 static func _side_of_rec(rec: Dictionary) -> Dictionary:
 	if bool(rec.get("builtin", false)):
@@ -182,6 +266,7 @@ static func _side_of_rec(rec: Dictionary) -> Dictionary:
 	var rows: Dictionary = rec.get("cards", {})
 	if not (rows is Dictionary):
 		rows = {}
+	rows = refresh_rows(rows)
 	return {
 		list = deck.to_deck_list(),
 		commanders = deck.commander_names(),

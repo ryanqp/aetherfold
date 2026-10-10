@@ -71,8 +71,21 @@ func _enter_current_step() -> void:
 		turn = st.turn_number,
 	})
 	_start_tba(eng, st)
+	if eng.combat_damage_paused:
+		return  ## waiting for the attacking player to divide their damage
 	if _receives_priority(st.step):
 		eng.priority.give(st, st.active_player_id)
+	else:
+		_finish_step_and_enter_next()
+
+
+## The damage step carries on after the attacking player divided their combat damage (see RulesEngine.apply_combat_damage).
+func resume_after_combat_damage() -> void:
+	var eng := _eng()
+	if eng == null:
+		return
+	if _receives_priority(eng.state.step):
+		eng.priority.give(eng.state, eng.state.active_player_id)
 	else:
 		_finish_step_and_enter_next()
 
@@ -105,6 +118,8 @@ func _finish_step_and_enter_next() -> void:
 			turn = st.turn_number,
 		})
 		_start_tba(eng, st)
+		if eng.combat_damage_paused:
+			return
 		if _receives_priority(st.step):
 			eng.priority.give(st, st.active_player_id)
 			return
@@ -199,6 +214,9 @@ func _start_tba(eng: RulesEngine, st: GameState) -> void:
 				cs.blockers.clear()
 				cs.defenders.clear()
 				cs.blocks_declared = false
+				cs.damage_plans.clear()
+				cs.damage_passes_done = 0
+				cs.damage_split = false
 		EngineEnums.Step.END:
 			## "At the beginning of that turn's end step, you lose the game" (Last Chance).
 			if st.lose_at_end_turn == st.turn_number:
@@ -233,6 +251,12 @@ func _untap(st: GameState) -> void:
 			## "Doesn't untap during its controller's next untap step" (frozen): this is that step.
 			if obj.marks.has("frozen"):
 				obj.marks.erase("frozen")
+				continue
+			## Stun counter (CR 122.1g): instead of untapping, a stunned permanent loses one stun counter.
+			if obj.tapped and int(obj.counters.get("stun", 0)) > 0:
+				obj.counters["stun"] = int(obj.counters["stun"]) - 1
+				if int(obj.counters["stun"]) <= 0:
+					obj.counters.erase("stun")
 				continue
 			## "You may choose not to untap ~ during your untap step.": the player is asked once the step has begun.
 			if obj.tapped and obj.definition is CardDefinition \
@@ -322,7 +346,7 @@ func _sync_phase(st: GameState) -> void:
 
 func _needs_input(st: GameState) -> bool:
 	match st.mode:
-		EngineEnums.EngineMode.GIVING_PRIORITY, EngineEnums.EngineMode.CASTING, EngineEnums.EngineMode.ACTIVATING, EngineEnums.EngineMode.PAYING_COSTS, EngineEnums.EngineMode.CHOOSING_SBA, EngineEnums.EngineMode.CHOOSING_REPLACEMENT, EngineEnums.EngineMode.DECLARING_ATTACKERS, EngineEnums.EngineMode.DECLARING_BLOCKERS, EngineEnums.EngineMode.ASSIGNING_COMBAT_DAMAGE, EngineEnums.EngineMode.GAME_OVER:
+		EngineEnums.EngineMode.GIVING_PRIORITY, EngineEnums.EngineMode.CASTING, EngineEnums.EngineMode.ACTIVATING, EngineEnums.EngineMode.PAYING_COSTS, EngineEnums.EngineMode.CHOOSING_SBA, EngineEnums.EngineMode.CHOOSING_REPLACEMENT, EngineEnums.EngineMode.DECLARING_ATTACKERS, EngineEnums.EngineMode.DECLARING_BLOCKERS, EngineEnums.EngineMode.ASSIGNING_COMBAT_DAMAGE, EngineEnums.EngineMode.AWAITING_DECISION, EngineEnums.EngineMode.GAME_OVER:
 			return true
 		_:
 			return false

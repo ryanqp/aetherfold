@@ -25,7 +25,7 @@ func _initialize() -> void:
 		var d := CardDefinition.new()
 		d.name = "Probe"
 		d.type_line = "Creature — Probe"
-		d.oracle_text = l
+		d.oracle_text = l.replace("\\n", "\n")
 		var res: Array = OracleIr.translate_permanent(d)
 		if res.is_empty():
 			res = OracleIr._read_whole_or_by_sentence(d, l.trim_suffix("."))

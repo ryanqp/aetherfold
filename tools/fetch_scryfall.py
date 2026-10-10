@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Download Scryfall Oracle Cards and write a lean catalog for Aetherfold.
+"""Download Scryfall Oracle Cards (the bulk file) for Aetherfold.
 
-Stores data on D: so the Godot project on C: stays small. Does not download
-card images — only metadata plus image URLs.
+Only the download step is needed now: run tools/build_catalog.gd afterwards to turn the bulk file into the game catalog
+(data/scryfall/catalog.jsonl). The conversion below is the OLD lean format (face names only, art cards kept) and should not be
+copied into the game. Does not download card images.
 """
 from __future__ import annotations
 

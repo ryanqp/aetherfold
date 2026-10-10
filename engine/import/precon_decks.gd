@@ -1,7 +1,7 @@
 class_name PreconDecks
 extends RefCounted
-## The eight starter decks that come with the game besides the two built-in ones (Krenko and Talrand):
-## official Commander precon decklists, the first eight on Moxfield's "Commander Precons" page
+## The nine starter decks that come with the game besides the two built-in ones (Krenko and Talrand):
+## official Commander precon decklists, the first eight on Moxfield plus Entropic Uprising (Commander 2016)'s "Commander Precons" page
 ## (https://moxfield.com/decks/public?q=eyJmb3JtYXQiOiJjb21tYW5kZXJQcmVjb25zIn0%3D).
 ##
 ## Each list ships with the game in res://data/precons/*.json, card rows included (name, cost, type line,
@@ -12,7 +12,7 @@ extends RefCounted
 
 const SOURCE := "moxfield_commander_precons"
 const DATA_DIR := "res://data/precons"
-const WANT := 8
+const WANT := 9
 ## Sources of starter decks this replaced; saved copies of them are deleted by install().
 const RETIRED_SOURCES := ["moxfield_top_likes", "edhrec_scryfall_top_100"]
 

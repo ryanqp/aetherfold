@@ -27,6 +27,10 @@ var attached_to: int = 0
 var chosen_type: String = ""
 ## "As ~ enters, choose a color other than green" (Thriving lands): the color its second mana ability makes.
 var chosen_color: String = ""
+## "As ~ enters, choose a [nonland] card name" (Pithing Needle, Phyrexian Revoker, Meddling Mage).
+var chosen_name: String = ""
+## "As ~ enters, choose an opponent / a player" (Entropic Specter, Stuffy Doll): that player's id, -1 = none.
+var chosen_player: int = -1
 ## Hideaway (CR 702.75): the object id of the card this permanent exiled face down (0 = none).
 var hideaway_card: int = 0
 ## Triggers limited to once each turn: ability id -> turn number it last fired.

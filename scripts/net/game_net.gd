@@ -11,8 +11,15 @@ signal chat_received(sender: String, text: String, mine: bool)
 signal notice_received(text: String)
 ## The other player left (or dropped out of) the room. Emitted with their name.
 signal peer_left(player_name: String)
+## A guest dropped mid-match and the seat is held for them; they came back; or this guest lost the host and is trying again.
+signal peer_dropped(player_name: String, seconds: int)
+signal peer_rejoined(player_name: String)
+signal connection_lost(seconds: int)
+signal connection_restored
 ## Host -> guest: the ways to play a card they clicked (labels only; they answer with the index).
 signal menu_received(object_id: int, title: String, entries: Array)
+## The host asks this guest to agree to an Override (id, a one-line summary).
+signal override_asked(id: int, text: String)
 
 const GAME_PORT := 27777
 const BEACON_PORT := 27778
@@ -44,6 +51,17 @@ const UPNP_LEASE := 3600
 const UPNP_RENEW_EVERY := 1800.0
 var _renew_acc := 0.0
 var _last_view_hash := 0
+
+## --- Surviving a dropped connection (AUDIT-016) ---
+const RECONNECT_WINDOW_MS := 120000
+const RECONNECT_EVERY := 4.0
+var in_match := false
+var _reservations := SeatReservations.new()
+var _tokens: Dictionary = {}  ## host: guest peer id -> that guest's seat token
+var _my_token := ""  ## guest: the token the host gave us when the match began
+var _last_address := ""
+var _reconnect_until := 0  ## guest: msec when we give up trying again; 0 = not reconnecting
+var _reconnect_acc := 0.0
 
 
 func generate_code() -> String:
@@ -143,7 +161,7 @@ func share_text() -> String:
 		return ""
 	var lines := PackedStringArray()
 	if public_ip != "":
-		lines.append("Online address for your friend: %s" % public_ip)
+		lines.append("Online address for your friend: %s   Room code: %s" % [public_ip, code])
 	else:
 		lines.append("Looking up your online address…")
 	if upnp_tried and not port_open:
@@ -184,6 +202,11 @@ func join_room(wanted_code: String, ip: String = "") -> void:
 
 
 func leave() -> void:
+	in_match = false
+	_tokens.clear()
+	_my_token = ""
+	_reconnect_until = 0
+	_reservations.clear()
 	_connect_token += 1
 	_last_view_hash = 0
 	_lobby.clear()
@@ -287,6 +310,13 @@ func ready_count() -> int:
 func _set_profile(id: int, player_name: String, deck_name: String, rec: Dictionary) -> void:
 	if not _lobby.has(id):
 		return
+	## What a guest sends is untrusted: a deck that is not shaped like a deck, or is huge, is refused.
+	if id != 1:
+		var refusal := RemoteDeckCheck.problem(rec)
+		if refusal != "":
+			_set_status("A player's deck was refused: %s." % refusal)
+			rec = {}
+			deck_name = ""
 	var e: Dictionary = _lobby[id]
 	e["name"] = player_name.strip_edges().substr(0, 20) if player_name.strip_edges() != "" else "Player"
 	e["deck"] = deck_name
@@ -397,6 +427,10 @@ func _start_now() -> void:
 		return
 	var host_e: Dictionary = _lobby[1]
 	var guest_e: Dictionary = _lobby[guest_id]
+	if (guest_e.rec as Dictionary).is_empty():
+		_announce_countdown(-1)
+		_set_status("The other player has not sent a usable deck yet, so the match can't start.")
+		return
 	var app := get_node_or_null("/root/AppState")
 	if app != null:
 		app.player_rec = host_e.rec
@@ -409,7 +443,29 @@ func _start_now() -> void:
 		app.skip_ai = true
 	_last_view_hash = 0
 	begin_match.rpc(str(host_e.name), str(guest_e.name))
+	in_match = true
+	_hand_out_tokens()
 	match_begin.emit()
+
+
+## Every guest gets a secret seat token: it is what lets them back into the same seat if their connection drops.
+func _hand_out_tokens() -> void:
+	_tokens.clear()
+	for pid in connected_peer_ids:
+		var tk := SeatReservations.new_token()
+		_tokens[pid] = tk
+		receive_token.rpc_id(pid, tk)
+
+
+@rpc("authority", "reliable")
+func receive_token(token: String) -> void:
+	if role != "client":
+		return
+	_my_token = token
+	if _reconnect_until > 0:
+		_reconnect_until = 0
+		_set_status("Reconnected.")
+		connection_restored.emit()
 
 
 func send_action(kind: String, payload: Dictionary = {}) -> void:
@@ -438,6 +494,25 @@ func broadcast_view(view) -> void:
 
 
 func _process(delta: float) -> void:
+	## Host: a held seat whose time ran out ends the match for good.
+	if role == "host" and in_match:
+		for gone_name in _reservations.expire(Time.get_ticks_msec()):
+			peer_left.emit(str(gone_name))
+	## Guest: keep knocking until the host lets us back in, or give up.
+	if role == "client" and _reconnect_until > 0:
+		if Time.get_ticks_msec() >= _reconnect_until:
+			_reconnect_until = 0
+			_set_status("Could not get back into the match.")
+			peer_left.emit("The host")
+		else:
+			_reconnect_acc += delta
+			if _reconnect_acc >= RECONNECT_EVERY:
+				_reconnect_acc = 0.0
+				if peer != null:
+					peer.close()
+					peer = null
+				multiplayer.multiplayer_peer = null
+				_connect_to(_last_address)
 	if role == "host" and udp != null:
 		_beacon_acc += delta
 		if _beacon_acc >= 1.0:
@@ -512,6 +587,7 @@ static func parse_address(text: String) -> Dictionary:
 
 
 func _connect_to(address: String) -> void:
+	_last_address = address
 	var a := parse_address(address)
 	var host := str(a.host)
 	peer = ENetMultiplayerPeer.new()
@@ -538,7 +614,7 @@ func _connect_timeout(token: int, address: String) -> void:
 
 
 ## Bump this whenever an RPC signature or the lobby / match flow changes: host and guest must match (see T-001).
-const PROTOCOL_VERSION := 4
+const PROTOCOL_VERSION := 5
 const VERSION_WAIT := 5.0
 
 ## Peers that connected but have not yet said which version they run (host only).
@@ -557,14 +633,29 @@ func _on_peer_connected(id: int) -> void:
 	)
 
 
+## True when the code a guest typed is the room's code (case and spaces do not matter; an empty room code never matches).
+static func code_matches(theirs: String, ours: String) -> bool:
+	var a := ours.strip_edges().to_upper()
+	return a != "" and theirs.strip_edges().to_upper() == a
+
+
 @rpc("any_peer", "reliable")
-func announce_version(version: int) -> void:
+func announce_version(version: int, room_code: String = "", token: String = "") -> void:
 	if role != "host":
 		return
 	var id := multiplayer.get_remote_sender_id()
 	if not _unverified.has(id):
 		return
 	_unverified.erase(id)
+	## The room code is the password of the room: joining by address alone, without the code, is turned away.
+	if version == PROTOCOL_VERSION and not code_matches(room_code, code):
+		_set_status("Someone tried to join without the right room code and was turned away.")
+		reject_version.rpc_id(id, "That is not the right room code for this host. Ask your friend for the code shown in their lobby.")
+		get_tree().create_timer(0.5).timeout.connect(func() -> void:
+			if peer != null:
+				peer.disconnect_peer(id)
+		)
+		return
 	if version != PROTOCOL_VERSION:
 		_set_status("A player on a different version (theirs %d, yours %d) was turned away. You both need the latest version." % [version, PROTOCOL_VERSION])
 		reject_version.rpc_id(id, "Your game is a different version from the host's (yours %d, host %d). Update to the latest version and try again." % [version, PROTOCOL_VERSION])
@@ -573,12 +664,43 @@ func announce_version(version: int) -> void:
 				peer.disconnect_peer(id)
 		)
 		return
+	## A guest coming back with the token the host gave them takes their old seat again.
+	if in_match:
+		var seat := _reservations.claim(token, Time.get_ticks_msec())
+		if seat.is_empty():
+			_set_status("Someone tried to join a match already in progress and was turned away.")
+			reject_version.rpc_id(id, "That match has already started, or your seat is no longer held.")
+			get_tree().create_timer(0.5).timeout.connect(func() -> void:
+				if peer != null:
+					peer.disconnect_peer(id)
+			)
+			return
+		_rejoin(id, token, str(seat.name))
+		return
 	_accept_peer(id)
+
+
+## The returning guest is seated again, the board is resent in full, and the table is told so it can carry on.
+func _rejoin(id: int, token: String, player_name: String) -> void:
+	_last_view_hash = 0
+	if not connected_peer_ids.has(id):
+		connected_peer_ids.append(id)
+	_tokens[id] = token
+	_lobby[id] = {"name": player_name, "deck": "", "ready": true, "rec": {"rejoined": true}}
+	_set_status("%s is back." % player_name)
+	receive_token.rpc_id(id, token)
+	peer_rejoined.emit(player_name)
 
 
 @rpc("authority", "reliable")
 func reject_version(text: String) -> void:
 	if role != "client":
+		return
+	if _reconnect_until > 0:
+		## We were trying to get back into the match and the host said no: that is the end of it.
+		leave()
+		_set_status(text)
+		peer_left.emit("The host")
 		return
 	leave()
 	_set_status(text)
@@ -601,6 +723,17 @@ func _on_peer_disconnected(id: int) -> void:
 	if not _lobby.has(id):
 		return  ## never seated (turned away or still unverified)
 	var gone_name := str((_lobby[id] as Dictionary).get("name", "The other player"))
+	## Mid-match the seat is held for a while: a Wi-Fi blip must not end the game.
+	if in_match and role == "host" and _tokens.has(id):
+		_reservations.hold(str(_tokens[id]), gone_name, Time.get_ticks_msec(), RECONNECT_WINDOW_MS)
+		_tokens.erase(id)
+		connected_peer_ids.erase(id)
+		ready_peer_ids.erase(id)
+		guest_decks.erase(id)
+		_lobby.erase(id)
+		_set_status("%s lost their connection. Their seat is held for %d minutes." % [gone_name, RECONNECT_WINDOW_MS / 60000])
+		peer_dropped.emit(gone_name, RECONNECT_WINDOW_MS / 1000)
+		return
 	connected_peer_ids.erase(id)
 	ready_peer_ids.erase(id)
 	guest_decks.erase(id)
@@ -611,7 +744,7 @@ func _on_peer_disconnected(id: int) -> void:
 
 
 func _on_connected_ok() -> void:
-	announce_version.rpc_id(1, PROTOCOL_VERSION)
+	announce_version.rpc_id(1, PROTOCOL_VERSION, code, _my_token)
 	if not connected_peer_ids.has(1):
 		connected_peer_ids.append(1)
 	_set_status("Joined room %s." % code)
@@ -620,10 +753,22 @@ func _on_connected_ok() -> void:
 
 
 func _on_connection_failed() -> void:
+	if _reconnect_until > 0:
+		return  ## still reconnecting: the next try is already scheduled (see _process)
 	_set_status("Join failed. Check the code or address, that the host is online with a room open, and that the table is not already full.")
 
 
 func _on_server_gone() -> void:
+	## Mid-match we keep trying to get back in (the host holds our seat) before calling it over.
+	if role == "client" and in_match and _my_token != "" and _last_address != "":
+		if _reconnect_until == 0:
+			_reconnect_until = Time.get_ticks_msec() + RECONNECT_WINDOW_MS
+			_reconnect_acc = RECONNECT_EVERY  ## the first try is right away
+			connected_peer_ids.clear()
+			ready_peer_ids.clear()
+			_set_status("Lost the connection to the host. Trying to reconnect…")
+			connection_lost.emit(RECONNECT_WINDOW_MS / 1000)
+		return
 	var host_name := "The host"
 	for r in roster:
 		if int((r as Dictionary).get("id", 0)) == 1:
@@ -688,6 +833,7 @@ func receive_view(data: Dictionary) -> void:
 ## Sent by the host to every guest when the countdown ends; the host runs the same setup for itself in _start_now().
 @rpc("authority", "reliable")
 func begin_match(host_name: String, guest_name: String) -> void:
+	in_match = true
 	var app := get_node_or_null("/root/AppState")
 	if app != null:
 		app.mp_role = "client"
@@ -758,6 +904,19 @@ func send_notice(seat: int, text: String) -> void:
 func receive_notice(text: String) -> void:
 	if role == "client":
 		notice_received.emit(text)
+
+
+## Host -> the guest in `seat`: "may I do this to the table?"; the guest answers with the action override_vote {id, yes}.
+func send_override_ask(seat: int, id: int, text: String) -> void:
+	if role != "host" or seat != 1 or connected_peer_ids.is_empty():
+		return
+	receive_override_ask.rpc_id(connected_peer_ids[0], id, text)
+
+
+@rpc("authority", "reliable")
+func receive_override_ask(id: int, text: String) -> void:
+	if role == "client":
+		override_asked.emit(id, text)
 
 
 ## Host -> the guest in `seat`: the ways to play a card ({label, detail} each); the guest answers with menu_pick.

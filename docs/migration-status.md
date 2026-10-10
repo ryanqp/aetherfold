@@ -14,12 +14,11 @@ main_menu.tscn
             → TableView   (engine/session/table_view.gd)
 ```
 
-- `scripts/table.gd` has `const USE_ENGINE := true`.
 - On startup it creates a `GameSession`, calls `start_with_demo()` / `start_imported()` / `AppState.make_demo()`, and **paints from `session.view`** (`_board()`).
 - Clicks (play land, cast, activate, attack, pass, end turn, keep/mulligan) go through `GameSession` → `RulesEngine.submit`.
-- Opponent turns on the engine path are `GameSession.ai_take_turn()`, not `RivalAI.take_turn()`.
+- Opponent turns are `GameSession.ai_take_turn()`.
 
-Do **not** add new gameplay to `scripts/match_state.gd`. That file is the old dictionary prototype (immediate spell resolution, GY as an int, name-special-cased AI). It is still constructed (`var state = MatchStateScript.new()`) and still used if someone flips `USE_ENGINE` to `false`. Shipping play never takes that branch.
+The old dictionary prototype (`scripts/match_state.gd`, `scripts/rival_ai.gd`) and the `USE_ENGINE` switch were deleted on 2026-10-09 (AUDIT-021); the table has only the engine path.
 
 ## Who owns what
 
@@ -32,15 +31,10 @@ Do **not** add new gameplay to `scripts/match_state.gd`. That file is the old di
 | `scripts/table.gd` | UI only: layout, art, animation, input routing | Changing how the table *looks* or which session method a click calls |
 | `scripts/scryfall_catalog.gd` | Card art + Oracle metadata cache | Catalog / images |
 | `scripts/app_state.gd`, `scripts/ui/`, `scripts/net/` | Menu, deck picks, LAN lobby | Front-end / multiplayer lobby |
-| `scripts/match_state.gd` | **Legacy.** Do not extend. | Only if fixing the `USE_ENGINE := false` rollback path |
-| `scripts/rival_ai.gd` | `label()` is live (difficulty names). `take_turn(state)` is **MatchState-only**. Engine AI lives in `GameSession`. | Difficulty labels, or the dead MatchState AI |
 | `tests/engine/` | Kernel + session tests | Any engine change |
 
 ## Still leftover (do not treat as “the game”)
 
-- **`USE_ENGINE` flag** — default true. False still wires `MatchState` + `RivalAI.take_turn`. Planned delete: design-doc PR-23.
-- **`MatchState` instance on the table** — allocated even when unused.
-- **`rival_ai.gd` `take_turn`** — still MatchState-only. Spell decisions read IR effect kinds (`DRAW`, `COUNTER_SPELL`, `MOVE_ZONE`), same as `GameSession.ai_should_skip_cast`. The Talrand Drake is still recognized by name on this legacy path.
 - Design-doc “current architecture” (no `res://engine/`, main scene `table.tscn`) — **stale**. Main scene is `scenes/main_menu.tscn`.
 
 ## If you are changing rules

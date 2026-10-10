@@ -12,11 +12,30 @@ func check(engine: RulesEngine) -> bool:
 		engine.kw.update_speed()
 		engine.kw.sync_day_night()
 	_check_storied(engine)
+	_check_blessing(st)
 	_check_life(st)
 	_check_commander_damage(st)
 	_check_legend(engine)
 	_check_game_over(st)
 	return st.mode == EngineEnums.EngineMode.CHOOSING_SBA or st.ended
+
+
+## Ascend (CR 702.131): a player with an ascend permanent who controls ten permanents gets the city's blessing for good.
+func _check_blessing(st: GameState) -> void:
+	var bf: Zone = st.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf == null:
+		return
+	for p in st.players:
+		if p.citys_blessing:
+			continue
+		var ascends := false
+		for oid in bf.object_ids:
+			var o: GameObject = st.objects.get(oid)
+			if o != null and o.controller_id == p.player_id and o.definition is CardDefinition and (o.definition as CardDefinition).oracle_text.to_lower().contains("ascend"):
+				ascends = true
+				break
+		if ascends:
+			LayerManager.citys_blessing(st, p.player_id)
 
 
 ## Storied (CR 702.195a): with a storied permanent, three or more artifacts, Sagas and/or legendary permanents you

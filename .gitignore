@@ -2,7 +2,7 @@
 .godot/
 .import/
 export.cfg
-export_presets.cfg
+# export_presets.cfg is committed (no secrets in it: signing keys come from the editor settings or environment)
 *.translation
 
 # OS / editor

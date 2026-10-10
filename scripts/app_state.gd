@@ -16,15 +16,23 @@ var mp_code: String = ""
 var skip_ai: bool = false
 var you_seat: int = 0
 var sfx_muted: bool = false
-## Table playmats: true = animated Super Playmat (scripts/playmat), false = the painted felt in assets/playmats.
-var animated_mats: bool = true
+## Table playmat, chosen in the table's Menu (scripts/playmat):
+##   "battlefield" = Living Battlefield, the identity's painted mat brought to life
+##   "aether"      = Super Playmat, animated swirls in the identity's colors
+##   "painted"     = the felt pictures in assets/playmats
+const PLAYMAT_STYLES := ["battlefield", "aether", "painted"]
+var playmat_style: String = "battlefield"
 
 
 func _ready() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(PROFILE_FILE) == OK:
 		player_name = str(cfg.get_value("player", "name", ""))
-		animated_mats = bool(cfg.get_value("table", "animated_mats", true))
+		## Older profiles saved an on/off "animated_mats"; someone who chose the felt keeps it.
+		var legacy_painted := not bool(cfg.get_value("table", "animated_mats", true))
+		playmat_style = str(cfg.get_value("table", "playmat_style", "painted" if legacy_painted else "battlefield"))
+		if not PLAYMAT_STYLES.has(playmat_style):
+			playmat_style = "battlefield"
 	if player_name.strip_edges() == "":
 		player_name = OS.get_environment("USERNAME").strip_edges()
 	if player_name == "":
@@ -38,9 +46,9 @@ func set_player_name(n: String) -> void:
 	_save_profile("player", "name", player_name)
 
 
-func set_animated_mats(on: bool) -> void:
-	animated_mats = on
-	_save_profile("table", "animated_mats", on)
+func set_playmat_style(style: String) -> void:
+	playmat_style = style if PLAYMAT_STYLES.has(style) else "battlefield"
+	_save_profile("table", "playmat_style", playmat_style)
 
 
 ## Loads the profile first so saving one setting keeps the others.

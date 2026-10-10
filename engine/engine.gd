@@ -454,6 +454,12 @@ func cost_reduction(player_id: int, spell: GameObject) -> int:
 				## "... cost {1} less for each +1/+1 counter on ~" (Herald of War).
 				var per_counter := str(spec.get("per_counter", ""))
 				total += int(spec.get("amount", 1)) * (int(src.counters.get(per_counter, 0)) if per_counter != "" else 1)
+				## "... for each 1 life your opponents have lost this turn" (Rakdos, Lord of Riots).
+				if bool(spec.get("per_opp_life_lost", false)):
+					total -= int(spec.get("amount", 1))
+					for opp in state.players:
+						if opp.player_id != player_id:
+							total += int(spec.get("amount", 1)) * opp.life_lost_this_turn
 	return total
 
 
@@ -569,6 +575,7 @@ func process_zone_events() -> void:
 		return
 	if triggers != null:
 		triggers.check_state(self)
+		_check_tap_changes()
 	var guard := 0
 	while guard < 20:
 		guard += 1
@@ -587,6 +594,40 @@ func process_zone_events() -> void:
 					_recover_triggers(p)
 			if triggers != null:
 				triggers.on_event(self, e)
+
+
+## Permanents tapped or untapped since the last look fire "becomes tapped" / "becomes untapped" triggers. Only permanents
+## that something is listening to are tracked, so the cost stays small.
+var _tap_seen: Dictionary = {}
+
+
+func _check_tap_changes() -> void:
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD) if state.zones != null else null
+	if bf == null:
+		return
+	if not _anyone_listens_to_taps(bf):
+		_tap_seen.clear()
+		return
+	var now := {}
+	for oid in bf.object_ids:
+		var o: GameObject = state.objects.get(oid)
+		if o == null:
+			continue
+		now[oid] = o.tapped
+		if _tap_seen.has(oid) and bool(_tap_seen[oid]) != o.tapped:
+			triggers.fire_tap_change(self, o, o.tapped)
+	_tap_seen = now
+
+
+func _anyone_listens_to_taps(bf: Zone) -> bool:
+	for oid in bf.object_ids:
+		var o: GameObject = state.objects.get(oid)
+		if o == null or not (o.definition is CardDefinition):
+			continue
+		var ons: Dictionary = layers.trigger_ons(o.definition as CardDefinition) if layers != null else {}
+		if ons.has("TAPPED") or ons.has("UNTAPPED"):
+			return true
+	return false
 
 
 ## Recover (CR 702.59): when a creature is put into its owner's graveyard from the battlefield, each card with recover
@@ -659,18 +700,39 @@ func _submit_play_land(action: GameAction) -> SubmitResult:
 	return r
 
 
+## The mana a mana ability takes from the pool as a cost (filter lands, Signets), or null when it takes none.
+func _pool_cost_of(ab: Ability) -> ManaCost:
+	for c in ab.costs:
+		var ac := c as AbilityCost
+		if ac != null and ac.kind == &"MANA" and str(ac.mana) != "":
+			return ManaCost.parse(str(ac.mana))
+	return null
+
+
+func ab_cost_text(ab: Ability) -> String:
+	for c in ab.costs:
+		var ac := c as AbilityCost
+		if ac != null and ac.kind == &"MANA":
+			return str(ac.mana)
+	return "mana"
+
+
+var _paying_now := false
+
+
 func _submit_activate_mana(action: GameAction) -> SubmitResult:
 	var r := SubmitResult.new()
 	r.ok = false
-	if state.mode != EngineEnums.EngineMode.GIVING_PRIORITY and state.mode != EngineEnums.EngineMode.PAYING_COSTS:
-		r.error = "mana ability not legal now"
-		return r
-	if state.mode == EngineEnums.EngineMode.GIVING_PRIORITY and action.player_id != int(state.awaiting.get("player_id", -1)):
-		r.error = "not your priority"
-		return r
-	if state.mode == EngineEnums.EngineMode.PAYING_COSTS and action.player_id != int(state.awaiting.get("player_id", -1)):
-		r.error = "not your payment"
-		return r
+	if not _paying_now:
+		if state.mode != EngineEnums.EngineMode.GIVING_PRIORITY and state.mode != EngineEnums.EngineMode.PAYING_COSTS:
+			r.error = "mana ability not legal now"
+			return r
+		if state.mode == EngineEnums.EngineMode.GIVING_PRIORITY and action.player_id != int(state.awaiting.get("player_id", -1)):
+			r.error = "not your priority"
+			return r
+		if state.mode == EngineEnums.EngineMode.PAYING_COSTS and action.player_id != int(state.awaiting.get("player_id", -1)):
+			r.error = "not your payment"
+			return r
 	var obj: GameObject = state.objects.get(action.object_id)
 	if obj == null or obj.zone != EngineEnums.ZoneId.BATTLEFIELD or obj.controller_id != action.player_id:
 		r.error = "illegal source"
@@ -689,6 +751,9 @@ func _submit_activate_mana(action: GameAction) -> SubmitResult:
 	if ab == null or not ab.is_mana():
 		r.error = "not a mana ability"
 		return r
+	if activation_locked(obj, true):
+		r.error = "can't be activated"
+		return r
 	if summoning_sickness_blocks(obj, ab):
 		r.error = "summoning sickness"
 		return r
@@ -698,6 +763,14 @@ func _submit_activate_mana(action: GameAction) -> SubmitResult:
 	if not _mana_restriction_ok(obj, ab):
 		r.error = "restricted mana"
 		return r
+	## A filter land ("{1}, {T}: Add {B}{R}") spends mana from the pool as part of the ability: tap another land first.
+	var filter_cost := _pool_cost_of(ab)
+	if filter_cost != null:
+		var filter_pool: ManaPool = mana.pool(action.player_id)
+		if filter_pool == null or not filter_pool.can_pay(filter_cost):
+			r.error = "needs %s from another source first" % ab_cost_text(ab)
+			return r
+		filter_pool.pay(filter_cost)
 	costs.pay(obj, ab)
 	if _cast_source != 0 and (_payment != null or _act_paying):
 		_paid_by.append(obj.object_id)
@@ -709,6 +782,10 @@ func _submit_activate_mana(action: GameAction) -> SubmitResult:
 			var per_counter := str((fx as AbilityEffect).params.get("per_counter", ""))
 			if per_counter != "":
 				mana_text = mana_text.repeat(int(obj.counters.get(per_counter, 0)))
+			## "Add {R} for each tapped land your opponents control": one mana for each permanent the query matches.
+			var per_query: Variant = (fx as AbilityEffect).params.get("per_query")
+			if per_query is Dictionary:
+				mana_text = mana_text.repeat(Query.count_objects(state, obj, per_query))
 			if mana_text == "":
 				continue
 			var produced := resolve_mana(action.player_id, ManaCost.parse(mana_text))
@@ -736,7 +813,11 @@ func _submit_activate_mana(action: GameAction) -> SubmitResult:
 		object_id = obj.object_id,
 		ability_id = str(ab.ability_id),
 	})
+	## "Whenever an opponent taps a land for mana ..." (Manabarbs, Storm Cauldron and the like).
+	if triggers != null and obj.definition is CardDefinition and (obj.definition as CardDefinition).is_land():
+		triggers.on_tap_for_mana(self, obj, action.player_id)
 	if sacrificed:
+		obj.marks["sacrificed"] = true
 		state.zones.move(obj.object_id, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
 	r.ok = true
 	return r
@@ -1047,14 +1128,28 @@ func _pay_ctx_is_ability() -> bool:
 	return _afford_is_ability
 
 
+## True while paying for (or asking if you can afford) a spell that may only be paid with mana produced by creatures.
+func _creature_mana_only_ctx() -> bool:
+	var target := _pay_ctx_object()
+	if target == null or _pay_ctx_is_ability() or not (target.definition is CardDefinition):
+		return false
+	return (target.definition as CardDefinition).oracle_text.to_lower().contains("spend only mana produced by creatures to cast")
+
+
 ## Conditions printed on a mana ability: "Activate only if you control five or more lands" ({min_lands}) and
 ## "Spend this mana only to cast ..." ({spend_only}). Strings in `restrictions` are timing rules, checked elsewhere.
 func _mana_restriction_ok(obj: GameObject, ab: Ability) -> bool:
+	## "Spend only mana produced by creatures to cast this spell" (Myr Superion): only creatures may pay for it.
+	if _creature_mana_only_ctx() and not (obj.definition is CardDefinition and _is_creature_now(obj)):
+		return false
 	for r in ab.restrictions:
 		if not (r is Dictionary):
 			continue
 		var d: Dictionary = r
 		if d.has("min_lands") and Query.count_objects(state, obj, {"controller": "SOURCE_CONTROLLER", "type": "land"}) < int(d.min_lands):
+			return false
+		## "Activate only if you control five or more lands" read as a general condition (Temple of the False God).
+		if d.has("cond") and not layers.condition_met(state, obj, d["cond"] as Dictionary):
 			return false
 		if d.has("spend_only"):
 			var spec: Dictionary = d.spend_only
@@ -1102,6 +1197,11 @@ func _legal_mana_abilities(player_id: int) -> Array:
 				continue
 			if not _mana_text_makes_mana(obj, ab):
 				continue
+			var pool_cost := _pool_cost_of(ab)
+			if pool_cost != null:
+				var lp: ManaPool = mana.pool(player_id)
+				if lp == null or not lp.can_pay(pool_cost):
+					continue
 			var act := GameAction.new()
 			act.kind = GameAction.Kind.ACTIVATE_MANA_ABILITY
 			act.player_id = player_id
@@ -1405,20 +1505,135 @@ func _is_land(obj: GameObject) -> bool:
 ## damage steps (CR 510.4); both run here, with state-based actions in between.
 ## Damage is assigned automatically: lethal to each blocker in declared order, the rest
 ## to the last blocker, or to the player when the attacker has trample (CR 510.1c, 702.19).
-func apply_combat_damage() -> void:
+## Returns false when it stopped to ask the attacking player how to divide damage (see _combat_damage_prepare); the answer
+## calls it again and it carries on from the pass it was at.
+func apply_combat_damage() -> bool:
+	combat_damage_paused = false
 	if not (state.combat is CombatState):
-		return
+		return true
 	if state.players.is_empty():
-		return
+		return true
 	var cs := state.combat as CombatState
-	var split := _combat_has_first_strike(cs)
-	if split:
+	if cs.damage_passes_done == 0:
+		cs.damage_split = _combat_has_first_strike(cs)
+	var split := cs.damage_split
+	if split and cs.damage_passes_done < 1:
+		if not _combat_damage_prepare(cs, true, true):
+			combat_damage_paused = true
+			return false
 		_combat_damage_pass(cs, true, true)
+		cs.damage_passes_done = 1
 		if sba != null:
 			sba.check(self)
-	_combat_damage_pass(cs, false, split)
-	if sba != null:
-		sba.check(self)
+	if cs.damage_passes_done < 2:
+		if not _combat_damage_prepare(cs, false, split):
+			combat_damage_paused = true
+			return false
+		_combat_damage_pass(cs, false, split)
+		cs.damage_passes_done = 2
+		if sba != null:
+			sba.check(self)
+	return true
+
+
+## True while combat damage is waiting for the attacking player to divide it.
+var combat_damage_paused := false
+
+
+## Before any damage is dealt in a pass: an attacker that a person controls and that is blocked by several creatures (or has
+## trample) asks how to divide its damage (CR 510.1c: as that player chooses; with trample, lethal to every blocker first).
+## Returns false after putting the first such question up. Bots, and every other case, use the automatic split.
+func _combat_damage_prepare(cs: CombatState, first_pass: bool, split: bool) -> bool:
+	var band := _banding_group(cs)
+	for aid in cs.attacker_ids:
+		if band.has(int(aid)):
+			continue
+		var attacker: GameObject = state.objects.get(int(aid))
+		if attacker == null or attacker.zone != EngineEnums.ZoneId.BATTLEFIELD or not _deals_damage_now(attacker, first_pass, split):
+			continue
+		var power := _power_of(attacker)
+		if power <= 0:
+			continue
+		var live := _live_blockers(cs, int(aid))
+		var defender := _attacker_defender(cs, int(aid))
+		var trample := has_keyword(attacker, "Trample")
+		if live.is_empty() or not (live.size() >= 2 or (trample and defender >= 0)):
+			continue
+		if not interactive_seats.has(attacker.controller_id):
+			continue
+		var key := _damage_key(int(aid), first_pass)
+		if cs.damage_plans.has(key):
+			continue
+		_ask_combat_split(attacker, live, power, trample, defender, key)
+		return false
+	return true
+
+
+func _damage_key(attacker_id: int, first_pass: bool) -> String:
+	return "%d:%d" % [attacker_id, 1 if first_pass else 2]
+
+
+func _live_blockers(cs: CombatState, attacker_id: int) -> Array:
+	var live: Array = []
+	for bid in _blocker_ids(cs, attacker_id):
+		var candidate: GameObject = state.objects.get(int(bid))
+		if candidate != null and candidate.zone == EngineEnums.ZoneId.BATTLEFIELD:
+			live.append(candidate)
+	return live
+
+
+## The automatic split: lethal to each blocker in order, the rest to the last blocker, or to the player with trample.
+## {blocker id or the player's target id: amount}
+func _default_assignment(attacker: GameObject, live: Array, power: int, trample: bool, defender: int) -> Dictionary:
+	var out := {}
+	var remaining := power
+	for i in live.size():
+		if remaining <= 0:
+			break
+		var target_blocker: GameObject = live[i]
+		var amount := remaining
+		if trample or i < live.size() - 1:
+			amount = mini(remaining, _lethal_for(attacker, target_blocker))
+		if amount > 0:
+			out[target_blocker.object_id] = amount
+			remaining -= amount
+	if trample and remaining > 0 and defender >= 0:
+		out[TargetingManager.encode_player(defender)] = remaining
+	return out
+
+
+func _ask_combat_split(attacker: GameObject, live: Array, power: int, trample: bool, defender: int, key: String) -> void:
+	var dec := PlayerDecision.new()
+	dec.decision_id = state.next_stack_id
+	dec.kind = &"DISTRIBUTE"
+	dec.player_id = attacker.controller_id
+	dec.stack_id = 0
+	dec.link = "combat:" + key
+	var atk_name := (attacker.definition as CardDefinition).name if attacker.definition is CardDefinition else "Attacker"
+	dec.prompt = "%s deals %d combat damage: divide it." % [atk_name, power]
+	dec.total = power
+	dec.min_count = 0
+	dec.max_count = power
+	dec.show_ids = [attacker.object_id]
+	for b in live:
+		var bo := b as GameObject
+		var lethal := _lethal_for(attacker, bo)
+		dec.candidates.append(bo.object_id)
+		dec.show_ids.append(bo.object_id)
+		dec.info[str(bo.object_id)] = {"label": (bo.definition as CardDefinition).name if bo.definition is CardDefinition else "Blocker",
+			"detail": "%d/%d, %d to be lethal" % [_power_of(bo), _toughness_of(bo), lethal], "lethal": lethal}
+	if trample and defender >= 0:
+		var pid_key := TargetingManager.encode_player(defender)
+		dec.candidates.append(pid_key)
+		dec.info[str(pid_key)] = {"label": str(state.players[defender].name), "detail": "trample: only after every blocker has lethal", "lethal": 0, "player": true}
+	var auto := _default_assignment(attacker, live, power, trample, defender)
+	var auto_str := {}
+	for k in auto.keys():
+		auto_str[str(k)] = auto[k]
+	dec.info["default"] = auto_str
+	state.pending_decision = dec
+	state.mode = EngineEnums.EngineMode.AWAITING_DECISION
+	state.awaiting = {player_id = attacker.controller_id, type = &"decision", decision_id = dec.decision_id}
 
 
 func _combat_has_first_strike(cs: CombatState) -> bool:
@@ -1490,20 +1705,17 @@ func _combat_damage_pass(cs: CombatState, first_pass: bool, split: bool) -> void
 				_combat_damage_to_player(attacker, defender, power)
 			continue
 		var trample := has_keyword(attacker, "Trample")
-		var remaining := power
-		for i in live.size():
-			if remaining <= 0:
-				break
-			var target_blocker: GameObject = live[i]
-			var amount := remaining
-			if trample or i < live.size() - 1:
-				amount = mini(remaining, _lethal_for(attacker, target_blocker))
-			if amount > 0:
-				_combat_damage_to_object(attacker, target_blocker, amount)
-				remaining -= amount
-		## A blocked creature with no blockers left deals no damage unless it has trample (CR 509.1h).
-		if trample and remaining > 0 and defender >= 0:
-			_combat_damage_to_player(attacker, defender, remaining)
+		## The attacking player's own split if they made one, else the automatic one. A blocked creature with no blockers left
+		## deals no damage unless it has trample (CR 509.1h).
+		var plan: Variant = cs.damage_plans.get(_damage_key(int(aid), first_pass))
+		var assignment: Dictionary = plan if plan is Dictionary else _default_assignment(attacker, live, power, trample, defender)
+		for b2 in live:
+			var share := int(assignment.get((b2 as GameObject).object_id, 0))
+			if share > 0:
+				_combat_damage_to_object(attacker, b2 as GameObject, share)
+		var to_player := int(assignment.get(TargetingManager.encode_player(defender), 0)) if defender >= 0 else 0
+		if trample and to_player > 0:
+			_combat_damage_to_player(attacker, defender, to_player)
 	if band_blocked:
 		_band_damage(cs, band, band_blockers, first_pass, split)
 
@@ -1612,7 +1824,7 @@ func damage_object(source: GameObject, target: GameObject, amount: int) -> void:
 ## Damage to a creature: marked damage, or -1/-1 counters when the source has infect (CR 702.90b) or wither (CR 702.80a).
 func _mark_damage(source: GameObject, target: GameObject, amount: int) -> void:
 	amount = _prevent_all_but_one(target, amount)
-	amount = apply_prevention(target, -1, amount)
+	amount = apply_prevention(target, -1, amount, source.object_id if source != null else 0)
 	if amount <= 0:
 		return
 	## CR 120.3c: damage to a planeswalker removes that many loyalty counters from it.
@@ -1626,7 +1838,7 @@ func _mark_damage(source: GameObject, target: GameObject, amount: int) -> void:
 
 
 ## Damage prevention shields (CR 615): what is left of `amount` after the shields that cover this target. Shields end with the turn.
-func apply_prevention(target_obj: GameObject, target_player: int, amount: int) -> int:
+func apply_prevention(target_obj: GameObject, target_player: int, amount: int, source_id: int = 0) -> int:
 	## "Damage can't be prevented." (Leyline of Punishment, Everlasting Torment): no shield applies.
 	if amount > 0 and _battlefield_text_has("damage can't be prevented"):
 		return amount
@@ -1650,10 +1862,16 @@ func apply_prevention(target_obj: GameObject, target_player: int, amount: int) -
 				covers = target_obj != null and target_obj.object_id == int(d.get("object_id", -2))
 			"YOUR_STUFF":
 				covers = (target_obj == null and target_player == int(d.get("player_id", -2))) or (target_obj != null and target_obj.controller_id == int(d.get("player_id", -2)))
+		## "The next time a source of your choice would deal damage to you" (Circle of Protection): only that source, once.
+		if covers and int(d.get("source_id", 0)) != 0 and int(d["source_id"]) != source_id:
+			covers = false
 		if not covers:
 			continue
 		var n := int(d.get("n", -1))
-		if n < 0:
+		if bool(d.get("once", false)):
+			amount = 0
+			d["n"] = 0
+		elif n < 0:
 			amount = 0
 		else:
 			var used := mini(n, amount)
@@ -1838,12 +2056,14 @@ func _combat_damage_to_object(source: GameObject, target: GameObject, amount: in
 		combat = true,
 	})
 	_apply_lifelink(source, amount)
+	if triggers != null and amount > 0 and is_creature_now(target):
+		triggers.on_combat_damage_to_creature(self, source, target, amount)
 
 
 func _combat_damage_to_player(source: GameObject, player_id: int, amount: int) -> void:
 	if player_id < 0 or player_id >= state.players.size():
 		return
-	amount = apply_prevention(null, player_id, amount)
+	amount = apply_prevention(null, player_id, amount, source.object_id if source != null else 0)
 	## Infect (CR 702.90b): damage to a player is poison counters instead of life loss. Toxic N (CR 702.164)
 	## adds N poison counters on top of normal damage.
 	if has_keyword(source, "Infect"):
@@ -2271,7 +2491,7 @@ func _auto_finish_payment(player_id: int) -> bool:
 	while not _payment.is_zero() and guard < 24:
 		guard += 1
 		var pool: ManaPool = mana.pool(player_id)
-		if pool != null and pool.can_pay(_payment):
+		if pool != null and not _creature_mana_only_ctx() and pool.can_pay(_payment):
 			pool.pay(_payment)
 			_payment = ManaCost.new()
 			return true
@@ -2282,7 +2502,7 @@ func _auto_finish_payment(player_id: int) -> bool:
 		if not tap_r.ok:
 			break
 	var pool2: ManaPool = mana.pool(player_id)
-	if pool2 != null and _payment != null and pool2.can_pay(_payment):
+	if pool2 != null and _payment != null and not _creature_mana_only_ctx() and pool2.can_pay(_payment):
 		pool2.pay(_payment)
 		_payment = ManaCost.new()
 		return true
@@ -2484,7 +2704,8 @@ func commander_identity(player_id: int) -> Array:
 func mana_slots(player_id: int) -> Array:
 	var slots: Array = []
 	var pool: ManaPool = mana.pool(player_id)
-	if pool != null:
+	## Floating mana can't be spent on a spell that wants creature mana (nothing remembers where it came from).
+	if pool != null and not _creature_mana_only_ctx():
 		for key in ["w", "u", "b", "r", "g", "colorless"]:
 			for _i in int(pool.get(key)):
 				slots.append([key.to_upper() if key != "colorless" else "C"])
@@ -2510,6 +2731,36 @@ func mana_slots(player_id: int) -> Array:
 			slots.append(union)
 		else:
 			slots.append_array(_slots_of(list[0], identity))
+	## Filter lands and Signets ("{1}, {T}: Add {B}{R}") turn one mana into two: with something to pay their {1} from,
+	## each is one more mana that can be either colour.
+	var bf: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bf != null:
+		for foid in bf.object_ids:
+			var fo: GameObject = state.objects.get(foid)
+			if fo == null or fo.controller_id != player_id or fo.tapped or not (fo.definition is CardDefinition) or by_object.has(fo.object_id):
+				continue
+			for fa in _active_abilities(fo):
+				var fab := fa as Ability
+				if fab == null or not fab.is_mana():
+					continue
+				var fcost := _pool_cost_of(fab)
+				if fcost == null or not _mana_text_makes_mana(fo, fab):
+					continue
+				var fraw := _produced_mana(fo.object_id, fab.ability_id, false)
+				if fraw == null:
+					continue
+				var fgain := _slots_of(fraw, identity)
+				var fnet := fgain.size() - fcost.cmc()
+				if fnet <= 0 or slots.size() < fcost.cmc():
+					continue
+				var funion: Array = []
+				for fs in fgain:
+					for fc in fs:
+						if not funion.has(fc):
+							funion.append(fc)
+				for _k in fnet:
+					slots.append(funion.duplicate())
+				break
 	return slots
 
 
@@ -2650,7 +2901,12 @@ func pay_now(player_id: int, cost: ManaCost) -> bool:
 		return false
 	var saved := _payment
 	_payment = c
+	## Paying in the middle of resolving something ("you may pay {G}. If you do ...") isn't a moment a player has priority, but
+	## tapping lands for it is still allowed.
+	var was_paying_now := _paying_now
+	_paying_now = true
 	var ok := _auto_finish_payment(player_id)
+	_paying_now = was_paying_now
 	_payment = saved
 	return ok
 
@@ -2708,10 +2964,14 @@ func discard_card(player_id: int, object_id: int) -> GameObject:
 			fx.kind = &"MADNESS"
 			fx.params = {"object_id": ex.object_id}
 			put_synthetic(null, obj.owner_id, [fx], {}, ex.object_id)
+			if triggers != null:
+				triggers.on_discarded(self, ex, obj.owner_id)
 		return ex
 	var gone: GameObject = state.zones.move(object_id, EngineEnums.ZoneId.GRAVEYARD, obj.owner_id)
 	if gone != null:
 		gone.discarded_turn = state.turn_number
+		if triggers != null:
+			triggers.on_discarded(self, gone, obj.owner_id)
 	return gone
 
 
@@ -2838,6 +3098,46 @@ func _block_text_allows(adef: CardDefinition, attacker: GameObject, blocker: Gam
 	return true
 
 
+## "Creatures you control can't have -1/-1 counters put on them" (Darksteel Angel): a static on any permanent forbids it.
+func counters_prevented(obj: GameObject, counter: String) -> bool:
+	var bfz: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bfz == null or obj == null:
+		return false
+	for boid in bfz.object_ids:
+		var bsrc: GameObject = state.objects.get(boid)
+		if bsrc == null or not (bsrc.definition is CardDefinition):
+			continue
+		for ba in (bsrc.definition as CardDefinition).abilities:
+			var bab := ba as Ability
+			if bab == null or bab.kind != &"STATIC" or not bab.static_spec.has("no_counters"):
+				continue
+			var ban: Dictionary = bab.static_spec["no_counters"]
+			if str(ban.get("counter", "")) == counter and Query._matches(obj, bsrc, ban.get("query", {}) as Dictionary):
+				return true
+	return false
+
+
+## Pithing Needle / Phyrexian Revoker: "Activated abilities of sources with the chosen name can't be activated [unless they're
+## mana abilities]." A static {"cant_activate": query, "mana_too": bool} on a permanent locks the matching sources.
+func activation_locked(obj: GameObject, is_mana: bool) -> bool:
+	var bfz: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bfz == null or obj == null:
+		return false
+	for boid in bfz.object_ids:
+		var bsrc: GameObject = state.objects.get(boid)
+		if bsrc == null or not (bsrc.definition is CardDefinition):
+			continue
+		for ba in (bsrc.definition as CardDefinition).abilities:
+			var bab := ba as Ability
+			if bab == null or bab.kind != &"STATIC" or not bab.static_spec.has("cant_activate"):
+				continue
+			if is_mana and not bool(bab.static_spec.get("mana_too", false)):
+				continue
+			if Query._matches(obj, bsrc, bab.static_spec["cant_activate"] as Dictionary):
+				return true
+	return false
+
+
 ## "You can't cast ~ unless an opponent lost life this turn" (Rakdos, Lord of Riots).
 func _cast_forbidden(obj: GameObject) -> bool:
 	if not (obj.definition is CardDefinition):
@@ -2850,6 +3150,17 @@ func _cast_forbidden(obj: GameObject) -> bool:
 		var ab := a as Ability
 		if ab != null and ab.kind == &"STATIC" and ab.static_spec.has("cast_condition") and not layers.condition_met(state, obj, ab.static_spec["cast_condition"]):
 			return true
+	## "Your opponents can't cast spells with even mana values." (Void Winnower)
+	var bfz: Zone = state.zones.get_zone(EngineEnums.ZoneId.BATTLEFIELD)
+	if bfz != null:
+		for boid in bfz.object_ids:
+			var bsrc: GameObject = state.objects.get(boid)
+			if bsrc == null or not (bsrc.definition is CardDefinition):
+				continue
+			for ba in (bsrc.definition as CardDefinition).abilities:
+				var bab := ba as Ability
+				if bab != null and bab.kind == &"STATIC" and bab.static_spec.has("cant_cast") and Query._matches(obj, bsrc, bab.static_spec["cant_cast"] as Dictionary):
+					return true
 	return false
 
 
@@ -3035,8 +3346,10 @@ func _activation_reason(obj: GameObject, ab: Ability) -> String:
 	for cr in ab.restrictions:
 		if cr is Dictionary and (cr as Dictionary).has("cond") and not layers.condition_met(state, obj, (cr as Dictionary)["cond"]):
 			return "CONDITION_NOT_MET"
-	if ab.restrictions.has("CITYS_BLESSING") and Query.count_objects(state, obj, {"controller": "SOURCE_CONTROLLER"}) < 10:
+	if ab.restrictions.has("CITYS_BLESSING") and not LayerManager.citys_blessing(state, obj.controller_id):
 		return "NO_CITYS_BLESSING"
+	if activation_locked(obj, false):
+		return "CANT_BE_ACTIVATED"
 	for rr in ab.restrictions:
 		if rr is Dictionary and (rr as Dictionary).has("min_lands") and Query.count_objects(state, obj, {"controller": "SOURCE_CONTROLLER", "type": "land"}) < int((rr as Dictionary).min_lands):
 			return "NOT_ENOUGH_LANDS"
@@ -3128,7 +3441,8 @@ func _put_activated_on_stack() -> SubmitResult:
 	var entry := StackEntry.new()
 	entry.stack_id = state.next_stack_id
 	state.next_stack_id += 1
-	entry.ctx = {"x": _act_x}
+	entry.ctx = {"x": _act_x, "sacrificed_power": int(obj.marks.get("sac_power", 0))}
+	obj.marks.erase("sac_power")
 	_act_x = 0
 	_paid_by = []
 	entry.kind = StackEntry.Kind.ACTIVATED
@@ -3172,6 +3486,13 @@ func _legal_decision(player_id: int) -> Array:
 	if not (state.pending_decision is PlayerDecision):
 		return out
 	var dec := state.pending_decision as PlayerDecision
+	if dec.kind == &"DISTRIBUTE":
+		var auto_split := GameAction.new()
+		auto_split.kind = GameAction.Kind.SUBMIT_DECISION
+		auto_split.player_id = player_id
+		auto_split.extra = {split = dec.info.get("default", {})}
+		out.append(auto_split)
+		return out
 	if dec.kind == &"OPTIONAL_YES_NO":
 		var yes := GameAction.new()
 		yes.kind = GameAction.Kind.SUBMIT_DECISION
@@ -3196,6 +3517,80 @@ func _legal_decision(player_id: int) -> Array:
 	return out
 
 
+## The answer to a DISTRIBUTE question: action.extra.split = {candidate id: amount}. Declining takes the automatic split.
+func _submit_distribution(action: GameAction, dec: PlayerDecision, accept: bool) -> SubmitResult:
+	var r := SubmitResult.new()
+	r.ok = false
+	var split := {}
+	var raw: Variant = action.extra.get("split", null) if accept else null
+	if raw is Dictionary:
+		for k in (raw as Dictionary).keys():
+			split[int(str(k))] = int((raw as Dictionary)[k])
+	else:
+		for k2 in (dec.info.get("default", {}) as Dictionary).keys():
+			split[int(str(k2))] = int((dec.info["default"] as Dictionary)[k2])
+	var problem := _distribution_problem(dec, split)
+	if problem != "":
+		r.error = problem
+		return r
+	for cand in split.keys():
+		if int(split[cand]) <= 0:
+			split.erase(cand)
+	if dec.link.begins_with("combat:"):
+		var cs := state.combat as CombatState
+		cs.damage_plans[dec.link.substr(7)] = split
+		state.pending_decision = null
+		state.mode = EngineEnums.EngineMode.GIVING_PRIORITY
+		state.awaiting = {player_id = state.active_player_id, type = &"priority"}
+		if apply_combat_damage():
+			turn.resume_after_combat_damage()
+		r.ok = true
+		return r
+	var stack := state.stack as MagicStack
+	var entry: StackEntry = stack.top() if stack != null else null
+	if entry == null or entry.stack_id != dec.stack_id:
+		r.error = "decision expired"
+		return r
+	entry.choices[dec.link] = split
+	state.pending_decision = null
+	finish_top_resolution()
+	r.ok = true
+	return r
+
+
+## "" if `split` is a legal way to divide dec.total among the candidates, else why not.
+func _distribution_problem(dec: PlayerDecision, split: Dictionary) -> String:
+	var sum := 0
+	for k in split.keys():
+		if not dec.candidates.has(int(k)):
+			return "That isn't something to divide damage among."
+		if int(split[k]) < 0:
+			return "Amounts can't be negative."
+		sum += int(split[k])
+	if sum != dec.total:
+		return "Divide exactly %d (you have %d)." % [dec.total, sum]
+	if dec.max_targets > 0:
+		var used := 0
+		for k3 in split.keys():
+			if int(split[k3]) > 0:
+				used += 1
+		if used > dec.max_targets:
+			return "At most %d targets." % dec.max_targets
+	if not dec.link.begins_with("combat:"):
+		return ""
+	## Trample: the player only gets damage once every blocker has lethal damage assigned.
+	for k2 in split.keys():
+		var info: Dictionary = dec.info.get(str(k2), {})
+		if bool(info.get("player", false)) and int(split[k2]) > 0:
+			for cand in dec.candidates:
+				var ci: Dictionary = dec.info.get(str(cand), {})
+				if bool(ci.get("player", false)):
+					continue
+				if int(split.get(cand, 0)) < int(ci.get("lethal", 0)):
+					return "Every blocker needs lethal damage before the player gets any."
+	return ""
+
+
 func _submit_decision(action: GameAction, accept: bool) -> SubmitResult:
 	var r := SubmitResult.new()
 	r.ok = false
@@ -3209,6 +3604,8 @@ func _submit_decision(action: GameAction, accept: bool) -> SubmitResult:
 		r.error = "no decision"
 		return r
 	var dec := state.pending_decision as PlayerDecision
+	if dec.kind == &"DISTRIBUTE":
+		return _submit_distribution(action, dec, accept)
 	if not (state.stack is MagicStack):
 		r.error = "no stack"
 		return r

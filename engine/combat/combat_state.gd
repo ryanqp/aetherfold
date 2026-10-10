@@ -9,3 +9,8 @@ var defenders: Dictionary = {}
 var blockers: Dictionary = {}
 ## True once the defending player has declared blockers this combat (even "no blocks").
 var blocks_declared: bool = false
+## Combat damage the attacking player divided by hand: "attacker:pass" -> {blocker id (or the defending player's target id): amount}.
+var damage_plans: Dictionary = {}
+## Damage passes finished so far this combat (0, 1 after first strike, 2 when done) and whether there are two of them.
+var damage_passes_done: int = 0
+var damage_split: bool = false

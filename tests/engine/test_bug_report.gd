@@ -72,7 +72,8 @@ func test_cards_the_engine_cannot_read_are_listed() -> void:
 func test_save_writes_a_text_and_a_json_file() -> void:
 	var s := _session()
 	var r := BugReport.build(s, "something broke", "it should not have", "BF-test")
-	var path := BugReport.save(r, "user://bug_reports_test")
+	var dir := "user://test_decks/bugreport-%d" % Time.get_ticks_usec()
+	var path := BugReport.save(r, dir)
 	assert_true(path != "" and FileAccess.file_exists(path), "the text file exists")
 	var body := FileAccess.get_file_as_string(path)
 	assert_true(body.contains("something broke"), "it holds the report")
@@ -80,6 +81,9 @@ func test_save_writes_a_text_and_a_json_file() -> void:
 	assert_true(FileAccess.file_exists(json_path), "the json file exists")
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(json_path))
 	assert_true(parsed is Dictionary and str((parsed as Dictionary).get("what_happened", "")) == "something broke", "the json reads back")
+	DirAccess.remove_absolute(path)
+	DirAccess.remove_absolute(json_path)
+	DirAccess.remove_absolute(dir)
 
 
 func test_a_guest_without_an_engine_still_gets_a_report() -> void:

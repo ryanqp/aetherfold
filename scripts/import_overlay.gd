@@ -27,6 +27,9 @@ var existing_path: String = ""
 var busy := false
 var auto_play := true
 var _source_url := ""
+var _run_id := 0
+var _started_msec := 0
+var _threads: Dictionary = {}
 
 
 func _ready() -> void:
@@ -156,26 +159,65 @@ func _btn(text: String, bg: Color, fg: Color, cb: Callable) -> Button:
 
 
 func _on_cancel() -> void:
+	## Closing the window during an import abandons it: the worker finishes in the background and its answer is dropped.
+	if busy:
+		_run_id += 1
+		busy = false
+		import_btn.disabled = false
+		progress_label.text = ""
 	visible = false
 	cancelled.emit()
 
 
+## The import runs on a worker thread (fetching and resolving a deck takes seconds and, on a slow connection, tens of
+## seconds): the window keeps drawing, shows how long it has been, and can be closed.
 func _on_import() -> void:
 	if busy:
 		return
 	busy = true
+	_run_id += 1
+	_started_msec = Time.get_ticks_msec()
 	import_btn.disabled = true
-	progress_label.text = "Detecting deck source..."
+	progress_label.text = "Importing…"
 	preview_label.text = ""
 	unresolved_label.text = ""
 	confirm_btn.visible = false
-	await get_tree().process_frame
 	var pipe := ImportPipeline.new()
-	var result: Dictionary = pipe.run(input_box.text, true)
+	pipe.catalog = get_node_or_null("/root/ScryfallCatalog")
+	var thread := Thread.new()
+	_threads[_run_id] = thread
+	thread.start(_import_worker.bind(_run_id, pipe, input_box.text))
+
+
+func _import_worker(run: int, pipe: ImportPipeline, text: String) -> void:
+	var result: Dictionary = pipe.run(text, true)
+	_import_finished.call_deferred(run, result)
+
+
+func _import_finished(run: int, result: Dictionary) -> void:
+	var thread: Thread = _threads.get(run)
+	if thread != null:
+		thread.wait_to_finish()
+		_threads.erase(run)
+	if run != _run_id or not busy:
+		return  ## closed or restarted meanwhile
 	last_result = result
 	busy = false
 	import_btn.disabled = false
 	_show_result(result)
+
+
+func _process(_delta: float) -> void:
+	if busy and visible:
+		progress_label.text = "Importing… %d s" % int((Time.get_ticks_msec() - _started_msec) / 1000)
+
+
+func _exit_tree() -> void:
+	## Never wait for a download that is still running: quitting must not hang for the length of a network timeout.
+	for t in _threads.values():
+		if not (t as Thread).is_alive():
+			(t as Thread).wait_to_finish()
+	_threads.clear()
 
 
 func _on_ignore() -> void:
@@ -199,7 +241,10 @@ func _commit(replace_path: String) -> void:
 		return
 	var rows: Dictionary = last_result.get("rows", {})
 	var store := DeckStore.new()
-	store.save(deck, rows, last_result.get("validation", {}), replace_path)
+	if store.save(deck, rows, last_result.get("validation", {}), replace_path) == "":
+		## Stay open: the deck is not saved, and the player must be told.
+		preview_label.text = "The deck could not be saved. %s\n\n%s" % [store.last_error, preview_label.text]
+		return
 	visible = false
 	deck_saved.emit(deck, rows)
 	if auto_play:

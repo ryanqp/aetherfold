@@ -4,10 +4,45 @@ extends RefCounted
 static func count_objects(state: GameState, source: GameObject, spec: Dictionary) -> int:
 	if spec.is_empty():
 		return 0
+	## "the number of Zombies on the battlefield plus the number of Zombie cards in all graveyards": two counts added.
+	if spec.has("plus"):
+		var base := spec.duplicate()
+		base.erase("plus")
+		return count_objects(state, source, base) + count_objects(state, source, spec["plus"] as Dictionary)
 	var zone_id := _zone_id(str(spec.get("zone", "BATTLEFIELD")))
 	var owner_id := EngineIds.NONE
 	if not ZoneManager.is_shared(zone_id) and source != null:
 		owner_id = source.controller_id
+	## "Zombie cards in all graveyards": the same zone of every player.
+	if str(spec.get("owners", "")) == "ALL" and not ZoneManager.is_shared(zone_id):
+		var all_total := 0
+		var all_plain := spec.duplicate()
+		all_plain.erase("owners")
+		for ap in state.players:
+			var az: Zone = state.zones.get_zone(zone_id, ap.player_id)
+			if az == null:
+				continue
+			for aid in az.object_ids:
+				var ao: GameObject = state.objects.get(aid)
+				if ao != null and _matches(ao, source, all_plain):
+					all_total += 1
+		return all_total
+	## "creature cards in your opponents' graveyards": the same zone of every other player, added up.
+	if str(spec.get("owners", "")) == "OPPONENTS" and source != null and not ZoneManager.is_shared(zone_id):
+		var total := 0
+		var plain := spec.duplicate()
+		plain.erase("owners")
+		for p in state.players:
+			if p.player_id == source.controller_id:
+				continue
+			var oz: Zone = state.zones.get_zone(zone_id, p.player_id)
+			if oz == null:
+				continue
+			for oid2 in oz.object_ids:
+				var o2: GameObject = state.objects.get(oid2)
+				if o2 != null and _matches(o2, source, plain):
+					total += 1
+		return total
 	var zone: Zone = state.zones.get_zone(zone_id, owner_id)
 	if zone == null:
 		return 0
@@ -31,6 +66,18 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 		return false
 	if bool(spec.get("commander", false)) and not obj.is_commander:
 		return false
+	## "creatures you control with a +1/+1 counter on them"
+	if spec.has("has_counter") and int(obj.counters.get(str(spec["has_counter"]), 0)) <= 0:
+		return false
+	## "with a counter on it": counters of any kind (loyalty and the like are not on creatures).
+	if bool(spec.get("has_any_counter", false)):
+		var any_counter := false
+		for ck in obj.counters.keys():
+			if int(obj.counters[ck]) > 0:
+				any_counter = true
+				break
+		if not any_counter:
+			return false
 	## Any one of several specs ("creature or Vehicle").
 	var any_specs: Variant = spec.get("any", [])
 	if any_specs is Array and not (any_specs as Array).is_empty():
@@ -87,6 +134,12 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 	## "one or more colors" (All Is Dust): not colorless.
 	if bool(spec.get("colored", false)) and (def == null or def.colors.is_empty()):
 		return false
+	if bool(spec.get("multicolored", false)) and (def == null or def.colors.size() < 2):
+		return false
+	if bool(spec.get("monocolored", false)) and (def == null or def.colors.size() != 1):
+		return false
+	if bool(spec.get("colorless", false)) and (def == null or not def.colors.is_empty()):
+		return false
 	if bool(spec.get("nontoken", false)) and obj.is_token:
 		return false
 	if bool(spec.get("token", false)) and not obj.is_token:
@@ -94,6 +147,8 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 	if bool(spec.get("other", false)) and source != null and obj.object_id == source.object_id:
 		return false
 	if bool(spec.get("tapped", false)) and not obj.tapped:
+		return false
+	if bool(spec.get("untapped", false)) and obj.tapped:
 		return false
 	## A keyword the card has ("creatures you control with toxic", "with flying"), printed or as a keyword line.
 	var kw_need := str(spec.get("keyword", "")).strip_edges()
@@ -120,11 +175,25 @@ static func _matches(obj: GameObject, source: GameObject, spec: Dictionary) -> b
 		return false
 	if spec.has("mv") and (def == null or def.cmc != int(spec["mv"])):
 		return false
+	## Void Winnower: "creatures with even mana values".
+	if spec.has("mv_parity") and (def == null or (int(def.cmc) % 2 == 0) != (str(spec["mv_parity"]) == "even")):
+		return false
 	if bool(spec.get("legendary", false)) and not type_line.contains("Legendary"):
 		return false
 	if bool(spec.get("nonlegendary", false)) and type_line.contains("Legendary"):
 		return false
-	if spec.has("name") and (def == null or def.name != str(spec["name"])):
+	if bool(spec.get("snow", false)) and not type_line.contains("Snow"):
+		return false
+	if bool(spec.get("permanent", false)) and (type_line.contains("Instant") or type_line.contains("Sorcery")):
+		return false
+	## "each creature you control named ~" (Gruff Triplets): the same name as the source.
+	if bool(spec.get("same_name_as_source", false)) and (def == null or source == null or not (source.definition is CardDefinition) or (source.definition as CardDefinition).name != def.name):
+		return false
+	## "with the chosen name" (Pithing Needle, Meddling Mage): the name the source named as it entered.
+	if spec.has("name") and str(spec["name"]) == "$chosen":
+		if def == null or source == null or source.chosen_name == "" or def.name != source.chosen_name:
+			return false
+	elif spec.has("name") and (def == null or def.name != str(spec["name"])):
 		return false
 	var not_color := str(spec.get("not_color", "")).strip_edges()
 	if not_color != "" and def != null and def.colors.has(not_color):
